@@ -9,7 +9,7 @@ import type {
 	FindingPromotedEvent,
 } from './index';
 
-const TEST_LEDGER = '/tmp/maat-test-ledger.jsonl';
+const TEST_LEDGER = '/tmp/maat-test-ledger.ndjson';
 
 // Fields shared by all events passed to append() — no entry_id, backend generates it
 const BASE = {
@@ -36,11 +36,11 @@ async function readLines(path: string): Promise<unknown[]> {
 		.map((l) => JSON.parse(l));
 }
 
+const TEST_SNAPSHOT = TEST_LEDGER.replace(/\.ndjson$/, '.snapshot.json');
+
 afterEach(async () => {
-	try {
-		await unlink(TEST_LEDGER);
-	} catch {
-		// file may not have been created
+	for (const path of [TEST_LEDGER, TEST_SNAPSHOT]) {
+		try { await unlink(path); } catch { /* file may not exist */ }
 	}
 });
 
@@ -341,5 +341,51 @@ describe('FilePathLedgerBackend / fold()', () => {
 			{ ...STORED_BASE, type: 'finding.promoted', fingerprint: 'ghost' },
 		]);
 		expect(records.has('ghost')).toBe(false);
+	});
+
+	test('re-observing a baselined finding preserves baselined=true', async () => {
+		// Regression: applyEvent previously reset baselined to false whenever a new
+		// finding.observed event arrived for the same fingerprint. This test ensures
+		// a second check run does not un-baseline a previously baselined finding.
+		const records = await fold(makeBackend(), [
+			{
+				...STORED_BASE,
+				type: 'finding.observed',
+				fingerprint: 'fp1',
+				rule_id: 'r1',
+				message: 'test',
+				artifacts: [],
+			},
+			{ ...STORED_BASE, type: 'finding.baselined', fingerprint: 'fp1' },
+			// second check run re-observes the same finding
+			{
+				...STORED_BASE,
+				type: 'finding.observed',
+				fingerprint: 'fp1',
+				rule_id: 'r1',
+				message: 'test',
+				artifacts: [],
+			},
+		]);
+		expect(records.get('fp1')?.baselined).toBe(true);
+	});
+});
+
+// ─── applyEvent (regression) ──────────────────────────────────────────────────
+
+describe('FilePathLedgerBackend / re-observe baselined finding', () => {
+
+	test('baselined flag is preserved when a finding is re-observed on a subsequent check run', async () => {
+		const backend = makeBackend();
+
+		// First check run: finding appears
+		await backend.append({ ...BASE, type: 'finding.observed', fingerprint: 'fp1', rule_id: 'r1', message: 'test', artifacts: [] });
+		// User runs `maat baseline`
+		await backend.append({ ...BASE, type: 'finding.baselined', fingerprint: 'fp1' });
+		// Second check run: same finding is observed again
+		await backend.append({ ...BASE, type: 'finding.observed', fingerprint: 'fp1', rule_id: 'r1', message: 'test', artifacts: [] });
+
+		const state = await backend.getState();
+		expect(state.findings['fp1']?.baselined).toBe(true);
 	});
 });

@@ -71,10 +71,11 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		const axioms = { ...snapshot.axioms };
 
 		if (event.type === FindingStatus.OBSERVED) {
+			const existing = findings[event.fingerprint];
 			findings[event.fingerprint] = {
 				fingerprint: event.fingerprint,
 				state: 'observed',
-				baselined: false,
+				baselined: existing?.baselined ?? false,
 				rule_id: event.rule_id,
 				message: event.message,
 				artifacts: event.artifacts,

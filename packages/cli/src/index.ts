@@ -20,6 +20,7 @@ import type { MaatCommand } from './commands';
 import { Check } from './commands/check';
 import { Axiom } from './commands/axiom';
 import { Baseline } from './commands/baseline';
+import { Promote } from './commands/promote';
 
 const maatConfig = defineConfig({
 	collectors: [
@@ -64,6 +65,7 @@ class MaatCLI {
 			new Check(this.program, config, this.kernel, this.ledger, this.insights),
 			new Axiom(this.program, config, this.kernel, this.ledger, this.insights),
 			new Baseline(this.program, config, this.kernel, this.ledger, this.insights),
+			new Promote(this.program, config, this.kernel, this.ledger, this.insights),
 		];
 
 		for (const command of commands) command.register();

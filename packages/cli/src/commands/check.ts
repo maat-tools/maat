@@ -23,12 +23,16 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const { findings } = await this.kernel.run();
 
 		const baselinedFingerprints = new Set<string>();
+		const enforcedFingerprints = new Set<string>();
 
 		if (this.ledger !== null) {
 			const snapshot = await this.ledger.getState();
 			for (const record of Object.values(snapshot.findings)) {
 				if (record.baselined) {
 					baselinedFingerprints.add(record.fingerprint);
+				}
+				if (record.state === 'enforced') {
+					enforcedFingerprints.add(record.fingerprint);
 				}
 			}
 		}
@@ -53,6 +57,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					);
 				}
 			}
+		}
+
+		const hasEnforcedViolations = visibleFindings.some((f) => enforcedFingerprints.has(f.fingerprint));
+
+		if (hasEnforcedViolations) {
+			process.exit(1);
 		}
 
 		if (!this.config.check?.strict || visibleFindings.length === 0) {

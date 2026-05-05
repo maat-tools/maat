@@ -157,8 +157,10 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 }
 
 export abstract class RuleBase {
+	abstract readonly id: string;
+
 	public generateFingerprint(data: unknown): string {
-		return createHash('sha256').update(stableStringify(data)).digest('hex');
+		return createHash('sha256').update(stableStringify({ ruleId: this.id, data })).digest('hex');
 	}
 }
 

@@ -1,0 +1,21 @@
+{
+	"name": "@maat/collector-ts",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"main": "./src/index.ts",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"lint": "eslint .",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"dependencies": {
+		"@maat/contracts": "workspace:*",
+		"@maat/vocabulary": "workspace:*",
+		"ts-morph": "^28.0.0"
+	}
+}

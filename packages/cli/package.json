@@ -1,0 +1,30 @@
+{
+	"name": "@maat/cli",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"bin": {
+		"maat": "./src/index.ts"
+	},
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"lint": "biome check .",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@biomejs/biome": "latest"
+	},
+	"dependencies": {
+		"@inquirer/prompts": "^8.4.2",
+		"chalk": "^5.6.2",
+		"commander": "^14.0.3",
+		"@maat/contracts": "workspace:*",
+		"@maat/collector-ts": "workspace:*",
+		"@maat/kernel": "workspace:*",
+		"@maat/coupling-rules": "workspace:*",
+		"@maat/core": "workspace:*",
+		"@maat/file-ledger": "workspace:*"
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"name": "@maat/coupling-rules",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./com": "./src/com.ts"
+	},
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"lint": "biome check .",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@biomejs/biome": "latest"
+	},
+	"dependencies": {
+		"@maat/contracts": "workspace:*",
+		"@maat/core": "workspace:*",
+		"@maat/vocabulary": "workspace:*"
+	}
+}

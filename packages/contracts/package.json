@@ -1,0 +1,17 @@
+{
+	"name": "@maat/contracts",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"main": "./src/index.ts",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"lint": "biome check .",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@biomejs/biome": "latest"
+	}
+}

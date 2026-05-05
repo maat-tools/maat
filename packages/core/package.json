@@ -1,0 +1,21 @@
+{
+	"name": "@maat/core",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"main": "./src/index.ts",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"lint": "biome check .",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@biomejs/biome": "latest"
+	},
+	"dependencies": {
+		"@maat/contracts": "workspace:*",
+		"ulid": "^3.0.2"
+	}
+}

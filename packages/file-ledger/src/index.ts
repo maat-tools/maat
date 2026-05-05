@@ -1,11 +1,12 @@
-import { appendFile } from 'node:fs/promises';
-import { ulid } from 'ulid';
+import { appendFile, writeFile } from 'node:fs/promises';
 import {
 	defineLedgerBackend,
+	FindingStatus,
+	type AxiomDeclaredEvent,
 	type FindingRecord,
 	type LedgerBackend,
 	type LedgerEvent,
-	type LedgerEventInput,
+	type LedgerSnapshot,
 } from '@maat/contracts';
 import { LedgerBackendBase } from '../../core/src';
 
@@ -19,6 +20,7 @@ export type {
 	FindingState,
 	LedgerBackend,
 	LedgerEvent,
+	LedgerSnapshot,
 } from '@maat/contracts';
 
 export { defineLedgerBackend } from '@maat/contracts';
@@ -27,18 +29,79 @@ type FilePathLedgerInput = {
 	path: string;
 };
 
+const EMPTY_SNAPSHOT: LedgerSnapshot = { last_entry_id: null, findings: {}, axioms: {} };
+
 export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBackend {
 	constructor(private readonly options: FilePathLedgerInput) {
 		super();
 	}
 
-	public async append(event: LedgerEventInput): Promise<void> {
-		const entry = { ...event, entry_id: ulid() } as LedgerEvent;
-
-		await appendFile(this.options.path, `${JSON.stringify(entry)}\n`, 'utf-8');
+	public async append(event: LedgerEvent): Promise<void> {
+		await Promise.all([
+			appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8'),
+			this.updateSnapshot(event),
+		]);
 	}
 
-	private async readAll(): Promise<LedgerEvent[]> {
+	public async getState(): Promise<LedgerSnapshot> {
+		const file = Bun.file(this.snapshotPath);
+		if (!(await file.exists())) {
+			return this.rebuildSnapshot();
+		}
+
+		return JSON.parse(await file.text()) as LedgerSnapshot;
+	}
+
+	private get snapshotPath(): string {
+		return this.options.path.replace(/\.ndjson$/, '.snapshot.json');
+	}
+
+	private async updateSnapshot(event: LedgerEvent): Promise<void> {
+		const snapshotFile = Bun.file(this.snapshotPath);
+		const current: LedgerSnapshot = (await snapshotFile.exists())
+			? JSON.parse(await snapshotFile.text()) as LedgerSnapshot
+			: EMPTY_SNAPSHOT;
+
+		const updated = this.applyEvent(current, event);
+		await writeFile(this.snapshotPath, `${JSON.stringify(updated, null, 2)}\n`, 'utf-8');
+	}
+
+	private applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
+		const findings = { ...snapshot.findings };
+		const axioms = { ...snapshot.axioms };
+
+		if (event.type === FindingStatus.OBSERVED) {
+			findings[event.fingerprint] = {
+				fingerprint: event.fingerprint,
+				state: 'observed',
+				baselined: false,
+				rule_id: event.rule_id,
+				message: event.message,
+				artifacts: event.artifacts,
+			} satisfies FindingRecord;
+		} else if (event.type === FindingStatus.BASELINED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, baselined: true };
+			}
+		} else if (event.type === FindingStatus.PROMOTED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, state: 'promoted' };
+			}
+		} else if (event.type === FindingStatus.ENFORCED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, state: 'enforced' };
+			}
+		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
+			axioms[event.axiom_id] = event satisfies AxiomDeclaredEvent;
+		}
+
+		return { last_entry_id: event.entry_id, findings, axioms };
+	}
+
+	private async readLog(): Promise<LedgerEvent[]> {
 		const file = Bun.file(this.options.path);
 		if (!(await file.exists())) {
 			return [];
@@ -51,35 +114,15 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			.map((line) => JSON.parse(line) as LedgerEvent);
 	}
 
-	private async fold(
-		events: LedgerEvent[],
-	): Promise<Map<string, FindingRecord>> {
-		const records = new Map<string, FindingRecord>();
-
+	private async rebuildSnapshot(): Promise<LedgerSnapshot> {
+		const events = await this.readLog();
+		let snapshot: LedgerSnapshot = EMPTY_SNAPSHOT;
 		for (const event of events) {
-			if (event.type === 'finding.observed') {
-				records.set(event.fingerprint, {
-					fingerprint: event.fingerprint,
-					state: 'observed',
-					baselined: false,
-					rule_id: event.rule_id,
-					message: event.message,
-					artifacts: event.artifacts,
-				});
-			} else if (event.type === 'finding.baselined') {
-				const record = records.get(event.fingerprint);
-				if (record !== undefined) record.baselined = true;
-			} else if (event.type === 'finding.promoted') {
-				const record = records.get(event.fingerprint);
-				if (record !== undefined) record.state = 'promoted';
-			} else if (event.type === 'finding.enforced') {
-				const record = records.get(event.fingerprint);
-				if (record !== undefined) record.state = 'enforced';
-			}
-			// axiom.declared events are not folded into FindingRecord — axioms are separate
+			snapshot = this.applyEvent(snapshot, event);
 		}
+		await writeFile(this.snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf-8');
 
-		return records;
+		return snapshot;
 	}
 }
 

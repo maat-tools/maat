@@ -17,8 +17,6 @@ console.log = (...args: unknown[]) =>
 	);
 
 export class Check extends MaatCommandBase implements MaatCommand {
-	public name = 'check';
-	public description = 'Run checks';
 
 	public async action(options: CheckOptions = {}) {
 		const { findings } = await this.kernel.run();
@@ -50,8 +48,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	public register(): void {
 		this.cli
-			.command(this.name)
-			.description(this.description)
+			.command('check')
+			.description('Scan the codebase for architectural findings and append them to the ledger')
 			.option('--no-ledger', 'Do not save findings to the ledger')
 			.action((options: CheckOptions) => this.action(options));
 	}

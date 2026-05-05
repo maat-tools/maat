@@ -18,6 +18,7 @@ import { Kernel } from '@maat/kernel';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
 import { Check } from './commands/check';
+import { Axiom } from './commands/axiom';
 
 const maatConfig = defineConfig({
 	collectors: [
@@ -58,7 +59,10 @@ class MaatCLI {
 			);
 		}
 		const config = { ...maatConfig, check: { strict: true } };
-		const commands: MaatCommand[] = [new Check(this.program, config, this.kernel, this.ledger, this.insights)];
+		const commands: MaatCommand[] = [
+			new Check(this.program, config, this.kernel, this.ledger, this.insights),
+			new Axiom(this.program, config, this.kernel, this.ledger, this.insights),
+		];
 
 		for (const command of commands) command.register();
 	}

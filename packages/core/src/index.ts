@@ -8,6 +8,7 @@ import {
 	type LedgerBackendRegistry,
 	type LedgerEvent,
 	type LedgerEventInput,
+	type LedgerSnapshot,
 	type RuleRegistry,
 } from '@maat/contracts';
 
@@ -134,6 +135,7 @@ type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECL
 
 export abstract class LedgerBackendBase implements LedgerBackend {
 	abstract append(event: LedgerEventInput): Promise<void>;
+	abstract getState(): Promise<LedgerSnapshot>;
 
 	public buildEntry(finding: Finding, type: FindingEventStatus): LedgerEvent {
 		const base = {

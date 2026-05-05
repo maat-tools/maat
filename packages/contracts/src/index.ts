@@ -43,6 +43,7 @@ export type InsightResult = {
 
 export interface LedgerBackend {
 	append(event: LedgerEventInput): Promise<void>;
+	getState(): Promise<LedgerSnapshot>;
 	buildEntry(finding: Finding, type: FindingStatus): LedgerEvent;
 }
 
@@ -124,6 +125,12 @@ export type FindingRecord = {
 	readonly rule_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
+};
+
+export type LedgerSnapshot = {
+	readonly last_entry_id: string | null;
+	readonly findings: Record<string, FindingRecord>;
+	readonly axioms: Record<string, AxiomDeclaredEvent>;
 };
 
 export type CollectorFactory<

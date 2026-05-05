@@ -57,7 +57,8 @@ class MaatCLI {
 				'No ledger configured. Commands that produce findings will not be registered.',
 			);
 		}
-		const commands: MaatCommand[] = [new Check(this.program, this.kernel, this.ledger, this.insights)];
+		const config = { ...maatConfig, check: { strict: true } };
+		const commands: MaatCommand[] = [new Check(this.program, config, this.kernel, this.ledger, this.insights)];
 
 		for (const command of commands) command.register();
 	}

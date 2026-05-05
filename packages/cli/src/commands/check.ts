@@ -1,4 +1,4 @@
-import { FindingStatus} from '@maat/contracts';
+import { FindingStatus } from '@maat/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
@@ -40,6 +40,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				}
 			}
 		}
+
+		if (!this.config.check?.strict || findings.length === 0) {
+			return;
+		}
+
+		process.exit(1);
 	}
 
 	public register(): void {

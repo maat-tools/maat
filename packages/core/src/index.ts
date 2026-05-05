@@ -46,6 +46,7 @@ export type LedgerEntry =
 	| [string & {}, Record<string, unknown>];
 
 export type MaatConfig = {
+	check?: { strict: boolean };
 	collectors: CollectorEntry[];
 	rules: RuleEntry[];
 } & (

@@ -1,5 +1,9 @@
 # maat
 
+<p align="center">
+  <img src="docs/assets/maat-repo-preview.png" alt="maat architectural governance preview" width="420" />
+</p>
+
 > *"It does not tell you what to build. It tells you when you are breaking what you built."*
 
 maat is an architectural governance tool for TypeScript codebases. It finds the coupling that is hard to find — structural today, semantic on the roadmap — turns each candidate into a first-class attributed decision, and optionally enforces it in CI.

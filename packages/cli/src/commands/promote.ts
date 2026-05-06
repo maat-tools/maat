@@ -8,54 +8,40 @@ type PromoteOptions = {
 };
 
 export class Promote extends MaatCommandBase implements MaatCommand {
-	public async action(options: PromoteOptions) {
+	public async action({ fingerprint, enforce }: PromoteOptions) {
 		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot promote without a ledger.');
 			process.exit(1);
 		}
 
 		const snapshot = await this.ledger.getState();
-		const record = snapshot.findings[options.fingerprint];
+		const record = snapshot.findings[fingerprint];
 
 		if (record === undefined) {
-			console.error(
-				`No finding with fingerprint "${options.fingerprint}" found in the ledger.`,
-			);
+			console.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
 			process.exit(1);
 		}
 
 		if (record.state === FindingStatus.ENFORCED) {
-			console.warn(
-				`Finding "${options.fingerprint}" is already enforced. Nothing to do.`,
-			);
+			console.warn(`Finding "${fingerprint}" is already enforced. Nothing to do.`);
 			return;
 		}
 
-		if (record.state === FindingStatus.PROMOTED && !options.enforce) {
-			console.warn(
-				`Finding "${options.fingerprint}" is already promoted. Use --enforce to escalate.`,
-			);
+		if (record.state === FindingStatus.PROMOTED && !enforce) {
+			console.warn(`Finding "${fingerprint}" is already promoted. Use --enforce to escalate.`);
 			return;
 		}
 
 		const timestamp = new Date().toISOString();
 
 		if (record.state === FindingStatus.OBSERVED) {
-			await this.ledger.append({
-				type: FindingStatus.PROMOTED,
-				timestamp,
-				fingerprint: options.fingerprint,
-			});
-			console.log(`Finding "${options.fingerprint}" promoted.`);
+			await this.ledger.append({ type: FindingStatus.PROMOTED, timestamp, fingerprint });
+			console.log(`Finding "${fingerprint}" promoted.`);
 		}
 
-		if (options.enforce) {
-			await this.ledger.append({
-				type: FindingStatus.ENFORCED,
-				timestamp,
-				fingerprint: options.fingerprint,
-			});
-			console.log(`Finding "${options.fingerprint}" enforced.`);
+		if (enforce) {
+			await this.ledger.append({ type: FindingStatus.ENFORCED, timestamp, fingerprint });
+			console.log(`Finding "${fingerprint}" enforced.`);
 		}
 	}
 

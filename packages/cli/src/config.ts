@@ -66,47 +66,42 @@ export async function loadMaatConfig(
 	};
 }
 
-export async function findMaatConfig(cwd: string): Promise<string | null> {
-	let currentDir = resolve(cwd);
-
+function* ancestorDirs(startDir: string): Generator<string> {
+	let current = startDir;
 	while (true) {
-		for (const filename of CONFIG_FILENAMES) {
-			const candidate = join(currentDir, filename);
-			if (await pathExists(candidate)) {
-				return candidate;
-			}
-		}
-
-		const parentDir = dirname(currentDir);
-		if (parentDir === currentDir) {
-			return null;
-		}
-		currentDir = parentDir;
+		yield current;
+		const parent = dirname(current);
+		if (parent === current) break;
+		current = parent;
 	}
 }
 
-export function readConfigPathFromArgv(argv: string[]): string | undefined {
-	for (let i = 0; i < argv.length; i += 1) {
-		const arg = argv[i];
-		if (arg === '--') {
-			return undefined;
+export async function findMaatConfig(cwd: string): Promise<string | null> {
+	for (const dir of ancestorDirs(resolve(cwd))) {
+		for (const filename of CONFIG_FILENAMES) {
+			const candidate = join(dir, filename);
+			if (await pathExists(candidate)) return candidate;
 		}
+	}
+	return null;
+}
+
+export function readConfigPathFromArgv(argv: string[]): string | undefined {
+	for (const [i, arg] of argv.entries()) {
+		if (arg === '--') return undefined;
+
 		if (arg === '--config' || arg === '-c') {
 			const value = argv[i + 1];
-			if (!value) {
-				throw new Error(`${arg} requires a path.`);
-			}
+			if (!value) throw new Error(`${arg} requires a path.`);
 			return value;
 		}
-		if (arg?.startsWith('--config=')) {
+
+		if (arg.startsWith('--config=')) {
 			const value = arg.slice('--config='.length);
-			if (!value) {
-				throw new Error('--config requires a path.');
-			}
+			if (!value) throw new Error('--config requires a path.');
 			return value;
 		}
 	}
-
 	return undefined;
 }
 
@@ -130,7 +125,7 @@ async function importMaatConfig(filePath: string): Promise<MaatConfig> {
 		);
 	}
 
-	const config = mod.default;
+	const { default: config } = mod;
 	if (!isMaatConfig(config)) {
 		throw new Error(
 			`Maat config at ${filePath} must default export a config with collectors and rules arrays.`,
@@ -141,18 +136,14 @@ async function importMaatConfig(filePath: string): Promise<MaatConfig> {
 }
 
 function isMaatConfig(value: unknown): value is MaatConfig {
-	return (
-		typeof value === 'object' &&
-		value !== null &&
-		Array.isArray((value as { collectors?: unknown }).collectors) &&
-		Array.isArray((value as { rules?: unknown }).rules)
-	);
+	if (typeof value !== 'object' || value === null) return false;
+	const obj = value as Record<string, unknown>;
+	return Array.isArray(obj.collectors) && Array.isArray(obj.rules);
 }
 
 async function pathExists(filePath: string): Promise<boolean> {
 	try {
 		await access(filePath);
-
 		return true;
 	} catch {
 		return false;
@@ -160,9 +151,6 @@ async function pathExists(filePath: string): Promise<boolean> {
 }
 
 function formatError(error: unknown): string {
-	if (error instanceof Error) {
-		return error.message;
-	}
-
+	if (error instanceof Error) return error.message;
 	return String(error);
 }

@@ -16,6 +16,26 @@ type LifecycleOptions = {
 	reason?: string;
 };
 
+type AxiomLifecycleStatus =
+	| typeof FindingStatus.AXIOM_SUPERSEDED
+	| typeof FindingStatus.AXIOM_REVOKED;
+
+const LIFECYCLE_VERBS: Record<AxiomLifecycleStatus, string> = {
+	[FindingStatus.AXIOM_REVOKED]: 'revoked',
+	[FindingStatus.AXIOM_SUPERSEDED]: 'superseded',
+};
+
+function parseFingerprints(value: string | undefined): string[] | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	return value
+		.split(',')
+		.map((fingerprint) => fingerprint.trim())
+		.filter(Boolean);
+}
+
 export class Axiom extends MaatCommandBase implements MaatCommand {
 	public async action(...args: unknown[]): Promise<void> {
 		await this.declare(args[0] as DeclareOptions);
@@ -70,7 +90,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			);
 	}
 
-	private async declare(options: DeclareOptions) {
+	private async declare(options: DeclareOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
 			console.error(
 				'No ledger configured. An axiom cannot be recorded without a ledger.',
@@ -81,6 +101,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		if (!options.force) {
 			const snapshot = await this.ledger.getState();
 			const existing = snapshot.axioms[options.id];
+
 			if (existing?.active) {
 				console.error(
 					`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`,
@@ -89,12 +110,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			}
 		}
 
-		const fingerprints = options.fingerprints
-			? options.fingerprints
-					.split(',')
-					.map((s) => s.trim())
-					.filter(Boolean)
-			: undefined;
+		const fingerprints = parseFingerprints(options.fingerprints);
 
 		await this.ledger.append({
 			type: FindingStatus.AXIOM_DECLARED,
@@ -102,19 +118,17 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			axiom_id: options.id,
 			scope: options.scope,
 			claim: options.claim,
-			...(options.note !== undefined && { note: options.note }),
-			...(fingerprints !== undefined && { fingerprints }),
+			...(options.note === undefined ? {} : { note: options.note }),
+			...(fingerprints === undefined ? {} : { fingerprints }),
 		});
 
 		console.log(`Axiom "${options.id}" declared.`);
 	}
 
 	private async lifecycle(
-		type:
-			| typeof FindingStatus.AXIOM_SUPERSEDED
-			| typeof FindingStatus.AXIOM_REVOKED,
+		type: AxiomLifecycleStatus,
 		options: LifecycleOptions,
-	) {
+	): Promise<void> {
 		if (!this.isLedgerProvided()) {
 			console.error(
 				'No ledger configured. Axiom lifecycle commands require a ledger.',
@@ -123,14 +137,14 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		}
 
 		const snapshot = await this.ledger.getState();
-		const existing = snapshot.axioms[options.id];
+		const axiom = snapshot.axioms[options.id];
 
-		if (existing === undefined) {
+		if (axiom === undefined) {
 			console.error(`Axiom "${options.id}" not found in the ledger.`);
 			process.exit(1);
 		}
 
-		if (!existing.active) {
+		if (!axiom.active) {
 			console.error(`Axiom "${options.id}" is already inactive.`);
 			process.exit(1);
 		}
@@ -139,11 +153,9 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			type,
 			timestamp: new Date().toISOString(),
 			axiom_id: options.id,
-			...(options.reason !== undefined && { reason: options.reason }),
+			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 
-		const verb =
-			type === FindingStatus.AXIOM_SUPERSEDED ? 'superseded' : 'revoked';
-		console.log(`Axiom "${options.id}" ${verb}.`);
+		console.log(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
 	}
 }

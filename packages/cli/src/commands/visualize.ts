@@ -17,17 +17,19 @@ type Group = 'enforced' | 'promoted' | 'observed' | 'baselined';
 
 const GROUP_ORDER: Group[] = ['enforced', 'promoted', 'observed', 'baselined'];
 
+const STATUS_TO_GROUP: Partial<Record<FindingStatus, Group>> = {
+	[FindingStatus.ENFORCED]: 'enforced',
+	[FindingStatus.PROMOTED]: 'promoted',
+	[FindingStatus.BASELINED]: 'baselined',
+};
+
 function classify(record: FindingRecord): Group {
-	if (record.state === FindingStatus.ENFORCED) {
-		return 'enforced';
-	}
-	if (record.state === FindingStatus.PROMOTED) {
-		return 'promoted';
-	}
-	if (record.state === FindingStatus.BASELINED) {
-		return 'baselined';
-	}
-	return 'observed';
+	return STATUS_TO_GROUP[record.state] ?? 'observed';
+}
+
+function printSection(heading: string): void {
+	console.log(`\n${heading}`);
+	console.log('─'.repeat(heading.length));
 }
 
 function toFinding(record: FindingRecord): Finding {
@@ -40,7 +42,7 @@ function toFinding(record: FindingRecord): Finding {
 }
 
 export class Visualize extends MaatCommandBase implements MaatCommand {
-	public async action(options: VisualizeOptions = {}) {
+	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot visualize without a ledger.');
 			process.exit(1);
@@ -50,28 +52,25 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		const allFindings = Object.values(snapshot.findings);
 		const allAxioms = Object.values(snapshot.axioms);
 
-		const activeGroups: Set<Group> = options.filter
-			? new Set(options.filter.split(',').map((s) => s.trim() as Group))
+		const activeGroups = filter
+			? new Set(filter.split(',').map((s) => s.trim() as Group))
 			: new Set(GROUP_ORDER);
 
 		const grouped = new Map<Group, FindingRecord[]>();
 		for (const group of GROUP_ORDER) {
 			if (activeGroups.has(group)) {
-				grouped.set(
-					group,
-					allFindings.filter((r) => classify(r) === group),
-				);
+				grouped.set(group, allFindings.filter((r) => classify(r) === group));
 			}
 		}
 
-		if (options.json) {
+		if (json) {
 			const out: Record<string, unknown> = {
 				findings: Object.fromEntries(grouped),
 			};
-			if (options.axioms !== false) {
+			if (axioms !== false) {
 				out.axioms = allAxioms;
 			}
-			if (options.insights && this.insights.length > 0) {
+			if (insights && this.insights.length > 0) {
 				out.insights = this.insights.flatMap((i) =>
 					i.analyze(allFindings.map(toFinding)),
 				);
@@ -88,35 +87,28 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			}
 			hasOutput = true;
 			const heading = `${group.toUpperCase()} (${records.length})`;
-			console.log(`\n${heading}`);
-			console.log('─'.repeat(heading.length));
+			printSection(heading);
 			for (const r of records) {
-				console.log(
-					`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`,
-				);
+				console.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
 			}
 		}
 
-		if (options.axioms !== false && allAxioms.length > 0) {
+		if (axioms !== false && allAxioms.length > 0) {
 			hasOutput = true;
 			const heading = `AXIOMS (${allAxioms.length})`;
-			console.log(`\n${heading}`);
-			console.log('─'.repeat(heading.length));
+			printSection(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				console.log(
-					`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`,
-				);
+				console.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
 			}
 		}
 
-		if (options.insights && this.insights.length > 0) {
+		if (insights && this.insights.length > 0) {
 			const results = this.runInsightsIfEnabled(allFindings.map(toFinding));
 			if (results.length > 0) {
 				hasOutput = true;
 				const heading = `INSIGHTS (${results.length})`;
-				console.log(`\n${heading}`);
-				console.log('─'.repeat(heading.length));
+				printSection(heading);
 				for (const result of results) {
 					console.log(`  [${result.insightId}] ${result.message}`);
 				}

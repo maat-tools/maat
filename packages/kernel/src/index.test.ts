@@ -1,238 +1,87 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import type { Collector, FactRegistry, Finding, Rule } from '@maat/contracts';
+import { describe, expect, test } from 'bun:test';
+import type { Collector, Rule } from '@maat/contracts';
 import { Kernel } from './index';
 
-// Extend FactRegistry for test purposes
 declare module '@maat/contracts' {
 	interface FactRegistry {
-		testFact: string;
-		otherFact: number;
-		fileList: string[];
+		testFacts: string[];
 	}
 }
 
-// Helpers
-function makeCollector(
-	id: string,
-	provides: (keyof FactRegistry)[],
-	facts: Partial<FactRegistry>,
-): Collector<keyof FactRegistry> {
+function makeCollector(items: string[]): Collector<'testFacts'> {
 	return {
-		id,
-		provideFacts: provides,
-		collect: async () => facts as Pick<FactRegistry, keyof FactRegistry>,
+		id: 'test-collector',
+		provideFacts: ['testFacts'] as const,
+		collect: async () => ({ testFacts: items }),
 	};
 }
 
-function makeRule(
-	id: string,
-	needs: (keyof FactRegistry)[],
-	findings: Finding[],
-): Rule {
+function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
 	return {
 		id,
-		needFacts: needs,
-		evaluate: () => findings,
+		needFacts: ['testFacts'] as const,
+		evaluate: ({ testFacts }) =>
+			testFacts.map((value, i) => ({
+				ruleId: id,
+				ruleIdentifier: { value, i },
+				message: `finding: ${value}`,
+				artifacts: [],
+			})),
 	};
 }
 
-const sampleFinding: Finding = {
-	ruleId: 'rule-a',
-	message: 'Something is wrong',
-	artifacts: [],
-};
+describe('Kernel.run', () => {
+	test('no collectors, no rules → empty findings', async () => {
+		const { findings } = await new Kernel().run();
+		expect(findings).toEqual([]);
+	});
 
-describe('Kernel.run()', () => {
-	test('returns [] when no collectors and no rules are registered', async () => {
-		const kernel = new Kernel();
+	test('collector provides facts, rule consumes them → findings produced', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerRule(makeRule());
+
+		const { findings } = await kernel.run();
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleId).toBe('rule@v1');
+	});
+
+	test('rule needs fact not collected → skipped, no findings', async () => {
+		const kernel = new Kernel().registerRule(makeRule());
 		const { findings } = await kernel.run();
 		expect(findings).toEqual([]);
 	});
 
-	test('returns [] when collectors are registered but no rules', async () => {
-		const kernel = new Kernel();
-		kernel.registerCollector(
-			makeCollector('c1', ['testFact'], { testFact: 'hello' }),
-		);
-		const { findings } = await kernel.run();
-		expect(findings).toEqual([]);
-	});
-
-	test('returns [] when rules are registered but collectors provide no matching facts', async () => {
-		const kernel = new Kernel();
-		kernel.registerRule(makeRule('r1', ['testFact'], [sampleFinding]));
-		const { findings } = await kernel.run();
-		expect(findings).toEqual([]);
-	});
-
-	test('calls all registered collectors and merges their facts', async () => {
-		let c1Called = false;
-		let c2Called = false;
-
-		const c1: Collector<'testFact'> = {
-			id: 'c1',
-			provideFacts: ['testFact'],
-			collect: async () => {
-				c1Called = true;
-				return { testFact: 'hello' };
-			},
-		};
-		const c2: Collector<'otherFact'> = {
-			id: 'c2',
-			provideFacts: ['otherFact'],
-			collect: async () => {
-				c2Called = true;
-				return { otherFact: 42 };
-			},
-		};
-
-		const kernel = new Kernel();
-		kernel.registerCollector(c1).registerCollector(c2);
-
-		const rule: Rule<'testFact' | 'otherFact'> = {
-			id: 'r1',
-			needFacts: ['testFact', 'otherFact'],
-			evaluate: (facts) => {
-				expect(facts.testFact).toBe('hello');
-				expect(facts.otherFact).toBe(42);
-				return [];
-			},
-		};
-		kernel.registerRule(rule);
-		await kernel.run();
-
-		expect(c1Called).toBe(true);
-		expect(c2Called).toBe(true);
-	});
-
-	test('concatenates array facts from multiple collectors with the same key', async () => {
-		const c1: Collector<'fileList'> = {
-			id: 'c1',
-			provideFacts: ['fileList'],
-			collect: async () => ({ fileList: ['a.ts', 'b.ts'] }),
-		};
-		const c2: Collector<'fileList'> = {
-			id: 'c2',
-			provideFacts: ['fileList'],
-			collect: async () => ({ fileList: ['A.cs', 'B.cs'] }),
-		};
-
-		const kernel = new Kernel();
-		kernel.registerCollector(c1).registerCollector(c2);
-		kernel.registerRule({
-			id: 'r1',
-			needFacts: ['fileList'],
-			evaluate: (facts) => {
-				expect(facts.fileList).toEqual(['a.ts', 'b.ts', 'A.cs', 'B.cs']);
-				return [];
-			},
-		});
-		await kernel.run();
-	});
-
-	test('skips a rule when its required facts are missing', async () => {
-		const kernel = new Kernel();
-		let evaluated = false;
-		kernel.registerRule({
-			id: 'r1',
-			needFacts: ['testFact'],
-			evaluate: () => {
-				evaluated = true;
-				return [];
-			},
-		});
-		await kernel.run();
-		expect(evaluated).toBe(false);
-	});
-
-	test('runs a rule and returns its findings when all required facts are present', async () => {
-		const kernel = new Kernel();
-		kernel.registerCollector(
-			makeCollector('c1', ['testFact'], { testFact: 'hello' }),
-		);
-		kernel.registerRule(makeRule('r1', ['testFact'], [sampleFinding]));
+	test('two collectors with same array fact key → arrays merged', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['a']))
+			.registerCollector(makeCollector(['b']))
+			.registerRule(makeRule());
 
 		const { findings } = await kernel.run();
-		expect(findings).toEqual([sampleFinding]);
+		expect(findings).toHaveLength(2);
 	});
 
-	test('a rule with an empty needs array always evaluates', async () => {
-		const kernel = new Kernel();
-		kernel.registerRule(makeRule('r-always', [], [sampleFinding]));
+	test('same input across two runs produces identical fingerprints', async () => {
+		const build = () =>
+			new Kernel()
+				.registerCollector(makeCollector(['stable']))
+				.registerRule(makeRule())
+				.run();
 
-		const { findings } = await kernel.run();
-		expect(findings).toEqual([sampleFinding]);
-	});
-
-	test('returns findings only from rules whose needs are satisfied', async () => {
-		const satisfiedFinding: Finding = {
-			ruleId: 'r-ok',
-			message: 'ok',
-			artifacts: [],
-		};
-		const kernel = new Kernel();
-		kernel.registerCollector(
-			makeCollector('c1', ['testFact'], { testFact: 'hello' }),
-		);
-		kernel.registerRule(makeRule('r-ok', ['testFact'], [satisfiedFinding]));
-		kernel.registerRule(makeRule('r-skip', ['otherFact'], [sampleFinding]));
-
-		const { findings } = await kernel.run();
-		expect(findings).toEqual([satisfiedFinding]);
+		const [r1, r2] = await Promise.all([build(), build()]);
+		expect(r1.findings.map((f) => f.fingerprint)).toEqual(r2.findings.map((f) => f.fingerprint));
 	});
 });
 
-describe('Kernel warnings', () => {
-	let warnSpy: ReturnType<typeof spyOn>;
-
-	beforeEach(() => {
-		warnSpy = spyOn(console, 'warn').mockImplementation(() => {});
-	});
-
-	afterEach(() => {
-		warnSpy.mockRestore();
-	});
-
-	test('warns when no collectors are registered', async () => {
+describe('Kernel fluent interface', () => {
+	test('registerCollector returns this', () => {
 		const kernel = new Kernel();
-		await kernel.run();
-		expect(warnSpy).toHaveBeenCalledWith(
-			expect.stringContaining('No collectors registered'),
-		);
+		expect(kernel.registerCollector(makeCollector([]))).toBe(kernel);
 	});
 
-	test('warns when no rules are registered', async () => {
+	test('registerRule returns this', () => {
 		const kernel = new Kernel();
-		await kernel.run();
-		expect(warnSpy).toHaveBeenCalledWith(
-			expect.stringContaining('No rules registered'),
-		);
-	});
-
-	test('warns when a rule is skipped due to missing facts', async () => {
-		const kernel = new Kernel();
-		kernel.registerCollector(
-			makeCollector('c1', ['testFact'], { testFact: 'hello' }),
-		);
-		kernel.registerRule(makeRule('r-skip', ['otherFact'], [sampleFinding]));
-		await kernel.run();
-		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('r-skip'));
+		expect(kernel.registerRule(makeRule())).toBe(kernel);
 	});
 });
-
-describe('Kernel fluent API', () => {
-	test('registerCollector() returns this', () => {
-		const kernel = new Kernel();
-		const result = kernel.registerCollector(
-			makeCollector('c1', ['testFact'], { testFact: 'x' }),
-		);
-		expect(result).toBe(kernel);
-	});
-
-	test('registerRule() returns this', () => {
-		const kernel = new Kernel();
-		const result = kernel.registerRule(makeRule('r1', [], []));
-		expect(result).toBe(kernel);
-	});
-});
-

@@ -1,10 +1,59 @@
-import { type Finding, FindingStatus } from '@maat/contracts';
+import {
+	type Artifact,
+	type Finding,
+	FindingStatus,
+	type Rule,
+} from '@maat/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
+
+function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
+	const described = rule?.describeArtifact(artifact) ?? {
+		[artifact.kind]: String(artifact.data),
+	};
+	return Object.entries(described)
+		.map(([k, v]) => `${k}: ${v}`)
+		.join('  ');
+}
+
+function printFindings(
+	findings: Finding[],
+	log: (...args: unknown[]) => void,
+	getRule: (id: string) => Rule | undefined,
+): void {
+	if (findings.length === 0) {
+		return;
+	}
+
+	const byRule = new Map<string, Finding[]>();
+	for (const f of findings) {
+		const group = byRule.get(f.ruleId) ?? [];
+		group.push(f);
+		byRule.set(f.ruleId, group);
+	}
+
+	const heading = `FINDINGS (${findings.length})`;
+	log(`
+${heading}`);
+	log('─'.repeat(heading.length));
+
+	for (const [ruleId, group] of byRule) {
+		const rule = getRule(ruleId);
+		log(`
+  [${ruleId}] — ${group.length} finding(s)`);
+		for (const f of group) {
+			log(`    ${f.fingerprint.slice(0, 8)}  ${f.message}`);
+			for (const artifact of f.artifacts) {
+				log(`            ↳ ${formatArtifact(artifact, rule)}`);
+			}
+		}
+	}
+}
 
 type CheckOptions = {
 	ledger?: boolean;
 	showBaselined?: boolean;
+	silent?: boolean;
 };
 
 const _origLog = console.log;
@@ -19,15 +68,31 @@ console.log = (...args: unknown[]) =>
 
 export class Check extends MaatCommandBase implements MaatCommand {
 	public async action(options: CheckOptions = {}) {
+		const log = (...args: unknown[]) => {
+			if (!options.silent) {
+				console.log(...args);
+			}
+		};
+		const warn = (...args: unknown[]) => {
+			if (!options.silent) {
+				console.warn(...args);
+			}
+		};
+		const error = (...args: unknown[]) => {
+			if (!options.silent) {
+				console.error(...args);
+			}
+		};
+
 		if (options.ledger === true && !this.isLedgerProvided()) {
-			console.error(
+			error(
 				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to use this feature.',
 			);
 			process.exit(1);
 		}
 
 		if (options.showBaselined && !this.isLedgerProvided()) {
-			console.error('--show-baselined requires a ledger to be configured.');
+			error('--show-baselined requires a ledger to be configured.');
 			process.exit(1);
 		}
 
@@ -37,12 +102,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		);
 
 		if (!this.isLedgerProvided()) {
+			printFindings(currentFindings, log, (id) => this.kernel.getRuleById(id));
 			const insightResults = this.runInsightsIfEnabled(currentFindings);
 			for (const result of insightResults) {
-				console.log(
-					`[Insight: ${result.insightId}] ${result.message}`,
-					result.data,
-				);
+				log(`[Insight: ${result.insightId}] ${result.message}`, result.data);
 			}
 			if (this.config.check?.strict && currentFindings.length > 0) {
 				process.exit(1);
@@ -106,7 +169,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					record.state === FindingStatus.PROMOTED ||
 					record.state === FindingStatus.ENFORCED
 				) {
-					console.warn(
+					warn(
 						`[maat] Finding "${record.fingerprint}" (${record.state}) is no longer detected. Run 'maat resolve --fingerprint ${record.fingerprint}' to confirm resolution.`,
 					);
 				}
@@ -136,12 +199,11 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					axiomExceptedFingerprints,
 				);
 
+		printFindings(visibleFindings, log, (id) => this.kernel.getRuleById(id));
+
 		const insightResults = this.runInsightsIfEnabled(visibleFindings);
 		for (const result of insightResults) {
-			console.log(
-				`[Insight: ${result.insightId}] ${result.message}`,
-				result.data,
-			);
+			log(`[Insight: ${result.insightId}] ${result.message}`, result.data);
 		}
 
 		const hasEnforcedViolations = visibleFindings.some((f) =>
@@ -149,11 +211,40 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		);
 
 		if (hasEnforcedViolations || hasRegressions || hasPendingResolutions) {
+			if (hasEnforcedViolations) {
+				error(
+					'One or more findings are currently enforced. Please address these issues to comply with the defined architecture.',
+				);
+			}
+			if (hasRegressions) {
+				error(
+					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.',
+				);
+			}
+			if (hasPendingResolutions) {
+				error(
+					'One or more findings that were previously promoted or enforced are no longer detected. Please confirm their resolution.',
+				);
+			}
 			process.exit(1);
 		}
 
 		if (this.config.check?.strict && visibleFindings.length > 0) {
+			error(
+				'One or more findings detected. Please address these issues to comply with the defined architecture.',
+			);
 			process.exit(1);
+		}
+
+		if (visibleFindings.length === 0) {
+			log('No findings detected. Great job!');
+		} else {
+			log(
+				`${visibleFindings.length} finding(s) detected. Please review the output above for details.`,
+			);
+			if (this.config.check?.strict) {
+				process.exit(1);
+			}
 		}
 	}
 
@@ -165,6 +256,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			.option(
 				'--show-baselined',
 				'Include baselined findings in output and exit code evaluation',
+			)
+			.option(
+				'--silent',
+				'Suppress all console output (exit code still reflects findings)',
 			)
 			.action((options: CheckOptions) => this.action(options));
 	}

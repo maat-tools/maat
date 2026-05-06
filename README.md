@@ -52,6 +52,15 @@ Run the first check:
 maat check
 ```
 
+The CLI searches from the current directory upward for `maat.config.ts` and
+the other `maat.config.*` variants. You can also pass a file explicitly:
+
+```bash
+maat --config ./maat.config.ts check
+```
+
+For CI or scripts, `MAAT_CONFIG=./path/to/maat.config.ts` works too.
+
 All findings start as `observation`. Use `maat baseline` to accept the current state as the starting point, then `maat promote` and `maat enforce` as you review.
 
 ## Packages

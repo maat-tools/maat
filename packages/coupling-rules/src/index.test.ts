@@ -182,3 +182,18 @@ describe('roles', () => {
 		expect(Pure.name).toBe('Pure');
 	});
 });
+
+describe('LayerRule.describeArtifact()', () => {
+	const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
+
+	test('import artifact → returns file and specifier', () => {
+		const imp = makeImport({ file: '/src/index.ts', specifier: 'uuid' });
+		const described = rule.describeArtifact({ kind: 'import', data: imp });
+		expect(described).toEqual({ file: '/src/index.ts', specifier: 'uuid' });
+	});
+
+	test('unknown kind → returns stringified value', () => {
+		const described = rule.describeArtifact({ kind: 'other', data: 'raw' });
+		expect(described).toEqual({ value: 'raw' });
+	});
+});

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import {
 	type Collector,
 	defineCollector,
@@ -16,6 +16,7 @@ import { Project } from 'ts-morph';
 
 export type TSInput = {
 	tsConfigFilePath: string;
+	exclude?: string[];
 };
 
 const getContext = (parentKind: string | undefined): ConstantContext => {
@@ -39,6 +40,10 @@ const getContext = (parentKind: string | undefined): ConstantContext => {
 };
 
 const packageNameCache = new Map<string, string | null>();
+
+function toProjectRelativePath(projectRoot: string, filePath: string): string {
+	return relative(projectRoot, filePath).replace(/\\/g, '/');
+}
 
 function resolvePackageName(filePath: string): string | null {
 	let dir = dirname(filePath);
@@ -81,15 +86,25 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 
 	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);
+		const projectRoot = dirname(resolvedPath);
 		const project = new Project({ tsConfigFilePath: resolvedPath });
 		const sourceFiles = project.getSourceFiles();
+		const excludePatterns = this.config.exclude ?? [
+			'**/*.test.ts',
+			'**/*.spec.ts',
+		];
+		const excludeGlobs = excludePatterns.map((p) => new Bun.Glob(p));
 
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
 
 		for (const sourceFile of sourceFiles) {
-			const file = sourceFile.getFilePath();
-			const packageName = resolvePackageName(file);
+			const absoluteFile = sourceFile.getFilePath();
+			const file = toProjectRelativePath(projectRoot, absoluteFile);
+			if (excludeGlobs.some((g) => g.match(file))) {
+				continue;
+			}
+			const packageName = resolvePackageName(absoluteFile);
 
 			for (const decl of sourceFile.getImportDeclarations()) {
 				imports.push({

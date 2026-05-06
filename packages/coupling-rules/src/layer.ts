@@ -1,4 +1,5 @@
 import {
+	type Artifact,
 	defineRuleBuilder,
 	type FindingRuleOutput,
 	type Rule,
@@ -42,6 +43,17 @@ class LayerRule implements Rule<'imports'> {
 		}
 
 		return findings;
+	}
+
+	describeArtifact(artifact: Artifact): Record<string, string> {
+		if (artifact.kind === 'import') {
+			const imp = artifact.data as Import;
+			return {
+				file: imp.file,
+				specifier: imp.specifier,
+			};
+		}
+		return { value: String(artifact.data) };
 	}
 
 	private isRelative(specifier: string): boolean {

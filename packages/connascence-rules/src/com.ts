@@ -1,4 +1,9 @@
-import { defineRule, type FindingRuleOutput, type Rule } from '@maat/contracts';
+import {
+	type Artifact,
+	defineRule,
+	type FindingRuleOutput,
+	type Rule,
+} from '@maat/contracts';
 import { CONSTANTS_CAPABILITY, type Constant } from '@maat/vocabulary';
 
 declare module '@maat/contracts' {
@@ -84,6 +89,19 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 		}
 
 		return findings;
+	}
+
+	public describeArtifact(artifact: Artifact): Record<string, string> {
+		if (artifact.kind === 'source') {
+			const c = artifact.data as Constant;
+			const loc = `${c.location.file}:${c.location.line}${c.location.column !== undefined ? `:${c.location.column}` : ''}`;
+			return {
+				location: loc,
+				context: c.context,
+				value: c.raw,
+			};
+		}
+		return { value: String(artifact.data) };
 	}
 }
 

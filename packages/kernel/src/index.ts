@@ -59,6 +59,10 @@ export class Kernel {
 		return this;
 	}
 
+	public getRuleById(id: string): Rule | undefined {
+		return this.rules.find((r) => r.id === id);
+	}
+
 	public async run(): Promise<KernelResult> {
 		const facts: Partial<FactRegistry> = {};
 

@@ -22,6 +22,7 @@ describe('defineRule', () => {
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
+			describeArtifact: () => ({}),
 		}));
 		expect(typeof factory).toBe('function');
 		expect(factory[RULE_FACTORY_BRAND]).toBe(true);
@@ -34,6 +35,7 @@ describe('defineRuleSet', () => {
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
+			describeArtifact: () => ({}),
 		}));
 		const set = defineRuleSet([f]);
 		expect(set[RULE_SET_BRAND]).toBe(true);
@@ -60,6 +62,7 @@ describe('isRuleFactory', () => {
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
+			describeArtifact: () => ({}),
 		}));
 		expect(isRuleFactory(factory)).toBe(true);
 	});
@@ -80,6 +83,7 @@ describe('isRuleSet', () => {
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
+			describeArtifact: () => ({}),
 		}));
 		expect(isRuleSet(defineRuleSet([f]))).toBe(true);
 	});
@@ -149,14 +153,14 @@ describe('isInsight', () => {
 describe('defineRuleBuilder', () => {
 	test('returns object with RULE_BUILDER_BRAND', () => {
 		const builder = defineRuleBuilder({
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }),
+			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
 		});
 		expect(builder[RULE_BUILDER_BRAND]).toBe(true);
 	});
 
 	test('preserves all original methods on the builder', () => {
 		const original = {
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }),
+			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
 			extra: () => 42,
 		};
 		const branded = defineRuleBuilder(original);
@@ -167,7 +171,7 @@ describe('defineRuleBuilder', () => {
 describe('isRuleBuilder', () => {
 	test('true for branded builder', () => {
 		const builder = defineRuleBuilder({
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }),
+			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
 		});
 		expect(isRuleBuilder(builder)).toBe(true);
 	});

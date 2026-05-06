@@ -25,6 +25,7 @@ export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
 	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];
+	describeArtifact(artifact: Artifact): Record<string, string>;
 }
 
 export interface RuleBuilder {

@@ -14,8 +14,7 @@ import {
 	isRuleSet,
 	type LedgerBackend,
 } from '@maat/contracts';
-import { defineConfig } from '@maat/core';
-import { layer, Pure } from '@maat/coupling-rules';
+import type { MaatConfig } from '@maat/core';
 import { Kernel } from '@maat/kernel';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
@@ -25,32 +24,7 @@ import { Check } from './commands/check';
 import { Promote } from './commands/promote';
 import { Resolve } from './commands/resolve';
 import { Visualize } from './commands/visualize';
-
-const maatConfig = defineConfig({
-	collectors: [
-		[
-			'@maat/collector-ts',
-			{
-				tsConfigFilePath:
-					'./packages/collector-ts/fixtures/sample-project/tsconfig.json',
-			},
-		],
-	],
-	rules: [
-		['@maat/connascence-rules', {}],
-		layer('@maat/contracts').is(Pure).allows(),
-		layer('@maat/vocabulary').is(Pure).allows('@maat/contracts'),
-		layer('@maat/core').is(Pure).allows('@maat/contracts'),
-		layer('@maat/kernel').is(Pure).allows('@maat/contracts', '@maat/core'),
-		layer('@maat/coupling-rules')
-			.is(Pure)
-			.allows('@maat/contracts', '@maat/vocabulary'),
-		layer('@maat/connascence-rules')
-			.is(Pure)
-			.allows('@maat/contracts', '@maat/vocabulary', '@maat/core'),
-	],
-	ledger: ['@maat/file-ledger', { path: './maat-ledger.ndjson' }],
-});
+import { loadMaatConfig } from './config';
 
 class MaatCLI {
 	private program: Command = new Command();
@@ -62,21 +36,47 @@ class MaatCLI {
 		this.registerCLIInfo();
 	}
 
-	public async run() {
-		await this.configureKernel();
-		await this.configureInsights();
-		await this.configureLedger();
-		this.registerCommands();
-		this.program.parse();
+	public async run(argv = process.argv) {
+		if (isHelpOrVersionRequest(argv)) {
+			this.registerCommands(
+				{ collectors: [], rules: [] },
+				{
+					warnMissingLedger: false,
+				},
+			);
+			this.program.parse(argv);
+			return;
+		}
+
+		const loadedConfig = await loadMaatConfig({
+			argv: argv.slice(2),
+			cwd: process.cwd(),
+			env: process.env,
+		});
+		process.chdir(loadedConfig.rootDir);
+
+		await this.configureKernel(loadedConfig.config);
+		await this.configureInsights(loadedConfig.config);
+		await this.configureLedger(loadedConfig.config);
+		this.registerCommands(loadedConfig.config);
+		this.program.parse(argv);
 	}
 
-	private registerCommands() {
+	private registerCommands(
+		maatConfig: MaatConfig,
+		options: { warnMissingLedger?: boolean } = {},
+	) {
 		if (!this.ledger) {
-			console.warn(
-				'No ledger configured. Commands that produce findings will not be registered.',
-			);
+			if (options.warnMissingLedger ?? true) {
+				console.warn(
+					'No ledger configured. Ledger-backed commands will require a ledger before they can run.',
+				);
+			}
 		}
-		const config = { ...maatConfig, check: { strict: true } };
+		const config = {
+			...maatConfig,
+			check: maatConfig.check ?? { strict: true },
+		};
 		const commands: MaatCommand[] = [
 			new Check(this.program, config, this.kernel, this.ledger, this.insights),
 			new Axiom(this.program, config, this.kernel, this.ledger, this.insights),
@@ -116,10 +116,14 @@ class MaatCLI {
 	}
 
 	private registerCLIInfo() {
-		this.program.name('maat').description('maat cli').version('0.0.1');
+		this.program
+			.name('maat')
+			.description('maat cli')
+			.version('0.0.1')
+			.option('-c, --config <path>', 'Path to a maat config file');
 	}
 
-	private async configureInsights() {
+	private async configureInsights(maatConfig: MaatConfig) {
 		for (const insightEntry of maatConfig.insights ?? []) {
 			const [insightId, options] =
 				typeof insightEntry === 'string' ? [insightEntry, {}] : insightEntry;
@@ -151,7 +155,7 @@ class MaatCLI {
 		}
 	}
 
-	private async configureLedger() {
+	private async configureLedger(maatConfig: MaatConfig) {
 		if (!maatConfig.ledger) {
 			return;
 		}
@@ -174,7 +178,7 @@ class MaatCLI {
 		this.ledger = factory(options);
 	}
 
-	private async configureKernel() {
+	private async configureKernel(maatConfig: MaatConfig) {
 		for (const collectorEntry of maatConfig.collectors) {
 			const [collectorId, options] =
 				typeof collectorEntry === 'string'
@@ -243,4 +247,18 @@ class MaatCLI {
 	}
 }
 
-new MaatCLI().run();
+function isHelpOrVersionRequest(argv: string[]): boolean {
+	return (
+		argv.includes('--help') ||
+		argv.includes('-h') ||
+		argv.includes('--version') ||
+		argv.includes('-V')
+	);
+}
+
+new MaatCLI().run().catch((error) => {
+	console.error(
+		`[maat] ${error instanceof Error ? error.message : String(error)}`,
+	);
+	process.exit(1);
+});

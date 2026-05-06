@@ -44,6 +44,7 @@ function makeKernel(findings: FindingRuleOutput[] = []) {
 		id: 'test@v1',
 		needFacts: [] as const,
 		evaluate: () => findings,
+		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	});
 	return kernel;
 }
@@ -110,6 +111,27 @@ describe('check without ledger', () => {
 		await expect(makeCheck([], null).action({ ledger: true })).rejects.toThrow(
 			'process.exit',
 		);
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	test('findings present → console.log is called', async () => {
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+		await makeCheck([RULE_OUTPUT], null).action({});
+		expect(logSpy).toHaveBeenCalled();
+	});
+
+	test('--silent with findings → console.log is NOT called', async () => {
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+		await makeCheck([RULE_OUTPUT], null).action({ silent: true });
+		expect(logSpy).not.toHaveBeenCalled();
+	});
+
+	test('--silent does not suppress exit code', async () => {
+		await expect(
+			makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({ silent: true }),
+		).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -246,6 +268,57 @@ describe('check with ledger', () => {
 			ledger: true,
 		});
 		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	test('findings present with ledger → console.log is called', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+		expect(logSpy).toHaveBeenCalled();
+	});
+
+	test('--silent with ledger → console.log and console.error are NOT called', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		const errSpy = spyOn(console, 'error').mockImplementation(() => {});
+		logSpy.mockClear();
+		errSpy.mockClear();
+		await makeCheck([RULE_OUTPUT], ledger).action({
+			ledger: true,
+			silent: true,
+		});
+		expect(logSpy).not.toHaveBeenCalled();
+		expect(errSpy).not.toHaveBeenCalled();
+	});
+
+	test('--silent with ledger still writes to ledger', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({
+			ledger: true,
+			silent: true,
+		});
+		const state = await ledger.getState();
+		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.OBSERVED);
+	});
+
+	test('--silent with enforced finding → still exits 1', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+		await new Promote(
+			new Command(),
+			BASE_CONFIG,
+			makeKernel(),
+			ledger,
+			[],
+		).action({
+			fingerprint: FINGERPRINT,
+			enforce: true,
+		});
+		await expect(
+			makeCheck([RULE_OUTPUT], ledger).action({ ledger: true, silent: true }),
+		).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
 

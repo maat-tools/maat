@@ -27,6 +27,7 @@ function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
 				message: `finding: ${value}`,
 				artifacts: [],
 			})),
+		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	};
 }
 
@@ -167,5 +168,22 @@ describe('Kernel.registerRule validation', () => {
 		expect(() =>
 			new Kernel().registerRule(rule as unknown as Rule<'testFacts'>),
 		).toThrow('evaluate');
+	});
+});
+
+describe('Kernel.getRuleById', () => {
+	test('returns the rule when registered', () => {
+		const rule = makeRule('my-rule@v1');
+		const kernel = new Kernel().registerRule(rule);
+		expect(kernel.getRuleById('my-rule@v1')).toBe(rule);
+	});
+
+	test('returns undefined for unknown id', () => {
+		const kernel = new Kernel().registerRule(makeRule('known@v1'));
+		expect(kernel.getRuleById('unknown@v1')).toBeUndefined();
+	});
+
+	test('returns undefined when no rules registered', () => {
+		expect(new Kernel().getRuleById('any@v1')).toBeUndefined();
 	});
 });

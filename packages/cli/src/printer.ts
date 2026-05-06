@@ -22,28 +22,38 @@ export class Printer {
 	}
 
 	public log(message: string): void {
-		if (this.silent) return;
+		if (this.silent) {
+			return;
+		}
 		console.log(message);
 	}
 
 	public warn(message: string): void {
-		if (this.silent) return;
+		if (this.silent) {
+			return;
+		}
 		console.warn(chalk.yellow(message));
 	}
 
 	public error(message: string): void {
-		if (this.silent) return;
+		if (this.silent) {
+			return;
+		}
 		console.error(chalk.red(message));
 	}
 
 	public section(heading: string): void {
-		if (this.silent) return;
+		if (this.silent) {
+			return;
+		}
 		console.log(`\n${chalk.bold(heading)}`);
 		console.log(chalk.dim('─'.repeat(heading.length)));
 	}
 
 	public findings(findings: Finding[], getRule: (id: string) => Rule | undefined): void {
-		if (this.silent || findings.length === 0) return;
+		if (this.silent || findings.length === 0) {
+			return;
+		}
 
 		const byRule = new Map<string, Finding[]>();
 		for (const f of findings) {
@@ -67,7 +77,9 @@ export class Printer {
 	}
 
 	public insight(result: InsightResult): void {
-		if (this.silent) return;
+		if (this.silent) {
+			return;
+		}
 		console.log(`${chalk.magenta(`[Insight: ${result.insightId}]`)} ${result.message}`, result.data);
 	}
 

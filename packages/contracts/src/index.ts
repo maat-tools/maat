@@ -27,6 +27,10 @@ export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
 	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];
 }
 
+export interface RuleBuilder {
+	build(): Rule;
+}
+
 export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
@@ -41,10 +45,19 @@ export type InsightResult = {
 	data: unknown;
 };
 
+export type FindingEvent =
+	| FindingObservedEvent
+	| FindingBaselinedEvent
+	| FindingPromotedEvent
+	| FindingEnforcedEvent
+	| FindingResolvedEvent;
+
+export type FindingEventInput = WithoutEntryId<FindingEvent>;
+
 export interface LedgerBackend {
 	append(event: LedgerEventInput): Promise<void>;
 	getState(): Promise<LedgerSnapshot>;
-	buildEntry(finding: Finding, type: FindingStatus): LedgerEvent;
+	buildEntry(finding: Finding, type: FindingStatus): FindingEventInput;
 }
 
 export type Artifact = {
@@ -78,6 +91,8 @@ export const FindingStatus = {
 	ENFORCED: 'finding.enforced',
 	RESOLVED: 'finding.resolved',
 	AXIOM_DECLARED: 'axiom.declared',
+	AXIOM_SUPERSEDED: 'axiom.superseded',
+	AXIOM_REVOKED: 'axiom.revoked',
 } as const;
 
 export type FindingStatus = (typeof FindingStatus)[keyof typeof FindingStatus];
@@ -118,6 +133,28 @@ export type AxiomDeclaredEvent = LedgerEntryBase & {
 	readonly scope: string;
 	readonly claim: string;
 	readonly note?: string;
+	readonly fingerprints?: readonly string[];
+};
+
+export type AxiomSupersededEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.AXIOM_SUPERSEDED;
+	readonly axiom_id: string;
+	readonly reason?: string;
+};
+
+export type AxiomRevokedEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.AXIOM_REVOKED;
+	readonly axiom_id: string;
+	readonly reason?: string;
+};
+
+export type AxiomRecord = {
+	readonly axiom_id: string;
+	readonly scope: string;
+	readonly claim: string;
+	readonly note?: string;
+	readonly fingerprints?: readonly string[];
+	readonly active: boolean;
 };
 
 export type LedgerEvent =
@@ -126,7 +163,9 @@ export type LedgerEvent =
 	| FindingPromotedEvent
 	| FindingEnforcedEvent
 	| FindingResolvedEvent
-	| AxiomDeclaredEvent;
+	| AxiomDeclaredEvent
+	| AxiomSupersededEvent
+	| AxiomRevokedEvent;
 
 export type LedgerEventInput = WithoutEntryId<LedgerEvent>;
 
@@ -142,7 +181,7 @@ export type FindingRecord = {
 export type LedgerSnapshot = {
 	readonly last_entry_id: string | null;
 	readonly findings: Record<string, FindingRecord>;
-	readonly axioms: Record<string, AxiomDeclaredEvent>;
+	readonly axioms: Record<string, AxiomRecord>;
 };
 
 export type CollectorFactory<
@@ -159,16 +198,17 @@ export type InsightFactory<TOptions = Record<string, never>> = (
 ) => Insight;
 
 export type RuleSet = {
-	readonly factories: readonly BrandedRuleFactory<Record<string, unknown>>[];
+	readonly factories: readonly BrandedRuleFactory<unknown>[];
 };
 
 export type InsightSet = {
-	readonly factories: readonly BrandedInsightFactory<Record<string, unknown>>[];
+	readonly factories: readonly BrandedInsightFactory<unknown>[];
 };
 
 export const COLLECTOR_FACTORY_BRAND = Symbol('maat.CollectorFactory');
 export const RULE_FACTORY_BRAND = Symbol('maat.RuleFactory');
 export const RULE_SET_BRAND = Symbol('maat.RuleSet');
+export const RULE_BUILDER_BRAND = Symbol('maat.RuleBuilder');
 export const LEDGER_BACKEND_FACTORY_BRAND = Symbol('maat.LedgerBackendFactory');
 export const INSIGHT_FACTORY_BRAND = Symbol('maat.InsightFactory');
 export const INSIGHT_SET_BRAND = Symbol('maat.InsightSet');
@@ -187,6 +227,10 @@ export type BrandedRuleFactory<TOptions = Record<string, never>> =
 
 export type BrandedRuleSet = RuleSet & {
 	readonly [RULE_SET_BRAND]: true;
+};
+
+export type BrandedRuleBuilder = RuleBuilder & {
+	readonly [RULE_BUILDER_BRAND]: true;
 };
 
 export type LedgerBackendFactory<TConfig = Record<string, never>> = (
@@ -222,10 +266,14 @@ export function defineRule<TOptions = Record<string, never>>(
 	return Object.assign(factory, { [RULE_FACTORY_BRAND]: true as const });
 }
 
-export function defineRuleSet(
-	factories: BrandedRuleFactory<Record<string, unknown>>[],
+export function defineRuleSet<T>(
+	factories: BrandedRuleFactory<T>[],
 ): BrandedRuleSet {
-	return { factories, [RULE_SET_BRAND]: true as const };
+	return { factories: factories as unknown as BrandedRuleFactory<unknown>[], [RULE_SET_BRAND]: true as const };
+}
+
+export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T & { readonly [RULE_BUILDER_BRAND]: true } {
+	return Object.assign(builder, { [RULE_BUILDER_BRAND]: true as const });
 }
 
 export function defineInsight<TOptions = Record<string, never>>(
@@ -234,10 +282,10 @@ export function defineInsight<TOptions = Record<string, never>>(
 	return Object.assign(factory, { [INSIGHT_FACTORY_BRAND]: true as const });
 }
 
-export function defineInsightSet(
-	factories: BrandedInsightFactory<Record<string, unknown>>[],
+export function defineInsightSet<T>(
+	factories: BrandedInsightFactory<T>[],
 ): BrandedInsightSet {
-	return { factories, [INSIGHT_SET_BRAND]: true as const };
+	return { factories: factories as unknown as BrandedInsightFactory<unknown>[], [INSIGHT_SET_BRAND]: true as const };
 }
 
 export function defineLedgerBackend<TConfig>(
@@ -293,6 +341,15 @@ export function isRule(obj: unknown): obj is Rule {
 		typeof (obj as Rule).id === 'string' &&
 		Array.isArray((obj as Rule).needFacts) &&
 		typeof (obj as Rule).evaluate === 'function'
+	);
+}
+
+export function isRuleBuilder(obj: unknown): obj is BrandedRuleBuilder {
+	return (
+		typeof obj === 'object' &&
+		obj !== null &&
+		(obj as Record<symbol, unknown>)[RULE_BUILDER_BRAND] === true &&
+		typeof (obj as RuleBuilder).build === 'function'
 	);
 }
 

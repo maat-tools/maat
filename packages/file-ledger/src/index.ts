@@ -1,8 +1,10 @@
 import { appendFile, writeFile } from 'node:fs/promises';
+import { ulid } from 'ulid';
 import {
 	defineLedgerBackend,
 	type LedgerBackend,
 	type LedgerEvent,
+	type LedgerEventInput,
 	type LedgerSnapshot,
 } from '@maat/contracts';
 import { LedgerBackendBase } from '../../core/src';
@@ -32,7 +34,8 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		super();
 	}
 
-	public async append(event: LedgerEvent): Promise<void> {
+	public async append(input: LedgerEventInput): Promise<void> {
+		const event = { entry_id: ulid(), ...input } as LedgerEvent;
 		await Promise.all([
 			appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8'),
 			this.updateSnapshot(event),

@@ -44,13 +44,23 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			return;
 		}
 
-		const snapshot = (await this.ledger.getState()).findings;
+		const fullSnapshot = await this.ledger.getState();
+		const findingsSnapshot = fullSnapshot.findings;
 		const baselinedFingerprints = new Set<string>();
 		const enforcedFingerprints = new Set<string>();
+		const axiomExceptedFingerprints = new Set<string>();
+
+		for (const axiom of Object.values(fullSnapshot.axioms)) {
+			if (axiom.active && axiom.fingerprints) {
+				for (const fp of axiom.fingerprints) {
+					axiomExceptedFingerprints.add(fp);
+				}
+			}
+		}
 		let hasRegressions = false;
 		let hasPendingResolutions = false;
 
-		for (const record of Object.values(snapshot)) {
+		for (const record of Object.values(findingsSnapshot)) {
 			if (record.baselined) {
 				baselinedFingerprints.add(record.fingerprint);
 			}
@@ -68,7 +78,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		if (options.ledger === true) {
 			const timestamp = new Date().toISOString();
 
-			for (const record of Object.values(snapshot)) {
+			for (const record of Object.values(findingsSnapshot)) {
 				if (currentFingerprints.has(record.fingerprint)) {
 					continue;
 				}
@@ -80,7 +90,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				}
 			}
 
-			for (const finding of this.getActiveFindings(currentFindings, baselinedFingerprints)) {
+			for (const finding of this.getActiveFindings(currentFindings, baselinedFingerprints, axiomExceptedFingerprints)) {
 				await this.ledger.append({
 					type: FindingStatus.OBSERVED,
 					timestamp,
@@ -94,7 +104,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		const visibleFindings = options.showBaselined
 			? currentFindings
-			: this.getActiveFindings(currentFindings, baselinedFingerprints);
+			: this.getActiveFindings(currentFindings, baselinedFingerprints, axiomExceptedFingerprints);
 
 		const insightResults = this.runInsightsIfEnabled(visibleFindings);
 		for (const result of insightResults) {
@@ -121,7 +131,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			.action((options: CheckOptions) => this.action(options));
 	}
 
-	private getActiveFindings(findings: Finding[], baselinedFingerprints: Set<string>): Finding[] {
-		return findings.filter((f) => !baselinedFingerprints.has(f.fingerprint));
+	private getActiveFindings(findings: Finding[], baselinedFingerprints: Set<string>, axiomExcepted: Set<string> = new Set()): Finding[] {
+		return findings.filter((f) => !baselinedFingerprints.has(f.fingerprint) && !axiomExcepted.has(f.fingerprint));
 	}
 }

@@ -5,8 +5,7 @@
 	"private": true,
 	"main": "./src/index.ts",
 	"exports": {
-		".": "./src/index.ts",
-		"./com": "./src/com.ts"
+		".": "./src/index.ts"
 	},
 	"scripts": {
 		"dev": "bun run src/index.ts",

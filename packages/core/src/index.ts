@@ -1,16 +1,18 @@
 import { createHash } from 'node:crypto';
-import { ulid } from 'ulid';
 import {
 	FindingStatus,
-	type AxiomDeclaredEvent,
+	type AxiomRecord,
 	type CollectorRegistry,
 	type Finding,
+	type FindingEventInput,
 	type FindingRecord,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
 	type LedgerEvent,
 	type LedgerEventInput,
 	type LedgerSnapshot,
+	type BrandedRuleBuilder,
+	type Rule,
 	type RuleRegistry,
 } from '@maat/contracts';
 
@@ -36,7 +38,9 @@ export type RuleEntry =
 	| keyof RuleRegistry
 	| RuleRegistryTuples
 	| (string & {})
-	| [string & {}, Record<string, unknown>];
+	| [string & {}, Record<string, unknown>]
+	| Rule
+	| BrandedRuleBuilder;
 
 export type InsightEntry =
 	| (string & {})
@@ -93,17 +97,14 @@ export abstract class RuleBase {
 	}
 }
 
-type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECLARED | typeof FindingStatus.RESOLVED>;
+type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECLARED | typeof FindingStatus.AXIOM_SUPERSEDED | typeof FindingStatus.AXIOM_REVOKED | typeof FindingStatus.RESOLVED>;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
 	abstract append(event: LedgerEventInput): Promise<void>;
 	abstract getState(): Promise<LedgerSnapshot>;
 
-	public buildEntry(finding: Finding, type: FindingEventStatus): LedgerEvent {
-		const base = {
-			entry_id: ulid(),
-			timestamp: new Date().toISOString(),
-		};
+	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {
+		const base = { timestamp: new Date().toISOString() };
 
 		switch (type) {
 			case FindingStatus.OBSERVED:
@@ -153,7 +154,24 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				findings[event.fingerprint] = { ...record, state: FindingStatus.RESOLVED };
 			}
 		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
-			axioms[event.axiom_id] = event satisfies AxiomDeclaredEvent;
+			axioms[event.axiom_id] = {
+				axiom_id: event.axiom_id,
+				scope: event.scope,
+				claim: event.claim,
+				note: event.note,
+				fingerprints: event.fingerprints,
+				active: true,
+			} satisfies AxiomRecord;
+		} else if (event.type === FindingStatus.AXIOM_SUPERSEDED) {
+			const record = axioms[event.axiom_id];
+			if (record !== undefined) {
+				axioms[event.axiom_id] = { ...record, active: false };
+			}
+		} else if (event.type === FindingStatus.AXIOM_REVOKED) {
+			const record = axioms[event.axiom_id];
+			if (record !== undefined) {
+				axioms[event.axiom_id] = { ...record, active: false };
+			}
 		}
 
 		return { last_entry_id: event.entry_id, findings, axioms };
@@ -171,12 +189,14 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 }
 
 export {
+	type BrandedRuleBuilder,
 	type Collector,
 	defineCollector,
 	defineInsight,
 	defineInsightSet,
 	defineLedgerBackend,
 	defineRule,
+	defineRuleBuilder,
 	defineRuleSet,
 	type Insight,
 	type InsightResult,
@@ -184,6 +204,8 @@ export {
 	isInsightFactory,
 	isInsightSet,
 	isLedgerBackendFactory,
+	isRuleBuilder,
 	type LedgerBackend,
 	type Rule,
+	type RuleBuilder,
 } from '@maat/contracts';

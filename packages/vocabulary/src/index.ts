@@ -1,12 +1,5 @@
-import type { Artifact } from '@maat/contracts';
-
-declare module '@maat/contracts' {
-	interface FactRegistry {
-		constants: Constant[];
-	}
-}
-
 export const CONSTANTS_CAPABILITY = 'constants' as const;
+export const IMPORTS_CAPABILITY = 'imports' as const;
 
 export type ConstantContext =
 	| 'argument'
@@ -30,3 +23,17 @@ export type Constant = {
 	context: ConstantContext;
 	location: SourceLocation;
 };
+
+export type Import = {
+	file: string;
+	packageName: string | null;
+	specifier: string;
+	location: SourceLocation;
+};
+
+declare module '@maat/contracts' {
+	interface FactRegistry {
+		constants: Constant[];
+		imports: Import[];
+	}
+}

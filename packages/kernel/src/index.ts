@@ -27,12 +27,30 @@ export class Kernel {
 	public registerCollector<TKeys extends keyof FactRegistry>(
 		collector: Collector<TKeys>,
 	): this {
+		if (!collector.id || collector.id.trim() === '') {
+			throw new Error('Collector must have a non-empty id');
+		}
+		if (!Array.isArray(collector.provideFacts) || collector.provideFacts.length === 0) {
+			throw new Error(`Collector "${collector.id}" must declare at least one fact in provideFacts`);
+		}
+		if (typeof collector.collect !== 'function') {
+			throw new Error(`Collector "${collector.id}" must implement collect()`);
+		}
 		this.collectors.push(collector);
 
 		return this;
 	}
 
 	public registerRule(rule: Rule): this {
+		if (!rule.id || rule.id.trim() === '') {
+			throw new Error('Rule must have a non-empty id');
+		}
+		if (!Array.isArray(rule.needFacts)) {
+			throw new Error(`Rule "${rule.id}" must have a needFacts array`);
+		}
+		if (typeof rule.evaluate !== 'function') {
+			throw new Error(`Rule "${rule.id}" must implement evaluate()`);
+		}
 		this.rules.push(rule);
 		
 		return this;

@@ -1,14 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import {
 	COLLECTOR_FACTORY_BRAND,
+	RULE_BUILDER_BRAND,
 	RULE_FACTORY_BRAND,
 	RULE_SET_BRAND,
 	defineCollector,
 	defineRule,
+	defineRuleBuilder,
 	defineRuleSet,
 	isCollector,
 	isInsight,
 	isRule,
+	isRuleBuilder,
 	isRuleFactory,
 	isRuleSet,
 } from './index';
@@ -26,7 +29,8 @@ describe('defineRuleSet', () => {
 		const f = defineRule(() => ({ id: 'r', needFacts: [], evaluate: () => [] }));
 		const set = defineRuleSet([f]);
 		expect(set[RULE_SET_BRAND]).toBe(true);
-		expect(set.factories).toEqual([f]);
+		expect(set.factories).toHaveLength(1);
+		expect(set.factories[0] as unknown).toBe(f);
 	});
 });
 
@@ -113,5 +117,37 @@ describe('isInsight', () => {
 
 	test('false for null', () => {
 		expect(isInsight(null)).toBe(false);
+	});
+});
+
+describe('defineRuleBuilder', () => {
+	test('returns object with RULE_BUILDER_BRAND', () => {
+		const builder = defineRuleBuilder({ build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }) });
+		expect(builder[RULE_BUILDER_BRAND]).toBe(true);
+	});
+
+	test('preserves all original methods on the builder', () => {
+		const original = { build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }), extra: () => 42 };
+		const branded = defineRuleBuilder(original);
+		expect(branded.extra()).toBe(42);
+	});
+});
+
+describe('isRuleBuilder', () => {
+	test('true for branded builder', () => {
+		const builder = defineRuleBuilder({ build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [] }) });
+		expect(isRuleBuilder(builder)).toBe(true);
+	});
+
+	test('false for unbranded object with build()', () => {
+		expect(isRuleBuilder({ build: () => ({ id: 'r', needFacts: [], evaluate: () => [] }) })).toBe(false);
+	});
+
+	test('false for null', () => {
+		expect(isRuleBuilder(null)).toBe(false);
+	});
+
+	test('false for plain function', () => {
+		expect(isRuleBuilder(() => {})).toBe(false);
 	});
 });

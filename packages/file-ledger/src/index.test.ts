@@ -23,7 +23,6 @@ afterEach(async () => {
 });
 
 const observedEvent = {
-	entry_id: 'e1',
 	type: FindingStatus.OBSERVED,
 	timestamp: new Date().toISOString(),
 	fingerprint: 'fp1',
@@ -47,16 +46,24 @@ describe('FilePathLedgerBackend', () => {
 		expect(state.findings['fp1']?.rule_id).toBe('rule@v1');
 	});
 
+	test('append generates entry_id — callers must not provide it', async () => {
+		await ledger.append(observedEvent);
+		const line = (await Bun.file(ledgerPath).text()).trim();
+		const event = JSON.parse(line);
+		expect(typeof event.entry_id).toBe('string');
+		expect(event.entry_id.length).toBeGreaterThan(0);
+		const state = await ledger.getState();
+		expect(state.last_entry_id).toBe(event.entry_id);
+	});
+
 	test('multiple appends accumulate correctly in snapshot', async () => {
 		await ledger.append(observedEvent);
 		await ledger.append({
-			entry_id: 'e2',
 			type: FindingStatus.BASELINED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp1',
 		});
 		await ledger.append({
-			entry_id: 'e3',
 			type: FindingStatus.OBSERVED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp2',
@@ -73,7 +80,6 @@ describe('FilePathLedgerBackend', () => {
 	test('getState rebuilds from NDJSON when snapshot is missing', async () => {
 		await ledger.append(observedEvent);
 		await ledger.append({
-			entry_id: 'e2',
 			type: FindingStatus.PROMOTED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp1',

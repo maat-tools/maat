@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import {
 	type Collector,
 	defineCollector,
@@ -8,6 +9,8 @@ import {
 	CONSTANTS_CAPABILITY,
 	type Constant,
 	type ConstantContext,
+	IMPORTS_CAPABILITY,
+	type Import,
 } from '@maat/vocabulary';
 import { Project } from 'ts-morph';
 
@@ -35,21 +38,68 @@ const getContext = (parentKind: string | undefined): ConstantContext => {
 	}
 };
 
-export class TSCollector implements Collector<'constants'> {
+const packageNameCache = new Map<string, string | null>();
+
+function resolvePackageName(filePath: string): string | null {
+	let dir = dirname(filePath);
+
+	while (true) {
+		if (packageNameCache.has(dir)) {
+			return packageNameCache.get(dir) ?? null;
+		}
+
+		const pkgPath = resolve(dir, 'package.json');
+		if (existsSync(pkgPath)) {
+			try {
+				const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+				const name = typeof pkg.name === 'string' ? pkg.name : null;
+				packageNameCache.set(dir, name);
+				return name;
+			} catch {
+				packageNameCache.set(dir, null);
+				return null;
+			}
+		}
+		const parent = dirname(dir);
+		if (parent === dir) {
+			break;
+		}
+		dir = parent;
+	}
+	
+	return null;
+}
+
+export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
-	public readonly provideFacts = [CONSTANTS_CAPABILITY] as const;
+	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
 
 	constructor(private readonly config: TSInput) { }
 
-	public async collect(): Promise<Pick<FactRegistry, 'constants'>> {
+	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);
 		const project = new Project({ tsConfigFilePath: resolvedPath });
 		const sourceFiles = project.getSourceFiles();
 
 		const constants: Constant[] = [];
+		const imports: Import[] = [];
 
 		for (const sourceFile of sourceFiles) {
 			const file = sourceFile.getFilePath();
+			const packageName = resolvePackageName(file);
+
+			for (const decl of sourceFile.getImportDeclarations()) {
+				imports.push({
+					file,
+					packageName,
+					specifier: decl.getModuleSpecifierValue(),
+					location: {
+						file,
+						line: decl.getStartLineNumber(),
+						column: decl.getStartLinePos(),
+					},
+				});
+			}
 
 			for (const node of sourceFile.getDescendants()) {
 				const kind = node.getKindName();
@@ -81,7 +131,7 @@ export class TSCollector implements Collector<'constants'> {
 			}
 		}
 
-		return { constants };
+		return { constants, imports };
 	}
 }
 

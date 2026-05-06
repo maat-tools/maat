@@ -8,12 +8,14 @@ import {
 	isInsightSet,
 	isLedgerBackendFactory,
 	isRule,
+	isRuleBuilder,
 	isRuleFactory,
 	isRuleSet,
 	type Insight,
 	type LedgerBackend,
 } from '@maat/contracts';
 import { defineConfig } from '@maat/core';
+import { layer, Pure } from '@maat/coupling-rules';
 import { Kernel } from '@maat/kernel';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
@@ -34,7 +36,15 @@ const maatConfig = defineConfig({
 			},
 		],
 	],
-	rules: [['@maat/coupling-rules', { }]],
+	rules: [
+		['@maat/connascence-rules', {}],
+		layer('@maat/contracts').is(Pure).allows(),
+		layer('@maat/vocabulary').is(Pure).allows('@maat/contracts'),
+		layer('@maat/core').is(Pure).allows('@maat/contracts'),
+		layer('@maat/kernel').is(Pure).allows('@maat/contracts', '@maat/core'),
+		layer('@maat/coupling-rules').is(Pure).allows('@maat/contracts', '@maat/vocabulary'),
+		layer('@maat/connascence-rules').is(Pure).allows('@maat/contracts', '@maat/vocabulary', '@maat/core'),
+	],
 	ledger: ['@maat/file-ledger', { path: './maat-ledger.ndjson' }],
 });
 
@@ -168,6 +178,16 @@ class MaatCLI {
 		}
 
 		for (const ruleEntry of maatConfig.rules) {
+			if (isRule(ruleEntry)) {
+				this.kernel.registerRule(ruleEntry);
+				continue;
+			}
+
+			if (isRuleBuilder(ruleEntry)) {
+				this.kernel.registerRule(ruleEntry.build());
+				continue;
+			}
+
 			const [ruleId, options] =
 				typeof ruleEntry === 'string' ? [ruleEntry, {}] : ruleEntry;
 

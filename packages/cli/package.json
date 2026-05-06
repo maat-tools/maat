@@ -21,6 +21,7 @@
 		"@maat/contracts": "workspace:*",
 		"@maat/collector-ts": "workspace:*",
 		"@maat/kernel": "workspace:*",
+		"@maat/connascence-rules": "workspace:*",
 		"@maat/coupling-rules": "workspace:*",
 		"@maat/core": "workspace:*",
 		"@maat/file-ledger": "workspace:*"

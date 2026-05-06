@@ -6,7 +6,6 @@ import {
 	type LedgerEventInput,
 	type LedgerSnapshot,
 } from '@maat/contracts';
-import { ulid } from 'ulid';
 import { LedgerBackendBase } from '../../core/src';
 
 export type {
@@ -39,7 +38,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	public async append(input: LedgerEventInput): Promise<void> {
-		const event = { entry_id: ulid(), ...input } as LedgerEvent;
+		const event = this.stampEvent(input);
 		await Promise.all([
 			appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8'),
 			this.updateSnapshot(event),
@@ -79,6 +78,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			return [];
 		}
 		const text = await file.text();
+
 		return text.trim().length === 0
 			? []
 			: text
@@ -94,6 +94,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			snapshot = this.applyEvent(snapshot, event);
 		}
 		await this.persistSnapshot(snapshot);
+
 		return snapshot;
 	}
 }

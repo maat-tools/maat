@@ -15,7 +15,6 @@
 		"@biomejs/biome": "2.4.14"
 	},
 	"dependencies": {
-		"@maat/contracts": "workspace:*",
-		"@maat/core": "workspace:*"
+		"@maat/contracts": "workspace:*"
 	}
 }

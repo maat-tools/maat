@@ -15,6 +15,7 @@ import {
 	type Rule,
 	type RuleRegistry,
 } from '@maat/contracts';
+import { ulid } from 'ulid';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 
@@ -93,6 +94,10 @@ type FindingEventStatus = Exclude<
 export abstract class LedgerBackendBase implements LedgerBackend {
 	public abstract append(event: LedgerEventInput): Promise<void>;
 	public abstract getState(): Promise<LedgerSnapshot>;
+
+	protected stampEvent(input: LedgerEventInput): LedgerEvent {
+		return { entry_id: ulid(), ...input } as LedgerEvent;
+	}
 
 	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {
 		const base = { timestamp: new Date().toISOString() };

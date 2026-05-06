@@ -1,9 +1,4 @@
-import type { Collector, FactRegistry, Finding, Rule } from '@maat/contracts';
-import { stableHash } from '@maat/core';
-
-function generateFingerprint(ruleId: string, ruleIdentifier: Record<string, unknown>): string {
-	return stableHash({ ruleId, data: ruleIdentifier });
-}
+import { type Collector, type FactRegistry, type Finding, generateFingerprint, type Rule } from '@maat/contracts';
 
 type StoredCollector = {
 	readonly id: string;

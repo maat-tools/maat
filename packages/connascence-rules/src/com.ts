@@ -1,9 +1,4 @@
-import {
-	type Artifact,
-	defineRule,
-	type FindingRuleOutput,
-	type Rule,
-} from '@maat/contracts';
+import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat/contracts';
 import { CONSTANTS_CAPABILITY, type Constant } from '@maat/vocabulary';
 
 declare module '@maat/contracts' {
@@ -13,18 +8,7 @@ declare module '@maat/contracts' {
 }
 
 // Values that are universally meaningless to track as coupling signals
-const NOISE_VALUES = new Set([
-	'',
-	' ',
-	'true',
-	'false',
-	'null',
-	'undefined',
-	'0',
-	'1',
-	'2',
-	'-1',
-]);
+const NOISE_VALUES = new Set(['', ' ', 'true', 'false', 'null', 'undefined', '0', '1', '2', '-1']);
 
 export type CoMRuleOptions = {
 	// Minimum number of occurrences across distinct files to be a finding
@@ -42,10 +26,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 
 	public constructor(options: CoMRuleOptions = {}) {
 		this.threshold = options.threshold ?? 3;
-		this.ignoreValues = new Set([
-			...NOISE_VALUES,
-			...(options.ignoreValues ?? []),
-		]);
+		this.ignoreValues = new Set([...NOISE_VALUES, ...(options.ignoreValues ?? [])]);
 	}
 
 	public evaluate(facts: { constants: Constant[] }): FindingRuleOutput[] {
@@ -105,6 +86,4 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 	}
 }
 
-export default defineRule(
-	(options?: CoMRuleOptions) => new ConnascenceOfMeaningRule(options),
-);
+export default defineRule((options?: CoMRuleOptions) => new ConnascenceOfMeaningRule(options));

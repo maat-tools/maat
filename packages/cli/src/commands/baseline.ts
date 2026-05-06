@@ -10,14 +10,10 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		}
 
 		const snapshot = await this.ledger.getState();
-		const toBaseline = Object.values(snapshot.findings).filter(
-			(r) => !r.baselined,
-		);
+		const toBaseline = Object.values(snapshot.findings).filter((r) => !r.baselined);
 
 		if (toBaseline.length === 0) {
-			console.log(
-				'Nothing to baseline. All observed findings are already baselined.',
-			);
+			console.log('Nothing to baseline. All observed findings are already baselined.');
 			return;
 		}
 
@@ -35,9 +31,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('baseline')
-			.description(
-				'Baseline all currently observed findings, suppressing them from future check output',
-			)
+			.description('Baseline all currently observed findings, suppressing them from future check output')
 			.action(() => this.action());
 	}
 }

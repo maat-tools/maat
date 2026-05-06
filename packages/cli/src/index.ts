@@ -26,6 +26,16 @@ import { Resolve } from './commands/resolve';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
 
+type PluginEntry = string | [string, Record<string, unknown>];
+
+function resolveEntry(entry: PluginEntry): [string, Record<string, unknown>] {
+	return typeof entry === 'string' ? [entry, {}] : entry;
+}
+
+function isHelpOrVersionRequest(argv: string[]): boolean {
+	return argv.includes('--help') || argv.includes('-h') || argv.includes('--version') || argv.includes('-V');
+}
+
 class MaatCLI {
 	private program: Command = new Command();
 	private kernel: Kernel = new Kernel();
@@ -33,17 +43,16 @@ class MaatCLI {
 	private insights: Insight[] = [];
 
 	public constructor() {
-		this.registerCLIInfo();
+		this.program
+			.name('maat')
+			.description('maat cli')
+			.version('0.0.1')
+			.option('-c, --config <path>', 'Path to a maat config file');
 	}
 
 	public async run(argv = process.argv) {
 		if (isHelpOrVersionRequest(argv)) {
-			this.registerCommands(
-				{ collectors: [], rules: [] },
-				{
-					warnMissingLedger: false,
-				},
-			);
+			this.registerCommands({ collectors: [], rules: [] }, { warnMissingLedger: false });
 			this.program.parse(argv);
 			return;
 		}
@@ -55,59 +64,28 @@ class MaatCLI {
 		});
 		process.chdir(loadedConfig.rootDir);
 
-		await this.configureKernel(loadedConfig.config);
+		await this.registerCollectors(loadedConfig.config);
+		await this.registerRules(loadedConfig.config);
 		await this.configureInsights(loadedConfig.config);
 		await this.configureLedger(loadedConfig.config);
 		this.registerCommands(loadedConfig.config);
 		this.program.parse(argv);
 	}
 
-	private registerCommands(
-		maatConfig: MaatConfig,
-		options: { warnMissingLedger?: boolean } = {},
-	) {
-		if (!this.ledger) {
-			if (options.warnMissingLedger ?? true) {
-				console.warn(
-					'No ledger configured. Ledger-backed commands will require a ledger before they can run.',
-				);
-			}
+	private registerCommands(maatConfig: MaatConfig, options: { warnMissingLedger?: boolean } = {}) {
+		if (!this.ledger && (options.warnMissingLedger ?? true)) {
+			console.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.');
 		}
-		const config = {
-			...maatConfig,
-			check: maatConfig.check ?? { strict: true },
-		};
+
+		const config = { ...maatConfig, check: maatConfig.check ?? { strict: true } };
+		const args = [this.program, config, this.kernel, this.ledger, this.insights] as const;
 		const commands: MaatCommand[] = [
-			new Check(this.program, config, this.kernel, this.ledger, this.insights),
-			new Axiom(this.program, config, this.kernel, this.ledger, this.insights),
-			new Baseline(
-				this.program,
-				config,
-				this.kernel,
-				this.ledger,
-				this.insights,
-			),
-			new Promote(
-				this.program,
-				config,
-				this.kernel,
-				this.ledger,
-				this.insights,
-			),
-			new Resolve(
-				this.program,
-				config,
-				this.kernel,
-				this.ledger,
-				this.insights,
-			),
-			new Visualize(
-				this.program,
-				config,
-				this.kernel,
-				this.ledger,
-				this.insights,
-			),
+			new Check(...args),
+			new Axiom(...args),
+			new Baseline(...args),
+			new Promote(...args),
+			new Resolve(...args),
+			new Visualize(...args),
 		];
 
 		for (const command of commands) {
@@ -115,21 +93,72 @@ class MaatCLI {
 		}
 	}
 
-	private registerCLIInfo() {
-		this.program
-			.name('maat')
-			.description('maat cli')
-			.version('0.0.1')
-			.option('-c, --config <path>', 'Path to a maat config file');
+	private async registerCollectors(maatConfig: MaatConfig) {
+		for (const entry of maatConfig.collectors) {
+			const [collectorId, options] = resolveEntry(entry as PluginEntry);
+			const factory = (await import(collectorId)).default;
+
+			if (!isCollectorFactory(factory)) {
+				throw new Error(
+					`Plugin "${collectorId}" default export is not a valid CollectorFactory. ` +
+						`Use defineCollector() from @maat/contracts to define it.`,
+				);
+			}
+
+			const collector = factory(options);
+
+			if (!isCollector(collector)) {
+				throw new Error(
+					`Plugin "${collectorId}" factory did not return a valid Collector. ` +
+						`Ensure the returned object has id, provideFacts, and collect().`,
+				);
+			}
+
+			this.kernel.registerCollector(collector);
+		}
+	}
+
+	private async registerRules(maatConfig: MaatConfig) {
+		for (const ruleEntry of maatConfig.rules) {
+			if (isRule(ruleEntry)) {
+				this.kernel.registerRule(ruleEntry);
+				continue;
+			}
+
+			if (isRuleBuilder(ruleEntry)) {
+				this.kernel.registerRule(ruleEntry.build());
+				continue;
+			}
+
+			const [ruleId, options] = resolveEntry(ruleEntry as PluginEntry);
+			const exported = (await import(ruleId)).default;
+
+			if (isRuleSet(exported)) {
+				for (const factory of exported.factories) {
+					this.kernel.registerRule(factory(options));
+				}
+			} else if (isRuleFactory(exported)) {
+				const rule = exported(options);
+				if (!isRule(rule)) {
+					throw new Error(
+						`Plugin "${ruleId}" factory did not return a valid Rule. ` +
+							`Ensure the returned object has id, needs, and evaluate().`,
+					);
+				}
+				this.kernel.registerRule(rule);
+			} else {
+				throw new Error(
+					`Plugin "${ruleId}" default export is not a valid RuleFactory or RuleSet. ` +
+						`Use defineRule() or defineRuleSet() from @maat/contracts to define it.`,
+				);
+			}
+		}
 	}
 
 	private async configureInsights(maatConfig: MaatConfig) {
-		for (const insightEntry of maatConfig.insights ?? []) {
-			const [insightId, options] =
-				typeof insightEntry === 'string' ? [insightEntry, {}] : insightEntry;
-
-			const mod = await import(insightId);
-			const exported = mod.default;
+		for (const entry of maatConfig.insights ?? []) {
+			const [insightId, options] = resolveEntry(entry);
+			const exported = (await import(insightId)).default;
 
 			if (isInsightSet(exported)) {
 				for (const factory of exported.factories) {
@@ -160,13 +189,8 @@ class MaatCLI {
 			return;
 		}
 
-		const [backendId, options] =
-			typeof maatConfig.ledger === 'string'
-				? [maatConfig.ledger, {}]
-				: maatConfig.ledger;
-
-		const mod = await import(backendId);
-		const factory = mod.default;
+		const [backendId, options] = resolveEntry(maatConfig.ledger as PluginEntry);
+		const factory = (await import(backendId)).default;
 
 		if (!isLedgerBackendFactory(factory)) {
 			throw new Error(
@@ -177,88 +201,9 @@ class MaatCLI {
 
 		this.ledger = factory(options);
 	}
-
-	private async configureKernel(maatConfig: MaatConfig) {
-		for (const collectorEntry of maatConfig.collectors) {
-			const [collectorId, options] =
-				typeof collectorEntry === 'string'
-					? [collectorEntry, {}]
-					: collectorEntry;
-
-			const mod = await import(collectorId);
-			const factory = mod.default;
-
-			if (!isCollectorFactory(factory)) {
-				throw new Error(
-					`Plugin "${collectorId}" default export is not a valid CollectorFactory. ` +
-						`Use defineCollector() from @maat/contracts to define it.`,
-				);
-			}
-
-			const collector = factory(options);
-
-			if (!isCollector(collector)) {
-				throw new Error(
-					`Plugin "${collectorId}" factory did not return a valid Collector. ` +
-						`Ensure the returned object has id, provideFacts, and collect().`,
-				);
-			}
-
-			this.kernel.registerCollector(collector);
-		}
-
-		for (const ruleEntry of maatConfig.rules) {
-			if (isRule(ruleEntry)) {
-				this.kernel.registerRule(ruleEntry);
-				continue;
-			}
-
-			if (isRuleBuilder(ruleEntry)) {
-				this.kernel.registerRule(ruleEntry.build());
-				continue;
-			}
-
-			const [ruleId, options] =
-				typeof ruleEntry === 'string' ? [ruleEntry, {}] : ruleEntry;
-
-			const mod = await import(ruleId);
-			const exported = mod.default;
-
-			if (isRuleSet(exported)) {
-				for (const factory of exported.factories) {
-					this.kernel.registerRule(factory(options));
-				}
-			} else if (isRuleFactory(exported)) {
-				const rule = exported(options);
-				if (!isRule(rule)) {
-					throw new Error(
-						`Plugin "${ruleId}" factory did not return a valid Rule. ` +
-							`Ensure the returned object has id, needs, and evaluate().`,
-					);
-				}
-				this.kernel.registerRule(rule);
-			} else {
-				throw new Error(
-					`Plugin "${ruleId}" default export is not a valid RuleFactory or RuleSet. ` +
-						`Use defineRule() or defineRuleSet() from @maat/contracts to define it.`,
-				);
-			}
-		}
-	}
-}
-
-function isHelpOrVersionRequest(argv: string[]): boolean {
-	return (
-		argv.includes('--help') ||
-		argv.includes('-h') ||
-		argv.includes('--version') ||
-		argv.includes('-V')
-	);
 }
 
 new MaatCLI().run().catch((error) => {
-	console.error(
-		`[maat] ${error instanceof Error ? error.message : String(error)}`,
-	);
+	console.error(`[maat] ${error instanceof Error ? error.message : String(error)}`);
 	process.exit(1);
 });

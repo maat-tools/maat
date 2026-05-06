@@ -1,14 +1,7 @@
 export const CONSTANTS_CAPABILITY = 'constants' as const;
 export const IMPORTS_CAPABILITY = 'imports' as const;
 
-export type ConstantContext =
-	| 'argument'
-	| 'assignment'
-	| 'return'
-	| 'condition'
-	| 'import'
-	| 'decorator'
-	| 'other';
+export type ConstantContext = 'argument' | 'assignment' | 'return' | 'condition' | 'import' | 'decorator' | 'other';
 
 export type SourceLocation = {
 	file: string;

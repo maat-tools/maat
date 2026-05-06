@@ -11,10 +11,7 @@ let snapshotPath: string;
 let ledger: FilePathLedgerBackend;
 
 beforeEach(async () => {
-	dir = join(
-		tmpdir(),
-		`maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-	);
+	dir = join(tmpdir(), `maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 	await mkdir(dir, { recursive: true });
 	ledgerPath = join(dir, 'test.ndjson');
 	snapshotPath = join(dir, 'test.snapshot.json');

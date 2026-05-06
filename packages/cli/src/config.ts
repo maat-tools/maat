@@ -29,9 +29,7 @@ export type LoadMaatConfigOptions = {
 	env?: Env;
 };
 
-export async function loadMaatConfig(
-	options: LoadMaatConfigOptions = {},
-): Promise<LoadedMaatConfig> {
+export async function loadMaatConfig(options: LoadMaatConfigOptions = {}): Promise<LoadedMaatConfig> {
 	const cwd = resolve(options.cwd ?? process.cwd());
 	const argv = options.argv ?? process.argv.slice(2);
 	const env = options.env ?? process.env;
@@ -53,9 +51,7 @@ export async function loadMaatConfig(
 
 	const filePath = await findMaatConfig(cwd);
 	if (!filePath) {
-		throw new Error(
-			`No maat config found. Add ${CONFIG_FILENAMES[0]} or pass --config <path>.`,
-		);
+		throw new Error(`No maat config found. Add ${CONFIG_FILENAMES[0]} or pass --config <path>.`);
 	}
 
 	return {
@@ -130,16 +126,12 @@ async function importMaatConfig(filePath: string): Promise<MaatConfig> {
 	try {
 		mod = await import(pathToFileURL(filePath).href);
 	} catch (error) {
-		throw new Error(
-			`Failed to load Maat config at ${filePath}: ${formatError(error)}`,
-		);
+		throw new Error(`Failed to load Maat config at ${filePath}: ${formatError(error)}`);
 	}
 
 	const { default: config } = mod;
 	if (!isMaatConfig(config)) {
-		throw new Error(
-			`Maat config at ${filePath} must default export a config with collectors and rules arrays.`,
-		);
+		throw new Error(`Maat config at ${filePath} must default export a config with collectors and rules arrays.`);
 	}
 
 	return config;

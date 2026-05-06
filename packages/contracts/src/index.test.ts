@@ -104,15 +104,11 @@ describe('isCollector', () => {
 	});
 
 	test('false if id is missing', () => {
-		expect(isCollector({ provideFacts: [], collect: async () => ({}) })).toBe(
-			false,
-		);
+		expect(isCollector({ provideFacts: [], collect: async () => ({}) })).toBe(false);
 	});
 
 	test('false if provideFacts is not array', () => {
-		expect(
-			isCollector({ id: 'c', provideFacts: 'bad', collect: async () => ({}) }),
-		).toBe(false);
+		expect(isCollector({ id: 'c', provideFacts: 'bad', collect: async () => ({}) })).toBe(false);
 	});
 
 	test('false if collect is not a function', () => {
@@ -140,9 +136,7 @@ describe('isInsight', () => {
 	});
 
 	test('false if needRules is not array', () => {
-		expect(isInsight({ id: 'i', needRules: 'bad', analyze: () => [] })).toBe(
-			false,
-		);
+		expect(isInsight({ id: 'i', needRules: 'bad', analyze: () => [] })).toBe(false);
 	});
 
 	test('false for null', () => {

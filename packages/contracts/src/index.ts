@@ -154,9 +154,7 @@ export type LedgerSnapshot = {
 	readonly axioms: Record<string, AxiomRecord>;
 };
 
-export interface Collector<
-	TKeys extends keyof FactRegistry = keyof FactRegistry,
-> {
+export interface Collector<TKeys extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly provideFacts: readonly TKeys[];
 	collect(): Promise<Pick<FactRegistry, TKeys>>;
@@ -185,22 +183,15 @@ export interface LedgerBackend {
 	buildEntry(finding: Finding, type: FindingStatus): FindingEventInput;
 }
 
-export type CollectorFactory<
-	TConfig,
-	TKeys extends keyof FactRegistry = keyof FactRegistry,
-> = (config: TConfig) => Collector<TKeys>;
-
-export type RuleFactory<TOptions = Record<string, never>> = (
-	options?: TOptions,
-) => Rule;
-
-export type InsightFactory<TOptions = Record<string, never>> = (
-	options?: TOptions,
-) => Insight;
-
-export type LedgerBackendFactory<TConfig = Record<string, never>> = (
+export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (
 	config: TConfig,
-) => LedgerBackend;
+) => Collector<TKeys>;
+
+export type RuleFactory<TOptions = Record<string, never>> = (options?: TOptions) => Rule;
+
+export type InsightFactory<TOptions = Record<string, never>> = (options?: TOptions) => Insight;
+
+export type LedgerBackendFactory<TConfig = Record<string, never>> = (config: TConfig) => LedgerBackend;
 
 export const COLLECTOR_FACTORY_BRAND = Symbol('maat.CollectorFactory');
 export const RULE_FACTORY_BRAND = Symbol('maat.RuleFactory');
@@ -210,27 +201,24 @@ export const LEDGER_BACKEND_FACTORY_BRAND = Symbol('maat.LedgerBackendFactory');
 export const INSIGHT_FACTORY_BRAND = Symbol('maat.InsightFactory');
 export const INSIGHT_SET_BRAND = Symbol('maat.InsightSet');
 
-export type BrandedCollectorFactory<
+export type BrandedCollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = CollectorFactory<
 	TConfig,
-	TKeys extends keyof FactRegistry = keyof FactRegistry,
-> = CollectorFactory<TConfig, TKeys> & {
+	TKeys
+> & {
 	readonly [COLLECTOR_FACTORY_BRAND]: true;
 };
 
-export type BrandedRuleFactory<TOptions = Record<string, never>> =
-	RuleFactory<TOptions> & {
-		readonly [RULE_FACTORY_BRAND]: true;
-	};
+export type BrandedRuleFactory<TOptions = Record<string, never>> = RuleFactory<TOptions> & {
+	readonly [RULE_FACTORY_BRAND]: true;
+};
 
-export type BrandedInsightFactory<TOptions = Record<string, never>> =
-	InsightFactory<TOptions> & {
-		readonly [INSIGHT_FACTORY_BRAND]: true;
-	};
+export type BrandedInsightFactory<TOptions = Record<string, never>> = InsightFactory<TOptions> & {
+	readonly [INSIGHT_FACTORY_BRAND]: true;
+};
 
-export type BrandedLedgerBackendFactory<TConfig = Record<string, never>> =
-	LedgerBackendFactory<TConfig> & {
-		readonly [LEDGER_BACKEND_FACTORY_BRAND]: true;
-	};
+export type BrandedLedgerBackendFactory<TConfig = Record<string, never>> = LedgerBackendFactory<TConfig> & {
+	readonly [LEDGER_BACKEND_FACTORY_BRAND]: true;
+};
 
 export type RuleSet = {
 	readonly factories: readonly BrandedRuleFactory<unknown>[];
@@ -252,10 +240,7 @@ export type BrandedInsightSet = InsightSet & {
 	readonly [INSIGHT_SET_BRAND]: true;
 };
 
-export function defineCollector<
-	TConfig,
-	TKeys extends keyof FactRegistry = keyof FactRegistry,
->(
+export function defineCollector<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry>(
 	factory: CollectorFactory<TConfig, TKeys>,
 ): BrandedCollectorFactory<TConfig, TKeys> {
 	return Object.assign(factory, { [COLLECTOR_FACTORY_BRAND]: true as const });
@@ -267,18 +252,14 @@ export function defineRule<TOptions = Record<string, never>>(
 	return Object.assign(factory, { [RULE_FACTORY_BRAND]: true as const });
 }
 
-export function defineRuleSet<T>(
-	factories: BrandedRuleFactory<T>[],
-): BrandedRuleSet {
+export function defineRuleSet<T>(factories: BrandedRuleFactory<T>[]): BrandedRuleSet {
 	return {
 		factories: factories as unknown as BrandedRuleFactory<unknown>[],
 		[RULE_SET_BRAND]: true as const,
 	};
 }
 
-export function defineRuleBuilder<T extends RuleBuilder>(
-	builder: T,
-): T & { readonly [RULE_BUILDER_BRAND]: true } {
+export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T & { readonly [RULE_BUILDER_BRAND]: true } {
 	return Object.assign(builder, { [RULE_BUILDER_BRAND]: true as const });
 }
 
@@ -288,9 +269,7 @@ export function defineInsight<TOptions = Record<string, never>>(
 	return Object.assign(factory, { [INSIGHT_FACTORY_BRAND]: true as const });
 }
 
-export function defineInsightSet<T>(
-	factories: BrandedInsightFactory<T>[],
-): BrandedInsightSet {
+export function defineInsightSet<T>(factories: BrandedInsightFactory<T>[]): BrandedInsightSet {
 	return {
 		factories: factories as unknown as BrandedInsightFactory<unknown>[],
 		[INSIGHT_SET_BRAND]: true as const,
@@ -305,18 +284,11 @@ export function defineLedgerBackend<TConfig>(
 	});
 }
 
-export function isCollectorFactory(
-	fn: unknown,
-): fn is BrandedCollectorFactory<unknown, keyof FactRegistry> {
-	return (
-		typeof fn === 'function' &&
-		(fn as unknown as Record<symbol, unknown>)[COLLECTOR_FACTORY_BRAND] === true
-	);
+export function isCollectorFactory(fn: unknown): fn is BrandedCollectorFactory<unknown, keyof FactRegistry> {
+	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[COLLECTOR_FACTORY_BRAND] === true;
 }
 
-export function isCollector(
-	obj: unknown,
-): obj is Collector<keyof FactRegistry> {
+export function isCollector(obj: unknown): obj is Collector<keyof FactRegistry> {
 	return (
 		typeof obj === 'object' &&
 		obj !== null &&
@@ -326,21 +298,12 @@ export function isCollector(
 	);
 }
 
-export function isRuleFactory(
-	fn: unknown,
-): fn is BrandedRuleFactory<Record<string, unknown>> {
-	return (
-		typeof fn === 'function' &&
-		(fn as unknown as Record<symbol, unknown>)[RULE_FACTORY_BRAND] === true
-	);
+export function isRuleFactory(fn: unknown): fn is BrandedRuleFactory<Record<string, unknown>> {
+	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[RULE_FACTORY_BRAND] === true;
 }
 
 export function isRuleSet(obj: unknown): obj is BrandedRuleSet {
-	return (
-		typeof obj === 'object' &&
-		obj !== null &&
-		(obj as Record<symbol, unknown>)[RULE_SET_BRAND] === true
-	);
+	return typeof obj === 'object' && obj !== null && (obj as Record<symbol, unknown>)[RULE_SET_BRAND] === true;
 }
 
 export function isRule(obj: unknown): obj is Rule {
@@ -362,21 +325,12 @@ export function isRuleBuilder(obj: unknown): obj is BrandedRuleBuilder {
 	);
 }
 
-export function isInsightFactory(
-	fn: unknown,
-): fn is BrandedInsightFactory<Record<string, never>> {
-	return (
-		typeof fn === 'function' &&
-		(fn as unknown as Record<symbol, unknown>)[INSIGHT_FACTORY_BRAND] === true
-	);
+export function isInsightFactory(fn: unknown): fn is BrandedInsightFactory<Record<string, never>> {
+	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[INSIGHT_FACTORY_BRAND] === true;
 }
 
 export function isInsightSet(obj: unknown): obj is BrandedInsightSet {
-	return (
-		typeof obj === 'object' &&
-		obj !== null &&
-		(obj as Record<symbol, unknown>)[INSIGHT_SET_BRAND] === true
-	);
+	return typeof obj === 'object' && obj !== null && (obj as Record<symbol, unknown>)[INSIGHT_SET_BRAND] === true;
 }
 
 export function isInsight(obj: unknown): obj is Insight {
@@ -389,12 +343,6 @@ export function isInsight(obj: unknown): obj is Insight {
 	);
 }
 
-export function isLedgerBackendFactory(
-	fn: unknown,
-): fn is BrandedLedgerBackendFactory<unknown> {
-	return (
-		typeof fn === 'function' &&
-		(fn as unknown as Record<symbol, unknown>)[LEDGER_BACKEND_FACTORY_BRAND] ===
-			true
-	);
+export function isLedgerBackendFactory(fn: unknown): fn is BrandedLedgerBackendFactory<unknown> {
+	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[LEDGER_BACKEND_FACTORY_BRAND] === true;
 }

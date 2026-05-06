@@ -11,6 +11,7 @@
 		"rules": {
 			"recommended": true,
 			"style": {
+				"noNestedTernary": "error",
 				"useBlockStatements": "error",
 				"useConsistentMemberAccessibility": {
 					"level": "error",
@@ -21,7 +22,8 @@
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
+		"indentStyle": "tab",
+		"lineWidth": 120
 	},
 	"javascript": {
 		"formatter": {

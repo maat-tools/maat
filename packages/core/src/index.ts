@@ -32,9 +32,7 @@ export type RuleEntry =
 	| Rule
 	| BrandedRuleBuilder;
 
-export type InsightEntry =
-	| (string & {})
-	| [string & {}, Record<string, unknown>];
+export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>];
 
 export type LedgerEntry =
 	| keyof LedgerBackendRegistry
@@ -46,10 +44,7 @@ export type MaatConfig = {
 	check?: { strict: boolean };
 	collectors: CollectorEntry[];
 	rules: RuleEntry[];
-} & (
-	| { ledger: LedgerEntry; insights?: InsightEntry[] }
-	| { ledger?: never; insights?: never }
-);
+} & ({ ledger: LedgerEntry; insights?: InsightEntry[] } | { ledger?: never; insights?: never });
 
 export function defineConfig(config: MaatConfig): MaatConfig {
 	return config;
@@ -73,11 +68,7 @@ export function stableHash(value: unknown): string {
 	return createHash('sha256').update(stableStringify(value)).digest('hex');
 }
 
-export function fingerprintFinding(finding: {
-	ruleId: string;
-	message: string;
-	artifacts: unknown[];
-}): string {
+export function fingerprintFinding(finding: { ruleId: string; message: string; artifacts: unknown[] }): string {
 	return stableHash({
 		ruleId: finding.ruleId,
 		message: finding.message,
@@ -103,10 +94,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 	public abstract append(event: LedgerEventInput): Promise<void>;
 	public abstract getState(): Promise<LedgerSnapshot>;
 
-	public buildEntry(
-		finding: Finding,
-		type: FindingEventStatus,
-	): FindingEventInput {
+	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {
 		const base = { timestamp: new Date().toISOString() };
 
 		switch (type) {
@@ -128,10 +116,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		}
 	}
 
-	protected applyEvent(
-		snapshot: LedgerSnapshot,
-		event: LedgerEvent,
-	): LedgerSnapshot {
+	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
 		const findings = { ...snapshot.findings };
 		const axioms = { ...snapshot.axioms };
 

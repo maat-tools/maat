@@ -1,10 +1,4 @@
-import {
-	type Artifact,
-	defineRuleBuilder,
-	type FindingRuleOutput,
-	type Rule,
-	type RuleBuilder,
-} from '@maat/contracts';
+import { type Artifact, defineRuleBuilder, type FindingRuleOutput, type Rule, type RuleBuilder } from '@maat/contracts';
 import { IMPORTS_CAPABILITY, type Import } from '@maat/vocabulary';
 import type { Role } from './roles';
 

@@ -64,10 +64,7 @@ let ledgerPath: string;
 let exitSpy: ReturnType<typeof spyOn>;
 
 beforeEach(async () => {
-	dir = join(
-		tmpdir(),
-		`maat-cli-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-	);
+	dir = join(tmpdir(), `maat-cli-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 	await mkdir(dir, { recursive: true });
 	ledgerPath = join(dir, 'test.ndjson');
 
@@ -94,23 +91,17 @@ describe('check without ledger', () => {
 	});
 
 	test('findings present, strict → exit 1', async () => {
-		await expect(
-			makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({}),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({})).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
 	test('--show-baselined without ledger → exit 1', async () => {
-		await expect(
-			makeCheck([], null).action({ showBaselined: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([], null).action({ showBaselined: true })).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
 	test('--ledger without ledger configured → exit 1', async () => {
-		await expect(makeCheck([], null).action({ ledger: true })).rejects.toThrow(
-			'process.exit',
-		);
+		await expect(makeCheck([], null).action({ ledger: true })).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -129,9 +120,9 @@ describe('check without ledger', () => {
 	});
 
 	test('--silent does not suppress exit code', async () => {
-		await expect(
-			makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({ silent: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({ silent: true })).rejects.toThrow(
+			'process.exit',
+		);
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -141,9 +132,9 @@ describe('check without ledger', () => {
 describe('check with ledger', () => {
 	test('findings present, strict → exit 1', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await expect(
-			makeCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({ ledger: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({ ledger: true })).rejects.toThrow(
+			'process.exit',
+		);
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -175,9 +166,7 @@ describe('check with ledger', () => {
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }); // observe
 		await makeCheck([], ledger).action({ ledger: true }); // auto-resolve
 
-		await expect(
-			makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], ledger).action({ ledger: true })).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -185,17 +174,12 @@ describe('check with ledger', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT, enforce: true });
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({
+			fingerprint: FINGERPRINT,
+			enforce: true,
+		});
 
-		await expect(
-			makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], ledger).action({ ledger: true })).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -203,13 +187,7 @@ describe('check with ledger', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT });
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({ fingerprint: FINGERPRINT });
 
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 		expect(exitSpy).not.toHaveBeenCalled();
@@ -219,13 +197,7 @@ describe('check with ledger', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Baseline(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action();
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action();
 
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 		expect(exitSpy).not.toHaveBeenCalled();
@@ -235,13 +207,7 @@ describe('check with ledger', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }); // observe (non-strict)
 
-		await new Baseline(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action();
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action();
 
 		await expect(
 			makeCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({
@@ -256,13 +222,7 @@ describe('check with ledger', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }); // observe (non-strict)
 
-		await new Baseline(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action();
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action();
 
 		await makeCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({
 			ledger: true,
@@ -305,19 +265,13 @@ describe('check with ledger', () => {
 	test('--silent with enforced finding → still exits 1', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({
 			fingerprint: FINGERPRINT,
 			enforce: true,
 		});
-		await expect(
-			makeCheck([RULE_OUTPUT], ledger).action({ ledger: true, silent: true }),
-		).rejects.toThrow('process.exit');
+		await expect(makeCheck([RULE_OUTPUT], ledger).action({ ledger: true, silent: true })).rejects.toThrow(
+			'process.exit',
+		);
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
@@ -329,13 +283,7 @@ describe('baseline', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Baseline(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action();
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action();
 
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.baselined).toBe(true);
@@ -350,13 +298,7 @@ describe('promote', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT });
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({ fingerprint: FINGERPRINT });
 
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.PROMOTED);
@@ -366,13 +308,10 @@ describe('promote', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT, enforce: true });
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({
+			fingerprint: FINGERPRINT,
+			enforce: true,
+		});
 
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.ENFORCED);
@@ -385,22 +324,14 @@ describe('axiom', () => {
 	test('records axiom in ledger', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 
-		await new Axiom(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({
+		await new Axiom(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({
 			id: 'no-side-effects',
 			scope: 'auth',
 			claim: 'auth module must have no side effects',
 		});
 
 		const state = await ledger.getState();
-		expect(state.axioms['no-side-effects']?.claim).toBe(
-			'auth module must have no side effects',
-		);
+		expect(state.axioms['no-side-effects']?.claim).toBe('auth module must have no side effects');
 	});
 });
 
@@ -411,21 +342,9 @@ describe('resolve', () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
-		await new Promote(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT });
+		await new Promote(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({ fingerprint: FINGERPRINT });
 
-		await new Resolve(
-			new Command(),
-			BASE_CONFIG,
-			makeKernel(),
-			ledger,
-			[],
-		).action({ fingerprint: FINGERPRINT });
+		await new Resolve(new Command(), BASE_CONFIG, makeKernel(), ledger, []).action({ fingerprint: FINGERPRINT });
 
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.RESOLVED);

@@ -17,15 +17,11 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[fingerprint];
 
 		if (record === undefined) {
-			console.error(
-				`No finding with fingerprint "${fingerprint}" found in the ledger.`,
-			);
+			console.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
 			process.exit(1);
 		}
 
-		const isResolvable =
-			record.state === FindingStatus.PROMOTED ||
-			record.state === FindingStatus.ENFORCED;
+		const isResolvable = record.state === FindingStatus.PROMOTED || record.state === FindingStatus.ENFORCED;
 		if (!isResolvable) {
 			console.error(
 				`Finding "${fingerprint}" is in state "${record.state}" and cannot be resolved. ` +
@@ -46,13 +42,8 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('resolve')
-			.description(
-				'Explicitly resolve a finding that was marked absent — confirming it has been intentionally fixed',
-			)
-			.requiredOption(
-				'--fingerprint <fingerprint>',
-				'Fingerprint of the finding to resolve',
-			)
+			.description('Explicitly resolve a finding that was marked absent — confirming it has been intentionally fixed')
+			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
 			.action((options: ResolveOptions) => this.action(options));
 	}
 }

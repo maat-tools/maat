@@ -16,9 +16,7 @@ type LifecycleOptions = {
 	reason?: string;
 };
 
-type AxiomLifecycleStatus =
-	| typeof FindingStatus.AXIOM_SUPERSEDED
-	| typeof FindingStatus.AXIOM_REVOKED;
+type AxiomLifecycleStatus = typeof FindingStatus.AXIOM_SUPERSEDED | typeof FindingStatus.AXIOM_REVOKED;
 
 const LIFECYCLE_VERBS: Record<AxiomLifecycleStatus, string> = {
 	[FindingStatus.AXIOM_REVOKED]: 'revoked',
@@ -42,33 +40,17 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 	}
 
 	public register(): void {
-		const cmd = this.cli
-			.command('axiom')
-			.description('Manage architectural axioms in the ledger');
+		const cmd = this.cli.command('axiom').description('Manage architectural axioms in the ledger');
 
 		cmd
 			.command('declare')
-			.description(
-				'Declare a human-authored architectural claim and record it in the ledger',
-			)
-			.requiredOption(
-				'--id <id>',
-				'Stable slug identifying this axiom (used as fold key)',
-			)
-			.requiredOption(
-				'--scope <scope>',
-				'Architectural scope this axiom applies to',
-			)
+			.description('Declare a human-authored architectural claim and record it in the ledger')
+			.requiredOption('--id <id>', 'Stable slug identifying this axiom (used as fold key)')
+			.requiredOption('--scope <scope>', 'Architectural scope this axiom applies to')
 			.requiredOption('--claim <claim>', 'The invariant being asserted')
 			.option('--note <note>', 'Optional rationale or references')
-			.option(
-				'--fingerprints <fingerprints>',
-				'Comma-separated finding fingerprints this axiom covers',
-			)
-			.option(
-				'--force',
-				'Re-declare even if the axiom id already exists in the ledger',
-			)
+			.option('--fingerprints <fingerprints>', 'Comma-separated finding fingerprints this axiom covers')
+			.option('--force', 'Re-declare even if the axiom id already exists in the ledger')
 			.action((options: DeclareOptions) => this.declare(options));
 
 		cmd
@@ -76,25 +58,19 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			.description('Mark an axiom as superseded by a newer declaration')
 			.requiredOption('--id <id>', 'The axiom id to supersede')
 			.option('--reason <reason>', 'Optional explanation for supersession')
-			.action((options: LifecycleOptions) =>
-				this.lifecycle(FindingStatus.AXIOM_SUPERSEDED, options),
-			);
+			.action((options: LifecycleOptions) => this.lifecycle(FindingStatus.AXIOM_SUPERSEDED, options));
 
 		cmd
 			.command('revoke')
 			.description('Revoke an axiom that no longer applies')
 			.requiredOption('--id <id>', 'The axiom id to revoke')
 			.option('--reason <reason>', 'Optional explanation for revocation')
-			.action((options: LifecycleOptions) =>
-				this.lifecycle(FindingStatus.AXIOM_REVOKED, options),
-			);
+			.action((options: LifecycleOptions) => this.lifecycle(FindingStatus.AXIOM_REVOKED, options));
 	}
 
 	private async declare(options: DeclareOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			console.error(
-				'No ledger configured. An axiom cannot be recorded without a ledger.',
-			);
+			console.error('No ledger configured. An axiom cannot be recorded without a ledger.');
 			process.exit(1);
 		}
 
@@ -103,9 +79,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			const existing = snapshot.axioms[options.id];
 
 			if (existing?.active) {
-				console.error(
-					`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`,
-				);
+				console.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`);
 				process.exit(1);
 			}
 		}
@@ -125,14 +99,9 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		console.log(`Axiom "${options.id}" declared.`);
 	}
 
-	private async lifecycle(
-		type: AxiomLifecycleStatus,
-		options: LifecycleOptions,
-	): Promise<void> {
+	private async lifecycle(type: AxiomLifecycleStatus, options: LifecycleOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			console.error(
-				'No ledger configured. Axiom lifecycle commands require a ledger.',
-			);
+			console.error('No ledger configured. Axiom lifecycle commands require a ledger.');
 			process.exit(1);
 		}
 

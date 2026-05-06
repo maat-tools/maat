@@ -11,16 +11,9 @@ async function makeDir(): Promise<string> {
 	return dir;
 }
 
-async function writeConfig(
-	root: string,
-	filename: string,
-	collectorId = 'test-collector',
-): Promise<string> {
+async function writeConfig(root: string, filename: string, collectorId = 'test-collector'): Promise<string> {
 	const filePath = join(root, filename);
-	await writeFile(
-		filePath,
-		`export default { collectors: ['${collectorId}'], rules: [] };`,
-	);
+	await writeFile(filePath, `export default { collectors: ['${collectorId}'], rules: [] };`);
 	return filePath;
 }
 
@@ -112,8 +105,6 @@ describe('loadMaatConfig', () => {
 
 describe('readConfigPathFromArgv', () => {
 	test('requires a path for --config', () => {
-		expect(() => readConfigPathFromArgv(['--config'])).toThrow(
-			'--config requires a path.',
-		);
+		expect(() => readConfigPathFromArgv(['--config'])).toThrow('--config requires a path.');
 	});
 });

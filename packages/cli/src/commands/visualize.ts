@@ -1,8 +1,4 @@
-import {
-	type Finding,
-	type FindingRecord,
-	FindingStatus,
-} from '@maat/contracts';
+import { type Finding, type FindingRecord, FindingStatus } from '@maat/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
@@ -42,12 +38,7 @@ function toFinding(record: FindingRecord): Finding {
 }
 
 export class Visualize extends MaatCommandBase implements MaatCommand {
-	public async action({
-		filter,
-		axioms,
-		insights,
-		json,
-	}: VisualizeOptions = {}) {
+	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot visualize without a ledger.');
 			process.exit(1);
@@ -57,9 +48,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		const allFindings = Object.values(snapshot.findings);
 		const allAxioms = Object.values(snapshot.axioms);
 
-		const activeGroups = filter
-			? new Set(filter.split(',').map((s) => s.trim() as Group))
-			: new Set(GROUP_ORDER);
+		const activeGroups = filter ? new Set(filter.split(',').map((s) => s.trim() as Group)) : new Set(GROUP_ORDER);
 
 		const grouped = new Map<Group, FindingRecord[]>();
 		for (const group of GROUP_ORDER) {
@@ -79,9 +68,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 				out.axioms = allAxioms;
 			}
 			if (insights && this.insights.length > 0) {
-				out.insights = this.insights.flatMap((i) =>
-					i.analyze(allFindings.map(toFinding)),
-				);
+				out.insights = this.insights.flatMap((i) => i.analyze(allFindings.map(toFinding)));
 			}
 			console.log(JSON.stringify(out, null, 2));
 			return;
@@ -97,9 +84,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			const heading = `${group.toUpperCase()} (${records.length})`;
 			printSection(heading);
 			for (const r of records) {
-				console.log(
-					`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`,
-				);
+				console.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
 			}
 		}
 
@@ -109,9 +94,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			printSection(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				console.log(
-					`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`,
-				);
+				console.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
 			}
 		}
 
@@ -135,13 +118,8 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('visualize')
-			.description(
-				'Display the current state of findings, axioms, and insights from the ledger',
-			)
-			.option(
-				'--filter <states>',
-				'Comma-separated groups to show: observed, baselined, promoted, enforced',
-			)
+			.description('Display the current state of findings, axioms, and insights from the ledger')
+			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, promoted, enforced')
 			.option('--no-axioms', 'Hide declared axioms')
 			.option('--insights', 'Run insights against the current ledger state')
 			.option('--json', 'Output as JSON')

@@ -32,10 +32,7 @@ describe('layer()', () => {
 	});
 
 	test('.build() returns a valid Rule', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		expect(isRule(rule)).toBe(true);
 		expect(rule.id).toBe('layer:@maat/kernel@v1');
 		expect(rule.needFacts).toContain('imports');
@@ -44,10 +41,7 @@ describe('layer()', () => {
 
 describe('LayerRule.evaluate() — allowlist', () => {
 	test('no finding when specifier is in allows list', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: '@maat/contracts' })],
 		});
@@ -55,10 +49,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('finding when specifier is NOT in allows list', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: 'uuid' })],
 		});
@@ -67,24 +58,15 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('no finding for relative imports regardless of allows list', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
-			imports: [
-				makeImport({ specifier: './utils' }),
-				makeImport({ specifier: '../types' }),
-			],
+			imports: [makeImport({ specifier: './utils' }), makeImport({ specifier: '../types' })],
 		});
 		expect(findings).toHaveLength(0);
 	});
 
 	test('no finding when packageName does not match target', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ packageName: '@maat/cli', specifier: 'uuid' })],
 		});
@@ -105,10 +87,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('string pattern matches sub-path', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: '@maat/contracts/types' })],
 		});
@@ -116,10 +95,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('string pattern does not match partial package name', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: '@maat/contracts-extra' })],
 		});
@@ -149,10 +125,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('includes role name in message', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts').build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: 'uuid' })],
 		});
@@ -160,10 +133,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('multiple imports — only disallowed ones produce findings', () => {
-		const rule = layer('@maat/kernel')
-			.is(Pure)
-			.allows('@maat/contracts', '@maat/core')
-			.build();
+		const rule = layer('@maat/kernel').is(Pure).allows('@maat/contracts', '@maat/core').build();
 		const findings = rule.evaluate({
 			imports: [
 				makeImport({ specifier: '@maat/contracts' }),

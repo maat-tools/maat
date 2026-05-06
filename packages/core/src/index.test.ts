@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	FindingStatus,
-	type LedgerEventInput,
-	type LedgerSnapshot,
-} from '@maat/contracts';
+import { FindingStatus, type LedgerEventInput, type LedgerSnapshot } from '@maat/contracts';
 import { LedgerBackendBase, stableHash, stableStringify } from './index';
 
 // Concrete subclass to expose protected applyEvent
@@ -14,10 +10,7 @@ class TestLedger extends LedgerBackendBase {
 	public getState(): Promise<LedgerSnapshot> {
 		return Promise.resolve(emptySnapshot());
 	}
-	public apply(
-		snapshot: LedgerSnapshot,
-		event: Parameters<LedgerBackendBase['applyEvent']>[1],
-	) {
+	public apply(snapshot: LedgerSnapshot, event: Parameters<LedgerBackendBase['applyEvent']>[1]) {
 		return this.applyEvent(snapshot, event);
 	}
 }
@@ -37,15 +30,11 @@ const baseFinding = {
 
 describe('stableStringify', () => {
 	test('sorts object keys', () => {
-		expect(stableStringify({ b: 1, a: 2 })).toBe(
-			stableStringify({ a: 2, b: 1 }),
-		);
+		expect(stableStringify({ b: 1, a: 2 })).toBe(stableStringify({ a: 2, b: 1 }));
 	});
 
 	test('sorts nested object keys', () => {
-		expect(stableStringify({ z: { b: 1, a: 2 } })).toBe(
-			stableStringify({ z: { a: 2, b: 1 } }),
-		);
+		expect(stableStringify({ z: { b: 1, a: 2 } })).toBe(stableStringify({ z: { a: 2, b: 1 } }));
 	});
 
 	test('preserves array order', () => {

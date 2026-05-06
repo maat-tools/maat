@@ -14,9 +14,7 @@ function makeConstant(overrides: Partial<Constant> = {}): Constant {
 }
 
 function makeOccurrences(files: string[], value = 'ADMIN'): Constant[] {
-	return files.map((file) =>
-		makeConstant({ value, raw: `"${value}"`, location: { file, line: 1 } }),
-	);
+	return files.map((file) => makeConstant({ value, raw: `"${value}"`, location: { file, line: 1 } }));
 }
 
 // ── evaluate ─────────────────────────────────────────────────────────────────

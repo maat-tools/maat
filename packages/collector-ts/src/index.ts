@@ -1,10 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import {
-	type Collector,
-	defineCollector,
-	type FactRegistry,
-} from '@maat/contracts';
+import { type Collector, defineCollector, type FactRegistry } from '@maat/contracts';
 import {
 	CONSTANTS_CAPABILITY,
 	type Constant,
@@ -78,11 +74,7 @@ function resolvePackageName(filePath: string): string | null {
 	return null;
 }
 
-function collectImports(
-	sourceFile: SourceFile,
-	file: string,
-	packageName: string | null,
-): Import[] {
+function collectImports(sourceFile: SourceFile, file: string, packageName: string | null): Import[] {
 	return sourceFile.getImportDeclarations().map((decl) => ({
 		file,
 		packageName,
@@ -126,10 +118,7 @@ function collectConstants(sourceFile: SourceFile, file: string): Constant[] {
 
 export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
-	public readonly provideFacts = [
-		CONSTANTS_CAPABILITY,
-		IMPORTS_CAPABILITY,
-	] as const;
+	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
 
 	public constructor(private readonly config: TSInput) {}
 
@@ -137,9 +126,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);
 		const projectRoot = dirname(resolvedPath);
 		const project = new Project({ tsConfigFilePath: resolvedPath });
-		const excludeGlobs = (this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS).map(
-			(p) => new Bun.Glob(p),
-		);
+		const excludeGlobs = (this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS).map((p) => new Bun.Glob(p));
 
 		const constants: Constant[] = [];
 		const imports: Import[] = [];

@@ -3,10 +3,7 @@ import { isAbsolute, resolve } from 'node:path';
 import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat/vocabulary';
 import { TSCollector } from './index';
 
-const FIXTURE_TSCONFIG = resolve(
-	import.meta.dir,
-	'../fixtures/sample-project/tsconfig.json',
-);
+const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/sample-project/tsconfig.json');
 
 describe('TSCollector.collect() — imports fact', () => {
 	test('provides imports in provideFacts', () => {
@@ -42,10 +39,7 @@ describe('TSCollector.collect() — imports fact', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { constants, imports } = await collector.collect();
 
-		const files = [
-			...imports.map((imp) => imp.file),
-			...constants.map((constant) => constant.location.file),
-		];
+		const files = [...imports.map((imp) => imp.file), ...constants.map((constant) => constant.location.file)];
 
 		expect(files).toContain('src/index.ts');
 		for (const file of files) {
@@ -57,18 +51,14 @@ describe('TSCollector.collect() — imports fact', () => {
 	test('captures import from index.ts → ./user', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { imports } = await collector.collect();
-		const found = imports.find(
-			(i) => i.file.endsWith('index.ts') && i.specifier === './user',
-		);
+		const found = imports.find((i) => i.file.endsWith('index.ts') && i.specifier === './user');
 		expect(found).toBeDefined();
 	});
 
 	test('captures import from permissions.ts → ./user', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { imports } = await collector.collect();
-		const found = imports.find(
-			(i) => i.file.endsWith('permissions.ts') && i.specifier === './user',
-		);
+		const found = imports.find((i) => i.file.endsWith('permissions.ts') && i.specifier === './user');
 		expect(found).toBeDefined();
 	});
 
@@ -78,9 +68,7 @@ describe('TSCollector.collect() — imports fact', () => {
 		// fixture project has no package.json, so packageName should be null
 		// (or the monorepo root package.json has no name — either way it's consistent)
 		for (const imp of imports) {
-			expect(
-				imp.packageName === null || typeof imp.packageName === 'string',
-			).toBe(true);
+			expect(imp.packageName === null || typeof imp.packageName === 'string').toBe(true);
 		}
 	});
 

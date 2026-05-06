@@ -9,7 +9,7 @@ import type { Kernel } from '@maat/kernel';
 import type { Command } from 'commander';
 
 export abstract class MaatCommandBase {
-	constructor(
+	public constructor(
 		protected cli: Command,
 		protected config: MaatConfig,
 		protected kernel: Kernel,

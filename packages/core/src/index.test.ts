@@ -8,10 +8,10 @@ import { LedgerBackendBase, stableHash, stableStringify } from './index';
 
 // Concrete subclass to expose protected applyEvent
 class TestLedger extends LedgerBackendBase {
-	append(_event: LedgerEventInput): Promise<void> {
+	public append(_event: LedgerEventInput): Promise<void> {
 		return Promise.resolve();
 	}
-	getState(): Promise<LedgerSnapshot> {
+	public getState(): Promise<LedgerSnapshot> {
 		return Promise.resolve(emptySnapshot());
 	}
 	public apply(

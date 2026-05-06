@@ -16,27 +16,17 @@ import {
 	type RuleRegistry,
 } from '@maat/contracts';
 
-type CollectorRegistryTuples = {
-	[K in keyof CollectorRegistry]: [K, CollectorRegistry[K]];
-}[keyof CollectorRegistry];
-
-type RuleRegistryTuples = {
-	[K in keyof RuleRegistry]: [K, RuleRegistry[K]];
-}[keyof RuleRegistry];
-
-type LedgerBackendRegistryTuples = {
-	[K in keyof LedgerBackendRegistry]: [K, LedgerBackendRegistry[K]];
-}[keyof LedgerBackendRegistry];
+type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 
 export type CollectorEntry =
 	| keyof CollectorRegistry
-	| CollectorRegistryTuples
+	| RegistryTuples<CollectorRegistry>
 	| (string & {})
 	| [string & {}, Record<string, unknown>];
 
 export type RuleEntry =
 	| keyof RuleRegistry
-	| RuleRegistryTuples
+	| RegistryTuples<RuleRegistry>
 	| (string & {})
 	| [string & {}, Record<string, unknown>]
 	| Rule
@@ -48,7 +38,7 @@ export type InsightEntry =
 
 export type LedgerEntry =
 	| keyof LedgerBackendRegistry
-	| LedgerBackendRegistryTuples
+	| RegistryTuples<LedgerBackendRegistry>
 	| (string & {})
 	| [string & {}, Record<string, unknown>];
 
@@ -96,7 +86,7 @@ export function fingerprintFinding(finding: {
 }
 
 export abstract class RuleBase {
-	generateFingerprint(data: Record<string, unknown>): string {
+	public generateFingerprint(data: Record<string, unknown>): string {
 		return stableHash(data);
 	}
 }
@@ -110,8 +100,8 @@ type FindingEventStatus = Exclude<
 >;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
-	abstract append(event: LedgerEventInput): Promise<void>;
-	abstract getState(): Promise<LedgerSnapshot>;
+	public abstract append(event: LedgerEventInput): Promise<void>;
+	public abstract getState(): Promise<LedgerSnapshot>;
 
 	public buildEntry(
 		finding: Finding,
@@ -145,78 +135,64 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		const findings = { ...snapshot.findings };
 		const axioms = { ...snapshot.axioms };
 
-		if (event.type === FindingStatus.OBSERVED) {
-			const existing = findings[event.fingerprint];
-			const newState = this.getNewState(existing?.state);
-			findings[event.fingerprint] = {
-				fingerprint: event.fingerprint,
-				state: newState,
-				baselined: existing?.baselined ?? false,
-				rule_id: event.rule_id,
-				message: event.message,
-				artifacts: event.artifacts,
-			} satisfies FindingRecord;
-		} else if (event.type === FindingStatus.BASELINED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, baselined: true };
-			}
-		} else if (event.type === FindingStatus.PROMOTED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
+		switch (event.type) {
+			case FindingStatus.OBSERVED: {
+				const existing = findings[event.fingerprint];
 				findings[event.fingerprint] = {
-					...record,
-					state: FindingStatus.PROMOTED,
-				};
+					fingerprint: event.fingerprint,
+					state: this.nextState(existing?.state),
+					baselined: existing?.baselined ?? false,
+					rule_id: event.rule_id,
+					message: event.message,
+					artifacts: event.artifacts,
+				} satisfies FindingRecord;
+				break;
 			}
-		} else if (event.type === FindingStatus.ENFORCED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = {
-					...record,
-					state: FindingStatus.ENFORCED,
-				};
+			case FindingStatus.BASELINED: {
+				const record = findings[event.fingerprint];
+				if (record !== undefined) {
+					findings[event.fingerprint] = { ...record, baselined: true };
+				}
+				break;
 			}
-		} else if (event.type === FindingStatus.RESOLVED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = {
-					...record,
-					state: FindingStatus.RESOLVED,
-				};
+			case FindingStatus.PROMOTED:
+			case FindingStatus.ENFORCED:
+			case FindingStatus.RESOLVED: {
+				const record = findings[event.fingerprint];
+				if (record !== undefined) {
+					findings[event.fingerprint] = { ...record, state: event.type };
+				}
+				break;
 			}
-		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
-			axioms[event.axiom_id] = {
-				axiom_id: event.axiom_id,
-				scope: event.scope,
-				claim: event.claim,
-				note: event.note,
-				fingerprints: event.fingerprints,
-				active: true,
-			} satisfies AxiomRecord;
-		} else if (event.type === FindingStatus.AXIOM_SUPERSEDED) {
-			const record = axioms[event.axiom_id];
-			if (record !== undefined) {
-				axioms[event.axiom_id] = { ...record, active: false };
+			case FindingStatus.AXIOM_DECLARED: {
+				axioms[event.axiom_id] = {
+					axiom_id: event.axiom_id,
+					scope: event.scope,
+					claim: event.claim,
+					note: event.note,
+					fingerprints: event.fingerprints,
+					active: true,
+				} satisfies AxiomRecord;
+				break;
 			}
-		} else if (event.type === FindingStatus.AXIOM_REVOKED) {
-			const record = axioms[event.axiom_id];
-			if (record !== undefined) {
-				axioms[event.axiom_id] = { ...record, active: false };
+			case FindingStatus.AXIOM_SUPERSEDED:
+			case FindingStatus.AXIOM_REVOKED: {
+				const record = axioms[event.axiom_id];
+				if (record !== undefined) {
+					axioms[event.axiom_id] = { ...record, active: false };
+				}
+				break;
 			}
 		}
 
 		return { last_entry_id: event.entry_id, findings, axioms };
 	}
 
-	private getNewState(existingState?: FindingStatus): FindingStatus {
-		if (!existingState) {
+	private nextState(existingState?: FindingStatus): FindingStatus {
+		if (!existingState || existingState === FindingStatus.RESOLVED) {
 			return FindingStatus.OBSERVED;
 		}
-		if (existingState === FindingStatus.RESOLVED) {
-			return FindingStatus.OBSERVED;
-		}
-		return existingState ?? FindingStatus.OBSERVED;
+		return existingState;
 	}
 }
 

@@ -18,29 +18,43 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[fingerprint];
 
 		if (record === undefined) {
-			console.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
+			console.error(
+				`No finding with fingerprint "${fingerprint}" found in the ledger.`,
+			);
 			process.exit(1);
 		}
 
 		if (record.state === FindingStatus.ENFORCED) {
-			console.warn(`Finding "${fingerprint}" is already enforced. Nothing to do.`);
+			console.warn(
+				`Finding "${fingerprint}" is already enforced. Nothing to do.`,
+			);
 			return;
 		}
 
 		if (record.state === FindingStatus.PROMOTED && !enforce) {
-			console.warn(`Finding "${fingerprint}" is already promoted. Use --enforce to escalate.`);
+			console.warn(
+				`Finding "${fingerprint}" is already promoted. Use --enforce to escalate.`,
+			);
 			return;
 		}
 
 		const timestamp = new Date().toISOString();
 
 		if (record.state === FindingStatus.OBSERVED) {
-			await this.ledger.append({ type: FindingStatus.PROMOTED, timestamp, fingerprint });
+			await this.ledger.append({
+				type: FindingStatus.PROMOTED,
+				timestamp,
+				fingerprint,
+			});
 			console.log(`Finding "${fingerprint}" promoted.`);
 		}
 
 		if (enforce) {
-			await this.ledger.append({ type: FindingStatus.ENFORCED, timestamp, fingerprint });
+			await this.ledger.append({
+				type: FindingStatus.ENFORCED,
+				timestamp,
+				fingerprint,
+			});
 			console.log(`Finding "${fingerprint}" enforced.`);
 		}
 	}

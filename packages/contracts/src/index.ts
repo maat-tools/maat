@@ -13,64 +13,9 @@ export interface LedgerBackendRegistry {}
 // biome-ignore lint/suspicious/noEmptyInterface: intentionally empty for declaration merging
 export interface InsightRegistry {}
 
-export interface Collector<
-	TKeys extends keyof FactRegistry = keyof FactRegistry,
-> {
-	readonly id: string;
-	readonly provideFacts: readonly TKeys[];
-	collect(): Promise<Pick<FactRegistry, TKeys>>;
-}
-
-export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
-	readonly id: string;
-	readonly needFacts: readonly TNeeds[];
-	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];
-	describeArtifact(artifact: Artifact): Record<string, string>;
-}
-
-export interface RuleBuilder {
-	build(): Rule;
-}
-
-export interface Insight {
-	readonly id: string;
-	readonly needRules: readonly string[];
-	analyze(findings: Finding[]): InsightResult[];
-}
-
-type WithoutEntryId<T> = T extends unknown ? Omit<T, 'entry_id'> : never;
-
-export type InsightResult = {
-	insightId: string;
-	message: string;
-	data: unknown;
-};
-
-export type FindingEvent =
-	| FindingObservedEvent
-	| FindingBaselinedEvent
-	| FindingPromotedEvent
-	| FindingEnforcedEvent
-	| FindingResolvedEvent;
-
-export type FindingEventInput = WithoutEntryId<FindingEvent>;
-
-export interface LedgerBackend {
-	append(event: LedgerEventInput): Promise<void>;
-	getState(): Promise<LedgerSnapshot>;
-	buildEntry(finding: Finding, type: FindingStatus): FindingEventInput;
-}
-
 export type Artifact = {
 	kind: string;
 	data: unknown;
-};
-
-export type FindingRuleOutput = {
-	ruleId: string;
-	ruleIdentifier: Record<string, unknown>;
-	message: string;
-	artifacts: Artifact[];
 };
 
 export type Finding = {
@@ -80,9 +25,17 @@ export type Finding = {
 	artifacts: Artifact[];
 };
 
-type LedgerEntryBase = {
-	readonly entry_id: string;
-	readonly timestamp: string;
+export type FindingRuleOutput = {
+	ruleId: string;
+	ruleIdentifier: Record<string, unknown>;
+	message: string;
+	artifacts: Artifact[];
+};
+
+export type InsightResult = {
+	insightId: string;
+	message: string;
+	data: unknown;
 };
 
 export const FindingStatus = {
@@ -97,6 +50,13 @@ export const FindingStatus = {
 } as const;
 
 export type FindingStatus = (typeof FindingStatus)[keyof typeof FindingStatus];
+
+type LedgerEntryBase = {
+	readonly entry_id: string;
+	readonly timestamp: string;
+};
+
+type WithoutEntryId<T> = T extends unknown ? Omit<T, 'entry_id'> : never;
 
 export type FindingObservedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.OBSERVED;
@@ -128,6 +88,15 @@ export type FindingResolvedEvent = LedgerEntryBase & {
 	readonly fingerprint: string;
 };
 
+export type FindingEvent =
+	| FindingObservedEvent
+	| FindingBaselinedEvent
+	| FindingPromotedEvent
+	| FindingEnforcedEvent
+	| FindingResolvedEvent;
+
+export type FindingEventInput = WithoutEntryId<FindingEvent>;
+
 export type AxiomDeclaredEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.AXIOM_DECLARED;
 	readonly axiom_id: string;
@@ -147,15 +116,6 @@ export type AxiomRevokedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.AXIOM_REVOKED;
 	readonly axiom_id: string;
 	readonly reason?: string;
-};
-
-export type AxiomRecord = {
-	readonly axiom_id: string;
-	readonly scope: string;
-	readonly claim: string;
-	readonly note?: string;
-	readonly fingerprints?: readonly string[];
-	readonly active: boolean;
 };
 
 export type LedgerEvent =
@@ -179,11 +139,51 @@ export type FindingRecord = {
 	readonly artifacts: readonly Artifact[];
 };
 
+export type AxiomRecord = {
+	readonly axiom_id: string;
+	readonly scope: string;
+	readonly claim: string;
+	readonly note?: string;
+	readonly fingerprints?: readonly string[];
+	readonly active: boolean;
+};
+
 export type LedgerSnapshot = {
 	readonly last_entry_id: string | null;
 	readonly findings: Record<string, FindingRecord>;
 	readonly axioms: Record<string, AxiomRecord>;
 };
+
+export interface Collector<
+	TKeys extends keyof FactRegistry = keyof FactRegistry,
+> {
+	readonly id: string;
+	readonly provideFacts: readonly TKeys[];
+	collect(): Promise<Pick<FactRegistry, TKeys>>;
+}
+
+export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
+	readonly id: string;
+	readonly needFacts: readonly TNeeds[];
+	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];
+	describeArtifact(artifact: Artifact): Record<string, string>;
+}
+
+export interface RuleBuilder {
+	build(): Rule;
+}
+
+export interface Insight {
+	readonly id: string;
+	readonly needRules: readonly string[];
+	analyze(findings: Finding[]): InsightResult[];
+}
+
+export interface LedgerBackend {
+	append(event: LedgerEventInput): Promise<void>;
+	getState(): Promise<LedgerSnapshot>;
+	buildEntry(finding: Finding, type: FindingStatus): FindingEventInput;
+}
 
 export type CollectorFactory<
 	TConfig,
@@ -198,13 +198,9 @@ export type InsightFactory<TOptions = Record<string, never>> = (
 	options?: TOptions,
 ) => Insight;
 
-export type RuleSet = {
-	readonly factories: readonly BrandedRuleFactory<unknown>[];
-};
-
-export type InsightSet = {
-	readonly factories: readonly BrandedInsightFactory<unknown>[];
-};
+export type LedgerBackendFactory<TConfig = Record<string, never>> = (
+	config: TConfig,
+) => LedgerBackend;
 
 export const COLLECTOR_FACTORY_BRAND = Symbol('maat.CollectorFactory');
 export const RULE_FACTORY_BRAND = Symbol('maat.RuleFactory');
@@ -226,6 +222,24 @@ export type BrandedRuleFactory<TOptions = Record<string, never>> =
 		readonly [RULE_FACTORY_BRAND]: true;
 	};
 
+export type BrandedInsightFactory<TOptions = Record<string, never>> =
+	InsightFactory<TOptions> & {
+		readonly [INSIGHT_FACTORY_BRAND]: true;
+	};
+
+export type BrandedLedgerBackendFactory<TConfig = Record<string, never>> =
+	LedgerBackendFactory<TConfig> & {
+		readonly [LEDGER_BACKEND_FACTORY_BRAND]: true;
+	};
+
+export type RuleSet = {
+	readonly factories: readonly BrandedRuleFactory<unknown>[];
+};
+
+export type InsightSet = {
+	readonly factories: readonly BrandedInsightFactory<unknown>[];
+};
+
 export type BrandedRuleSet = RuleSet & {
 	readonly [RULE_SET_BRAND]: true;
 };
@@ -233,20 +247,6 @@ export type BrandedRuleSet = RuleSet & {
 export type BrandedRuleBuilder = RuleBuilder & {
 	readonly [RULE_BUILDER_BRAND]: true;
 };
-
-export type LedgerBackendFactory<TConfig = Record<string, never>> = (
-	config: TConfig,
-) => LedgerBackend;
-
-export type BrandedLedgerBackendFactory<TConfig = Record<string, never>> =
-	LedgerBackendFactory<TConfig> & {
-		readonly [LEDGER_BACKEND_FACTORY_BRAND]: true;
-	};
-
-export type BrandedInsightFactory<TOptions = Record<string, never>> =
-	InsightFactory<TOptions> & {
-		readonly [INSIGHT_FACTORY_BRAND]: true;
-	};
 
 export type BrandedInsightSet = InsightSet & {
 	readonly [INSIGHT_SET_BRAND]: true;
@@ -314,6 +314,18 @@ export function isCollectorFactory(
 	);
 }
 
+export function isCollector(
+	obj: unknown,
+): obj is Collector<keyof FactRegistry> {
+	return (
+		typeof obj === 'object' &&
+		obj !== null &&
+		typeof (obj as Collector<keyof FactRegistry>).id === 'string' &&
+		Array.isArray((obj as Collector<keyof FactRegistry>).provideFacts) &&
+		typeof (obj as Collector<keyof FactRegistry>).collect === 'function'
+	);
+}
+
 export function isRuleFactory(
 	fn: unknown,
 ): fn is BrandedRuleFactory<Record<string, unknown>> {
@@ -328,18 +340,6 @@ export function isRuleSet(obj: unknown): obj is BrandedRuleSet {
 		typeof obj === 'object' &&
 		obj !== null &&
 		(obj as Record<symbol, unknown>)[RULE_SET_BRAND] === true
-	);
-}
-
-export function isCollector(
-	obj: unknown,
-): obj is Collector<keyof FactRegistry> {
-	return (
-		typeof obj === 'object' &&
-		obj !== null &&
-		typeof (obj as Collector<keyof FactRegistry>).id === 'string' &&
-		Array.isArray((obj as Collector<keyof FactRegistry>).provideFacts) &&
-		typeof (obj as Collector<keyof FactRegistry>).collect === 'function'
 	);
 }
 
@@ -359,16 +359,6 @@ export function isRuleBuilder(obj: unknown): obj is BrandedRuleBuilder {
 		obj !== null &&
 		(obj as Record<symbol, unknown>)[RULE_BUILDER_BRAND] === true &&
 		typeof (obj as RuleBuilder).build === 'function'
-	);
-}
-
-export function isLedgerBackendFactory(
-	fn: unknown,
-): fn is BrandedLedgerBackendFactory<unknown> {
-	return (
-		typeof fn === 'function' &&
-		(fn as unknown as Record<symbol, unknown>)[LEDGER_BACKEND_FACTORY_BRAND] ===
-			true
 	);
 }
 
@@ -396,5 +386,15 @@ export function isInsight(obj: unknown): obj is Insight {
 		typeof (obj as Insight).id === 'string' &&
 		Array.isArray((obj as Insight).needRules) &&
 		typeof (obj as Insight).analyze === 'function'
+	);
+}
+
+export function isLedgerBackendFactory(
+	fn: unknown,
+): fn is BrandedLedgerBackendFactory<unknown> {
+	return (
+		typeof fn === 'function' &&
+		(fn as unknown as Record<symbol, unknown>)[LEDGER_BACKEND_FACTORY_BRAND] ===
+			true
 	);
 }

@@ -42,7 +42,12 @@ function toFinding(record: FindingRecord): Finding {
 }
 
 export class Visualize extends MaatCommandBase implements MaatCommand {
-	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
+	public async action({
+		filter,
+		axioms,
+		insights,
+		json,
+	}: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot visualize without a ledger.');
 			process.exit(1);
@@ -59,7 +64,10 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		const grouped = new Map<Group, FindingRecord[]>();
 		for (const group of GROUP_ORDER) {
 			if (activeGroups.has(group)) {
-				grouped.set(group, allFindings.filter((r) => classify(r) === group));
+				grouped.set(
+					group,
+					allFindings.filter((r) => classify(r) === group),
+				);
 			}
 		}
 
@@ -89,7 +97,9 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			const heading = `${group.toUpperCase()} (${records.length})`;
 			printSection(heading);
 			for (const r of records) {
-				console.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
+				console.log(
+					`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`,
+				);
 			}
 		}
 
@@ -99,7 +109,9 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			printSection(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				console.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
+				console.log(
+					`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`,
+				);
 			}
 		}
 

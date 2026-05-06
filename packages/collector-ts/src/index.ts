@@ -12,14 +12,18 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 } from '@maat/vocabulary';
-import { Project } from 'ts-morph';
+import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
 	tsConfigFilePath: string;
 	exclude?: string[];
 };
 
-const getContext = (parentKind: string | undefined): ConstantContext => {
+const DEFAULT_EXCLUDE_PATTERNS = ['**/*.test.ts', '**/*.spec.ts'];
+
+const packageNameCache = new Map<string, string | null>();
+
+function inferContext(parentKind: string | undefined): ConstantContext {
 	switch (parentKind) {
 		case 'ImportDeclaration':
 		case 'ExportDeclaration':
@@ -37,9 +41,7 @@ const getContext = (parentKind: string | undefined): ConstantContext => {
 		default:
 			return 'assignment';
 	}
-};
-
-const packageNameCache = new Map<string, string | null>();
+}
 
 function toProjectRelativePath(projectRoot: string, filePath: string): string {
 	return relative(projectRoot, filePath).replace(/\\/g, '/');
@@ -65,6 +67,7 @@ function resolvePackageName(filePath: string): string | null {
 				return null;
 			}
 		}
+
 		const parent = dirname(dir);
 		if (parent === dir) {
 			break;
@@ -75,6 +78,52 @@ function resolvePackageName(filePath: string): string | null {
 	return null;
 }
 
+function collectImports(
+	sourceFile: SourceFile,
+	file: string,
+	packageName: string | null,
+): Import[] {
+	return sourceFile.getImportDeclarations().map((decl) => ({
+		file,
+		packageName,
+		specifier: decl.getModuleSpecifierValue(),
+		location: {
+			file,
+			line: decl.getStartLineNumber(),
+			column: decl.getStartLinePos(),
+		},
+	}));
+}
+
+function collectConstants(sourceFile: SourceFile, file: string): Constant[] {
+	const constants: Constant[] = [];
+
+	for (const node of sourceFile.getDescendants()) {
+		const kind = node.getKindName();
+		const raw = node.getText();
+		const context = inferContext(node.getParent()?.getKindName());
+		const location: Constant['location'] = {
+			file,
+			line: node.getStartLineNumber(),
+			column: node.getStartLinePos(),
+		};
+
+		if (kind === 'StringLiteral') {
+			constants.push({
+				kind: 'string',
+				value: raw.slice(1, -1),
+				raw,
+				context,
+				location,
+			});
+		} else if (kind === 'NumericLiteral') {
+			constants.push({ kind: 'number', value: raw, raw, context, location });
+		}
+	}
+
+	return constants;
+}
+
 export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
 	public readonly provideFacts = [
@@ -82,71 +131,30 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		IMPORTS_CAPABILITY,
 	] as const;
 
-	constructor(private readonly config: TSInput) {}
+	public constructor(private readonly config: TSInput) {}
 
 	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);
 		const projectRoot = dirname(resolvedPath);
 		const project = new Project({ tsConfigFilePath: resolvedPath });
-		const sourceFiles = project.getSourceFiles();
-		const excludePatterns = this.config.exclude ?? [
-			'**/*.test.ts',
-			'**/*.spec.ts',
-		];
-		const excludeGlobs = excludePatterns.map((p) => new Bun.Glob(p));
+		const excludeGlobs = (this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS).map(
+			(p) => new Bun.Glob(p),
+		);
 
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
 
-		for (const sourceFile of sourceFiles) {
+		for (const sourceFile of project.getSourceFiles()) {
 			const absoluteFile = sourceFile.getFilePath();
 			const file = toProjectRelativePath(projectRoot, absoluteFile);
+
 			if (excludeGlobs.some((g) => g.match(file))) {
 				continue;
 			}
+
 			const packageName = resolvePackageName(absoluteFile);
-
-			for (const decl of sourceFile.getImportDeclarations()) {
-				imports.push({
-					file,
-					packageName,
-					specifier: decl.getModuleSpecifierValue(),
-					location: {
-						file,
-						line: decl.getStartLineNumber(),
-						column: decl.getStartLinePos(),
-					},
-				});
-			}
-
-			for (const node of sourceFile.getDescendants()) {
-				const kind = node.getKindName();
-				const context = getContext(node.getParent()?.getKindName());
-				const raw = node.getText();
-				const location: Constant['location'] = {
-					file,
-					line: node.getStartLineNumber(),
-					column: node.getStartLinePos(),
-				};
-
-				if (kind === 'StringLiteral') {
-					constants.push({
-						kind: 'string',
-						value: raw.slice(1, -1),
-						raw,
-						context,
-						location,
-					});
-				} else if (kind === 'NumericLiteral') {
-					constants.push({
-						kind: 'number',
-						value: raw,
-						raw,
-						context,
-						location,
-					});
-				}
-			}
+			imports.push(...collectImports(sourceFile, file, packageName));
+			constants.push(...collectConstants(sourceFile, file));
 		}
 
 		return { constants, imports };

@@ -40,7 +40,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 	private readonly threshold: number;
 	private readonly ignoreValues: Set<string>;
 
-	constructor(options: CoMRuleOptions = {}) {
+	public constructor(options: CoMRuleOptions = {}) {
 		this.threshold = options.threshold ?? 3;
 		this.ignoreValues = new Set([
 			...NOISE_VALUES,

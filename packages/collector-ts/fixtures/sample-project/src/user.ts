@@ -9,17 +9,17 @@ export type Role = 'admin' | 'editor' | 'viewer';
 export class UserService {
 	private users: User[] = [];
 
-	constructor(readonly _role: Role) {}
+	public constructor(public readonly _role: Role) {}
 
-	addUser(user: User): void {
+	public addUser(user: User): void {
 		this.users.push(user);
 	}
 
-	findById(id: number): User | undefined {
+	public findById(id: number): User | undefined {
 		return this.users.find((u) => u.id === id);
 	}
 
-	getAll(): User[] {
+	public getAll(): User[] {
 		return this.users;
 	}
 }

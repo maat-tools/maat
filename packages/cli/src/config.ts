@@ -71,7 +71,9 @@ function* ancestorDirs(startDir: string): Generator<string> {
 	while (true) {
 		yield current;
 		const parent = dirname(current);
-		if (parent === current) break;
+		if (parent === current) {
+			break;
+		}
 		current = parent;
 	}
 }
@@ -80,7 +82,9 @@ export async function findMaatConfig(cwd: string): Promise<string | null> {
 	for (const dir of ancestorDirs(resolve(cwd))) {
 		for (const filename of CONFIG_FILENAMES) {
 			const candidate = join(dir, filename);
-			if (await pathExists(candidate)) return candidate;
+			if (await pathExists(candidate)) {
+				return candidate;
+			}
 		}
 	}
 	return null;
@@ -88,17 +92,23 @@ export async function findMaatConfig(cwd: string): Promise<string | null> {
 
 export function readConfigPathFromArgv(argv: string[]): string | undefined {
 	for (const [i, arg] of argv.entries()) {
-		if (arg === '--') return undefined;
+		if (arg === '--') {
+			return undefined;
+		}
 
 		if (arg === '--config' || arg === '-c') {
 			const value = argv[i + 1];
-			if (!value) throw new Error(`${arg} requires a path.`);
+			if (!value) {
+				throw new Error(`${arg} requires a path.`);
+			}
 			return value;
 		}
 
 		if (arg.startsWith('--config=')) {
 			const value = arg.slice('--config='.length);
-			if (!value) throw new Error('--config requires a path.');
+			if (!value) {
+				throw new Error('--config requires a path.');
+			}
 			return value;
 		}
 	}
@@ -136,7 +146,9 @@ async function importMaatConfig(filePath: string): Promise<MaatConfig> {
 }
 
 function isMaatConfig(value: unknown): value is MaatConfig {
-	if (typeof value !== 'object' || value === null) return false;
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
 	const obj = value as Record<string, unknown>;
 	return Array.isArray(obj.collectors) && Array.isArray(obj.rules);
 }
@@ -151,6 +163,8 @@ async function pathExists(filePath: string): Promise<boolean> {
 }
 
 function formatError(error: unknown): string {
-	if (error instanceof Error) return error.message;
+	if (error instanceof Error) {
+		return error.message;
+	}
 	return String(error);
 }

@@ -17,11 +17,15 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[fingerprint];
 
 		if (record === undefined) {
-			console.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
+			console.error(
+				`No finding with fingerprint "${fingerprint}" found in the ledger.`,
+			);
 			process.exit(1);
 		}
 
-		const isResolvable = record.state === FindingStatus.PROMOTED || record.state === FindingStatus.ENFORCED;
+		const isResolvable =
+			record.state === FindingStatus.PROMOTED ||
+			record.state === FindingStatus.ENFORCED;
 		if (!isResolvable) {
 			console.error(
 				`Finding "${fingerprint}" is in state "${record.state}" and cannot be resolved. ` +
@@ -30,7 +34,11 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		await this.ledger.append({ type: FindingStatus.RESOLVED, timestamp: new Date().toISOString(), fingerprint });
+		await this.ledger.append({
+			type: FindingStatus.RESOLVED,
+			timestamp: new Date().toISOString(),
+			fingerprint,
+		});
 
 		console.log(`Finding "${fingerprint}" resolved.`);
 	}

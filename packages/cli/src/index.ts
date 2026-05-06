@@ -32,7 +32,7 @@ class MaatCLI {
 	private ledger: LedgerBackend | null = null;
 	private insights: Insight[] = [];
 
-	constructor() {
+	public constructor() {
 		this.registerCLIInfo();
 	}
 

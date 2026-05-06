@@ -9,10 +9,10 @@ import { IMPORTS_CAPABILITY, type Import } from '@maat/vocabulary';
 import type { Role } from './roles';
 
 class LayerRule implements Rule<'imports'> {
-	readonly id: string;
-	readonly needFacts = [IMPORTS_CAPABILITY] as const;
+	public readonly id: string;
+	public readonly needFacts = [IMPORTS_CAPABILITY] as const;
 
-	constructor(
+	public constructor(
 		private readonly target: string,
 		private readonly role: Role | null,
 		private readonly allowed: readonly (string | RegExp)[],
@@ -20,7 +20,7 @@ class LayerRule implements Rule<'imports'> {
 		this.id = `layer:${target}@v1`;
 	}
 
-	evaluate(facts: { imports: Import[] }): FindingRuleOutput[] {
+	public evaluate(facts: { imports: Import[] }): FindingRuleOutput[] {
 		const findings: FindingRuleOutput[] = [];
 
 		for (const imp of facts.imports) {
@@ -45,7 +45,7 @@ class LayerRule implements Rule<'imports'> {
 		return findings;
 	}
 
-	describeArtifact(artifact: Artifact): Record<string, string> {
+	public describeArtifact(artifact: Artifact): Record<string, string> {
 		if (artifact.kind === 'import') {
 			const imp = artifact.data as Import;
 			return {
@@ -71,29 +71,29 @@ class LayerRule implements Rule<'imports'> {
 }
 
 export class LayerBuilder implements RuleBuilder {
-	readonly target: string;
+	public readonly target: string;
 	private _role: Role | null = null;
 	private _allowed: (string | RegExp)[] = [];
 
-	constructor(target: string) {
+	public constructor(target: string) {
 		this.target = target;
 	}
 
-	get role(): Role | null {
+	public get role(): Role | null {
 		return this._role;
 	}
 
-	is(role: Role): this {
+	public is(role: Role): this {
 		this._role = role;
 		return this;
 	}
 
-	allows(...patterns: (string | RegExp)[]): this {
+	public allows(...patterns: (string | RegExp)[]): this {
 		this._allowed.push(...patterns);
 		return this;
 	}
 
-	build(): Rule<'imports'> {
+	public build(): Rule<'imports'> {
 		return new LayerRule(this.target, this._role, this._allowed);
 	}
 }

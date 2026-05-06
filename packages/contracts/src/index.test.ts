@@ -153,14 +153,24 @@ describe('isInsight', () => {
 describe('defineRuleBuilder', () => {
 	test('returns object with RULE_BUILDER_BRAND', () => {
 		const builder = defineRuleBuilder({
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
+			build: () => ({
+				id: 'r',
+				needFacts: ['x' as never],
+				evaluate: () => [],
+				describeArtifact: () => ({}),
+			}),
 		});
 		expect(builder[RULE_BUILDER_BRAND]).toBe(true);
 	});
 
 	test('preserves all original methods on the builder', () => {
 		const original = {
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
+			build: () => ({
+				id: 'r',
+				needFacts: ['x' as never],
+				evaluate: () => [],
+				describeArtifact: () => ({}),
+			}),
 			extra: () => 42,
 		};
 		const branded = defineRuleBuilder(original);
@@ -171,7 +181,12 @@ describe('defineRuleBuilder', () => {
 describe('isRuleBuilder', () => {
 	test('true for branded builder', () => {
 		const builder = defineRuleBuilder({
-			build: () => ({ id: 'r', needFacts: ['x' as never], evaluate: () => [], describeArtifact: () => ({}) }),
+			build: () => ({
+				id: 'r',
+				needFacts: ['x' as never],
+				evaluate: () => [],
+				describeArtifact: () => ({}),
+			}),
 		});
 		expect(isRuleBuilder(builder)).toBe(true);
 	});

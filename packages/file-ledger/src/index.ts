@@ -23,7 +23,7 @@ export type {
 
 export { defineLedgerBackend } from '@maat/contracts';
 
-type FilePathLedgerInput = {
+type FilePathLedgerOptions = {
 	path: string;
 };
 
@@ -37,7 +37,7 @@ export class FilePathLedgerBackend
 	extends LedgerBackendBase
 	implements LedgerBackend
 {
-	constructor(private readonly options: FilePathLedgerInput) {
+	public constructor(private readonly options: FilePathLedgerOptions) {
 		super();
 	}
 
@@ -50,35 +50,38 @@ export class FilePathLedgerBackend
 	}
 
 	public async getState(): Promise<LedgerSnapshot> {
-		const file = Bun.file(this.snapshotPath);
-		if (!(await file.exists())) {
+		const snapshotFile = Bun.file(this.snapshotPath);
+		if (!(await snapshotFile.exists())) {
 			return this.rebuildSnapshot();
 		}
-
-		const text = await file.text();
-		if (text.trim().length === 0) {
-			return EMPTY_SNAPSHOT;
-		}
-
-		return JSON.parse(text) as LedgerSnapshot;
+		return this.loadSnapshot();
 	}
 
 	private get snapshotPath(): string {
 		return this.options.path.replace(/\.ndjson$/, '.snapshot.json');
 	}
 
-	private async updateSnapshot(event: LedgerEvent): Promise<void> {
-		const snapshotFile = Bun.file(this.snapshotPath);
-		const current: LedgerSnapshot = (await snapshotFile.exists())
-			? (JSON.parse(await snapshotFile.text()) as LedgerSnapshot)
-			: EMPTY_SNAPSHOT;
+	private async loadSnapshot(): Promise<LedgerSnapshot> {
+		const text = await Bun.file(this.snapshotPath).text();
+		return text.trim().length === 0
+			? EMPTY_SNAPSHOT
+			: (JSON.parse(text) as LedgerSnapshot);
+	}
 
-		const updated = this.applyEvent(current, event);
+	private async persistSnapshot(snapshot: LedgerSnapshot): Promise<void> {
 		await writeFile(
 			this.snapshotPath,
-			`${JSON.stringify(updated, null, 2)}\n`,
+			`${JSON.stringify(snapshot, null, 2)}\n`,
 			'utf-8',
 		);
+	}
+
+	private async updateSnapshot(event: LedgerEvent): Promise<void> {
+		const snapshotFile = Bun.file(this.snapshotPath);
+		const current = (await snapshotFile.exists())
+			? await this.loadSnapshot()
+			: EMPTY_SNAPSHOT;
+		await this.persistSnapshot(this.applyEvent(current, event));
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
@@ -86,43 +89,32 @@ export class FilePathLedgerBackend
 		if (!(await file.exists())) {
 			return [];
 		}
-
 		const text = await file.text();
-
-		if (text.trim().length === 0) {
-			return [];
-		}
-
-		return text
-			.split('\n')
-			.filter((line) => line.trim().length > 0)
-			.map((line) => JSON.parse(line) as LedgerEvent);
+		return text.trim().length === 0
+			? []
+			: text
+					.split('\n')
+					.filter((line) => line.trim().length > 0)
+					.map((line) => JSON.parse(line) as LedgerEvent);
 	}
 
 	private async rebuildSnapshot(): Promise<LedgerSnapshot> {
 		const events = await this.readLog();
 		let snapshot: LedgerSnapshot = EMPTY_SNAPSHOT;
-
 		for (const event of events) {
 			snapshot = this.applyEvent(snapshot, event);
 		}
-
-		await writeFile(
-			this.snapshotPath,
-			`${JSON.stringify(snapshot, null, 2)}\n`,
-			'utf-8',
-		);
-
+		await this.persistSnapshot(snapshot);
 		return snapshot;
 	}
 }
 
 declare module '@maat/contracts' {
 	interface LedgerBackendRegistry {
-		'@maat/ledger': FilePathLedgerInput;
+		'@maat/ledger': FilePathLedgerOptions;
 	}
 }
 
 export default defineLedgerBackend(
-	(config: FilePathLedgerInput) => new FilePathLedgerBackend(config),
+	(config: FilePathLedgerOptions) => new FilePathLedgerBackend(config),
 );

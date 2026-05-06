@@ -1,5 +1,4 @@
 import { appendFile, writeFile } from 'node:fs/promises';
-import { ulid } from 'ulid';
 import {
 	defineLedgerBackend,
 	type LedgerBackend,
@@ -7,6 +6,7 @@ import {
 	type LedgerEventInput,
 	type LedgerSnapshot,
 } from '@maat/contracts';
+import { ulid } from 'ulid';
 import { LedgerBackendBase } from '../../core/src';
 
 export type {
@@ -27,9 +27,16 @@ type FilePathLedgerInput = {
 	path: string;
 };
 
-const EMPTY_SNAPSHOT: LedgerSnapshot = { last_entry_id: null, findings: {}, axioms: {} };
+const EMPTY_SNAPSHOT: LedgerSnapshot = {
+	last_entry_id: null,
+	findings: {},
+	axioms: {},
+};
 
-export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBackend {
+export class FilePathLedgerBackend
+	extends LedgerBackendBase
+	implements LedgerBackend
+{
 	constructor(private readonly options: FilePathLedgerInput) {
 		super();
 	}
@@ -63,13 +70,16 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	private async updateSnapshot(event: LedgerEvent): Promise<void> {
 		const snapshotFile = Bun.file(this.snapshotPath);
 		const current: LedgerSnapshot = (await snapshotFile.exists())
-			? JSON.parse(await snapshotFile.text()) as LedgerSnapshot
+			? (JSON.parse(await snapshotFile.text()) as LedgerSnapshot)
 			: EMPTY_SNAPSHOT;
 
 		const updated = this.applyEvent(current, event);
-		await writeFile(this.snapshotPath, `${JSON.stringify(updated, null, 2)}\n`, 'utf-8');
+		await writeFile(
+			this.snapshotPath,
+			`${JSON.stringify(updated, null, 2)}\n`,
+			'utf-8',
+		);
 	}
-
 
 	private async readLog(): Promise<LedgerEvent[]> {
 		const file = Bun.file(this.options.path);
@@ -97,7 +107,11 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			snapshot = this.applyEvent(snapshot, event);
 		}
 
-		await writeFile(this.snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf-8');
+		await writeFile(
+			this.snapshotPath,
+			`${JSON.stringify(snapshot, null, 2)}\n`,
+			'utf-8',
+		);
 
 		return snapshot;
 	}

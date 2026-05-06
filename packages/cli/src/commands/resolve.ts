@@ -17,14 +17,19 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[options.fingerprint];
 
 		if (record === undefined) {
-			console.error(`No finding with fingerprint "${options.fingerprint}" found in the ledger.`);
+			console.error(
+				`No finding with fingerprint "${options.fingerprint}" found in the ledger.`,
+			);
 			process.exit(1);
 		}
 
-		if (record.state !== FindingStatus.PROMOTED && record.state !== FindingStatus.ENFORCED) {
+		if (
+			record.state !== FindingStatus.PROMOTED &&
+			record.state !== FindingStatus.ENFORCED
+		) {
 			console.error(
 				`Finding "${options.fingerprint}" is in state "${record.state}" and cannot be resolved. ` +
-				`Only findings in "${FindingStatus.PROMOTED}" or "${FindingStatus.ENFORCED}" state can be explicitly resolved.`,
+					`Only findings in "${FindingStatus.PROMOTED}" or "${FindingStatus.ENFORCED}" state can be explicitly resolved.`,
 			);
 			process.exit(1);
 		}
@@ -41,8 +46,13 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('resolve')
-			.description('Explicitly resolve a finding that was marked absent — confirming it has been intentionally fixed')
-			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
+			.description(
+				'Explicitly resolve a finding that was marked absent — confirming it has been intentionally fixed',
+			)
+			.requiredOption(
+				'--fingerprint <fingerprint>',
+				'Fingerprint of the finding to resolve',
+			)
 			.action((options: ResolveOptions) => this.action(options));
 	}
 }

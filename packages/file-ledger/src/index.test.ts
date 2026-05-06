@@ -1,7 +1,7 @@
-import { mkdir, rm, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdir, rm, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { FindingStatus } from '@maat/contracts';
 import { FilePathLedgerBackend } from './index';
 
@@ -11,7 +11,10 @@ let snapshotPath: string;
 let ledger: FilePathLedgerBackend;
 
 beforeEach(async () => {
-	dir = join(tmpdir(), `maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	dir = join(
+		tmpdir(),
+		`maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+	);
 	await mkdir(dir, { recursive: true });
 	ledgerPath = join(dir, 'test.ndjson');
 	snapshotPath = join(dir, 'test.snapshot.json');
@@ -42,8 +45,8 @@ describe('FilePathLedgerBackend', () => {
 	test('append + getState reflects the appended event', async () => {
 		await ledger.append(observedEvent);
 		const state = await ledger.getState();
-		expect(state.findings['fp1']?.state).toBe(FindingStatus.OBSERVED);
-		expect(state.findings['fp1']?.rule_id).toBe('rule@v1');
+		expect(state.findings.fp1?.state).toBe(FindingStatus.OBSERVED);
+		expect(state.findings.fp1?.rule_id).toBe('rule@v1');
 	});
 
 	test('append generates entry_id — callers must not provide it', async () => {
@@ -73,8 +76,8 @@ describe('FilePathLedgerBackend', () => {
 		});
 
 		const state = await ledger.getState();
-		expect(state.findings['fp1']?.baselined).toBe(true);
-		expect(state.findings['fp2']?.state).toBe(FindingStatus.OBSERVED);
+		expect(state.findings.fp1?.baselined).toBe(true);
+		expect(state.findings.fp2?.state).toBe(FindingStatus.OBSERVED);
 	});
 
 	test('getState rebuilds from NDJSON when snapshot is missing', async () => {
@@ -90,6 +93,6 @@ describe('FilePathLedgerBackend', () => {
 
 		const fresh = new FilePathLedgerBackend({ path: ledgerPath });
 		const state = await fresh.getState();
-		expect(state.findings['fp1']?.state).toBe(FindingStatus.PROMOTED);
+		expect(state.findings.fp1?.state).toBe(FindingStatus.PROMOTED);
 	});
 });

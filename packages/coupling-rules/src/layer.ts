@@ -5,7 +5,7 @@ import {
 	type RuleBuilder,
 } from '@maat/contracts';
 import { IMPORTS_CAPABILITY, type Import } from '@maat/vocabulary';
-import {  type Role } from './roles';
+import type { Role } from './roles';
 
 class LayerRule implements Rule<'imports'> {
 	readonly id: string;
@@ -23,9 +23,15 @@ class LayerRule implements Rule<'imports'> {
 		const findings: FindingRuleOutput[] = [];
 
 		for (const imp of facts.imports) {
-			if (imp.packageName !== this.target) continue;
-			if (this.isRelative(imp.specifier)) continue;
-			if (this.isAllowed(imp.specifier)) continue;
+			if (imp.packageName !== this.target) {
+				continue;
+			}
+			if (this.isRelative(imp.specifier)) {
+				continue;
+			}
+			if (this.isAllowed(imp.specifier)) {
+				continue;
+			}
 
 			findings.push({
 				ruleId: this.id,

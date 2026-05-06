@@ -66,15 +66,18 @@ function resolvePackageName(filePath: string): string | null {
 		}
 		dir = parent;
 	}
-	
+
 	return null;
 }
 
 export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
-	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
+	public readonly provideFacts = [
+		CONSTANTS_CAPABILITY,
+		IMPORTS_CAPABILITY,
+	] as const;
 
-	constructor(private readonly config: TSInput) { }
+	constructor(private readonly config: TSInput) {}
 
 	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);

@@ -3,7 +3,15 @@
 	"version": "0.0.1",
 	"private": true,
 	"description": "Architectural governance tool for TypeScript — deterministic detection, attributed decisions, permanent ledger, opt-in enforcement.",
-	"keywords": ["architecture", "governance", "coupling", "connascence", "typescript", "static-analysis", "ledger"],
+	"keywords": [
+		"architecture",
+		"governance",
+		"coupling",
+		"connascence",
+		"typescript",
+		"static-analysis",
+		"ledger"
+	],
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",

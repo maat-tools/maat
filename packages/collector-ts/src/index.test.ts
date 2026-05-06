@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
-import { IMPORTS_CAPABILITY, CONSTANTS_CAPABILITY } from '@maat/vocabulary';
+import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat/vocabulary';
 import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(
@@ -59,7 +59,9 @@ describe('TSCollector.collect() — imports fact', () => {
 		// fixture project has no package.json, so packageName should be null
 		// (or the monorepo root package.json has no name — either way it's consistent)
 		for (const imp of imports) {
-			expect(imp.packageName === null || typeof imp.packageName === 'string').toBe(true);
+			expect(
+				imp.packageName === null || typeof imp.packageName === 'string',
+			).toBe(true);
 		}
 	});
 

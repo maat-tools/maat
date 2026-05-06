@@ -1,4 +1,8 @@
-import { FindingStatus, type Finding, type FindingRecord } from '@maat/contracts';
+import {
+	type Finding,
+	type FindingRecord,
+	FindingStatus,
+} from '@maat/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
@@ -53,7 +57,10 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		const grouped = new Map<Group, FindingRecord[]>();
 		for (const group of GROUP_ORDER) {
 			if (activeGroups.has(group)) {
-				grouped.set(group, allFindings.filter((r) => classify(r) === group));
+				grouped.set(
+					group,
+					allFindings.filter((r) => classify(r) === group),
+				);
 			}
 		}
 
@@ -65,7 +72,9 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 				out.axioms = allAxioms;
 			}
 			if (options.insights && this.insights.length > 0) {
-				out.insights = this.insights.flatMap((i) => i.analyze(allFindings.map(toFinding)));
+				out.insights = this.insights.flatMap((i) =>
+					i.analyze(allFindings.map(toFinding)),
+				);
 			}
 			console.log(JSON.stringify(out, null, 2));
 			return;
@@ -82,7 +91,9 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			console.log(`\n${heading}`);
 			console.log('─'.repeat(heading.length));
 			for (const r of records) {
-				console.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
+				console.log(
+					`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`,
+				);
 			}
 		}
 
@@ -93,7 +104,9 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			console.log('─'.repeat(heading.length));
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				console.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
+				console.log(
+					`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`,
+				);
 			}
 		}
 
@@ -118,8 +131,13 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('visualize')
-			.description('Display the current state of findings, axioms, and insights from the ledger')
-			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, promoted, enforced')
+			.description(
+				'Display the current state of findings, axioms, and insights from the ledger',
+			)
+			.option(
+				'--filter <states>',
+				'Comma-separated groups to show: observed, baselined, promoted, enforced',
+			)
 			.option('--no-axioms', 'Hide declared axioms')
 			.option('--insights', 'Run insights against the current ledger state')
 			.option('--json', 'Output as JSON')

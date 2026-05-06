@@ -70,7 +70,9 @@ describe('Kernel.run', () => {
 				.run();
 
 		const [r1, r2] = await Promise.all([build(), build()]);
-		expect(r1.findings.map((f) => f.fingerprint)).toEqual(r2.findings.map((f) => f.fingerprint));
+		expect(r1.findings.map((f) => f.fingerprint)).toEqual(
+			r2.findings.map((f) => f.fingerprint),
+		);
 	});
 });
 
@@ -88,42 +90,82 @@ describe('Kernel fluent interface', () => {
 
 describe('Kernel.registerCollector validation', () => {
 	test('throws if collector id is empty', () => {
-		const collector = { id: '', provideFacts: ['testFacts'] as const, collect: async () => ({ testFacts: [] }) };
-		expect(() => new Kernel().registerCollector(collector)).toThrow('non-empty id');
+		const collector = {
+			id: '',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => ({ testFacts: [] }),
+		};
+		expect(() => new Kernel().registerCollector(collector)).toThrow(
+			'non-empty id',
+		);
 	});
 
 	test('throws if collector id is whitespace', () => {
-		const collector = { id: '   ', provideFacts: ['testFacts'] as const, collect: async () => ({ testFacts: [] }) };
-		expect(() => new Kernel().registerCollector(collector)).toThrow('non-empty id');
+		const collector = {
+			id: '   ',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => ({ testFacts: [] }),
+		};
+		expect(() => new Kernel().registerCollector(collector)).toThrow(
+			'non-empty id',
+		);
 	});
 
 	test('throws if provideFacts is empty', () => {
-		const collector = { id: 'c', provideFacts: [] as const, collect: async () => ({}) };
-		expect(() => new Kernel().registerCollector(collector as unknown as Collector<'testFacts'>)).toThrow('provideFacts');
+		const collector = {
+			id: 'c',
+			provideFacts: [] as const,
+			collect: async () => ({}),
+		};
+		expect(() =>
+			new Kernel().registerCollector(
+				collector as unknown as Collector<'testFacts'>,
+			),
+		).toThrow('provideFacts');
 	});
 
 	test('throws if collect is not a function', () => {
-		const collector = { id: 'c', provideFacts: ['testFacts'] as const, collect: 'bad' };
-		expect(() => new Kernel().registerCollector(collector as unknown as Collector<'testFacts'>)).toThrow('collect');
+		const collector = {
+			id: 'c',
+			provideFacts: ['testFacts'] as const,
+			collect: 'bad',
+		};
+		expect(() =>
+			new Kernel().registerCollector(
+				collector as unknown as Collector<'testFacts'>,
+			),
+		).toThrow('collect');
 	});
 });
 
 describe('Kernel.registerRule validation', () => {
 	test('throws if rule id is empty', () => {
-		expect(() => new Kernel().registerRule(makeRule(''))).toThrow('non-empty id');
+		expect(() => new Kernel().registerRule(makeRule(''))).toThrow(
+			'non-empty id',
+		);
 	});
 
 	test('throws if rule id is whitespace', () => {
-		expect(() => new Kernel().registerRule(makeRule('   '))).toThrow('non-empty id');
+		expect(() => new Kernel().registerRule(makeRule('   '))).toThrow(
+			'non-empty id',
+		);
 	});
 
 	test('accepts rule with empty needFacts (runs unconditionally)', () => {
 		const rule = { id: 'r@v1', needFacts: [] as const, evaluate: () => [] };
-		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).not.toThrow();
+		expect(() =>
+			new Kernel().registerRule(rule as unknown as Rule<'testFacts'>),
+		).not.toThrow();
 	});
 
 	test('throws if evaluate is not a function', () => {
-		const rule = { id: 'r@v1', needFacts: ['testFacts'] as const, evaluate: 'bad' };
-		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('evaluate');
+		const rule = {
+			id: 'r@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: 'bad',
+		};
+		expect(() =>
+			new Kernel().registerRule(rule as unknown as Rule<'testFacts'>),
+		).toThrow('evaluate');
 	});
 });

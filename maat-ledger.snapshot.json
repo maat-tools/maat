@@ -1,56 +1,5 @@
 {
-  "findings": {
-    "079f21df741d7612424cecc2cd3a463d0ae67039933ee857e87439747abf43ad": {
-      "fingerprint": "079f21df741d7612424cecc2cd3a463d0ae67039933ee857e87439747abf43ad",
-      "state": "finding.enforced",
-      "baselined": false,
-      "rule_id": "com@v1",
-      "message": "\"admin\" appears in 3 files — possible Connascence of Meaning",
-      "artifacts": [
-        {
-          "kind": "source",
-          "data": {
-            "kind": "string",
-            "value": "admin",
-            "raw": "'admin'",
-            "context": "argument",
-            "location": {
-              "file": "/home/defendi/projects/maat/packages/collector-ts/fixtures/sample-project/src/index.ts",
-              "line": 3,
-              "column": 46
-            }
-          }
-        },
-        {
-          "kind": "source",
-          "data": {
-            "kind": "string",
-            "value": "admin",
-            "raw": "'admin'",
-            "context": "assignment",
-            "location": {
-              "file": "/home/defendi/projects/maat/packages/collector-ts/fixtures/sample-project/src/permissions.ts",
-              "line": 13,
-              "column": 297
-            }
-          }
-        },
-        {
-          "kind": "source",
-          "data": {
-            "kind": "string",
-            "value": "admin",
-            "raw": "'admin'",
-            "context": "assignment",
-            "location": {
-              "file": "/home/defendi/projects/maat/packages/collector-ts/fixtures/sample-project/src/user.ts",
-              "line": 7,
-              "column": 71
-            }
-          }
-        }
-      ]
-    }
-  },
-  "axioms": {}
+	"last_entry_id": null,
+	"findings": {},
+	"axioms": {}
 }

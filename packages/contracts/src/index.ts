@@ -269,10 +269,15 @@ export function defineRule<TOptions = Record<string, never>>(
 export function defineRuleSet<T>(
 	factories: BrandedRuleFactory<T>[],
 ): BrandedRuleSet {
-	return { factories: factories as unknown as BrandedRuleFactory<unknown>[], [RULE_SET_BRAND]: true as const };
+	return {
+		factories: factories as unknown as BrandedRuleFactory<unknown>[],
+		[RULE_SET_BRAND]: true as const,
+	};
 }
 
-export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T & { readonly [RULE_BUILDER_BRAND]: true } {
+export function defineRuleBuilder<T extends RuleBuilder>(
+	builder: T,
+): T & { readonly [RULE_BUILDER_BRAND]: true } {
 	return Object.assign(builder, { [RULE_BUILDER_BRAND]: true as const });
 }
 
@@ -285,7 +290,10 @@ export function defineInsight<TOptions = Record<string, never>>(
 export function defineInsightSet<T>(
 	factories: BrandedInsightFactory<T>[],
 ): BrandedInsightSet {
-	return { factories: factories as unknown as BrandedInsightFactory<unknown>[], [INSIGHT_SET_BRAND]: true as const };
+	return {
+		factories: factories as unknown as BrandedInsightFactory<unknown>[],
+		[INSIGHT_SET_BRAND]: true as const,
+	};
 }
 
 export function defineLedgerBackend<TConfig>(

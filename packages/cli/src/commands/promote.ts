@@ -18,20 +18,25 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[options.fingerprint];
 
 		if (record === undefined) {
-			console.error(`No finding with fingerprint "${options.fingerprint}" found in the ledger.`);
+			console.error(
+				`No finding with fingerprint "${options.fingerprint}" found in the ledger.`,
+			);
 			process.exit(1);
 		}
 
 		if (record.state === FindingStatus.ENFORCED) {
-			console.warn(`Finding "${options.fingerprint}" is already enforced. Nothing to do.`);
+			console.warn(
+				`Finding "${options.fingerprint}" is already enforced. Nothing to do.`,
+			);
 			return;
 		}
 
 		if (record.state === FindingStatus.PROMOTED && !options.enforce) {
-			console.warn(`Finding "${options.fingerprint}" is already promoted. Use --enforce to escalate.`);
+			console.warn(
+				`Finding "${options.fingerprint}" is already promoted. Use --enforce to escalate.`,
+			);
 			return;
 		}
-		
 
 		const timestamp = new Date().toISOString();
 
@@ -57,9 +62,17 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('promote')
-			.description('Promote an observed finding to acknowledged, optionally escalating it to an enforced gate')
-			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to promote')
-			.option('--enforce', 'Escalate directly to enforced — maat check will fail if this finding is detected')
+			.description(
+				'Promote an observed finding to acknowledged, optionally escalating it to an enforced gate',
+			)
+			.requiredOption(
+				'--fingerprint <fingerprint>',
+				'Fingerprint of the finding to promote',
+			)
+			.option(
+				'--enforce',
+				'Escalate directly to enforced — maat check will fail if this finding is detected',
+			)
 			.action((options: PromoteOptions) => this.action(options));
 	}
 }

@@ -1,12 +1,10 @@
+import type { Collector, FactRegistry, Finding, Rule } from '@maat/contracts';
 import { stableHash } from '@maat/core';
-import type {
-	Collector,
-	FactRegistry,
-	Finding,
-	Rule,
-} from '@maat/contracts';
 
-function generateFingerprint(ruleId: string, ruleIdentifier: Record<string, unknown>): string {
+function generateFingerprint(
+	ruleId: string,
+	ruleIdentifier: Record<string, unknown>,
+): string {
 	return stableHash({ ruleId, data: ruleIdentifier });
 }
 
@@ -30,8 +28,13 @@ export class Kernel {
 		if (!collector.id || collector.id.trim() === '') {
 			throw new Error('Collector must have a non-empty id');
 		}
-		if (!Array.isArray(collector.provideFacts) || collector.provideFacts.length === 0) {
-			throw new Error(`Collector "${collector.id}" must declare at least one fact in provideFacts`);
+		if (
+			!Array.isArray(collector.provideFacts) ||
+			collector.provideFacts.length === 0
+		) {
+			throw new Error(
+				`Collector "${collector.id}" must declare at least one fact in provideFacts`,
+			);
 		}
 		if (typeof collector.collect !== 'function') {
 			throw new Error(`Collector "${collector.id}" must implement collect()`);
@@ -52,7 +55,7 @@ export class Kernel {
 			throw new Error(`Rule "${rule.id}" must implement evaluate()`);
 		}
 		this.rules.push(rule);
-		
+
 		return this;
 	}
 
@@ -88,7 +91,10 @@ export class Kernel {
 			}
 			const fromRule = rule.evaluate(facts as FactRegistry);
 			for (const { ruleIdentifier, ...rest } of fromRule) {
-				findings.push({ ...rest, fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier) });
+				findings.push({
+					...rest,
+					fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
+				});
 			}
 		}
 

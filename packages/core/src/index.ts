@@ -1,17 +1,17 @@
 import { createHash } from 'node:crypto';
 import {
-	FindingStatus,
 	type AxiomRecord,
+	type BrandedRuleBuilder,
 	type CollectorRegistry,
 	type Finding,
 	type FindingEventInput,
 	type FindingRecord,
+	FindingStatus,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
 	type LedgerEvent,
 	type LedgerEventInput,
 	type LedgerSnapshot,
-	type BrandedRuleBuilder,
 	type Rule,
 	type RuleRegistry,
 } from '@maat/contracts';
@@ -57,9 +57,9 @@ export type MaatConfig = {
 	collectors: CollectorEntry[];
 	rules: RuleEntry[];
 } & (
-		| { ledger: LedgerEntry; insights?: InsightEntry[] }
-		| { ledger?: never; insights?: never }
-	);
+	| { ledger: LedgerEntry; insights?: InsightEntry[] }
+	| { ledger?: never; insights?: never }
+);
 
 export function defineConfig(config: MaatConfig): MaatConfig {
 	return config;
@@ -88,7 +88,11 @@ export function fingerprintFinding(finding: {
 	message: string;
 	artifacts: unknown[];
 }): string {
-	return stableHash({ ruleId: finding.ruleId, message: finding.message, artifacts: finding.artifacts });
+	return stableHash({
+		ruleId: finding.ruleId,
+		message: finding.message,
+		artifacts: finding.artifacts,
+	});
 }
 
 export abstract class RuleBase {
@@ -97,18 +101,34 @@ export abstract class RuleBase {
 	}
 }
 
-type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECLARED | typeof FindingStatus.AXIOM_SUPERSEDED | typeof FindingStatus.AXIOM_REVOKED | typeof FindingStatus.RESOLVED>;
+type FindingEventStatus = Exclude<
+	FindingStatus,
+	| typeof FindingStatus.AXIOM_DECLARED
+	| typeof FindingStatus.AXIOM_SUPERSEDED
+	| typeof FindingStatus.AXIOM_REVOKED
+	| typeof FindingStatus.RESOLVED
+>;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
 	abstract append(event: LedgerEventInput): Promise<void>;
 	abstract getState(): Promise<LedgerSnapshot>;
 
-	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {
+	public buildEntry(
+		finding: Finding,
+		type: FindingEventStatus,
+	): FindingEventInput {
 		const base = { timestamp: new Date().toISOString() };
 
 		switch (type) {
 			case FindingStatus.OBSERVED:
-				return { ...base, type, fingerprint: finding.fingerprint, rule_id: finding.ruleId, message: finding.message, artifacts: finding.artifacts };
+				return {
+					...base,
+					type,
+					fingerprint: finding.fingerprint,
+					rule_id: finding.ruleId,
+					message: finding.message,
+					artifacts: finding.artifacts,
+				};
 			case FindingStatus.BASELINED:
 				return { ...base, type, fingerprint: finding.fingerprint };
 			case FindingStatus.PROMOTED:
@@ -118,7 +138,10 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		}
 	}
 
-	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
+	protected applyEvent(
+		snapshot: LedgerSnapshot,
+		event: LedgerEvent,
+	): LedgerSnapshot {
 		const findings = { ...snapshot.findings };
 		const axioms = { ...snapshot.axioms };
 
@@ -141,17 +164,26 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		} else if (event.type === FindingStatus.PROMOTED) {
 			const record = findings[event.fingerprint];
 			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, state: FindingStatus.PROMOTED };
+				findings[event.fingerprint] = {
+					...record,
+					state: FindingStatus.PROMOTED,
+				};
 			}
 		} else if (event.type === FindingStatus.ENFORCED) {
 			const record = findings[event.fingerprint];
 			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, state: FindingStatus.ENFORCED };
+				findings[event.fingerprint] = {
+					...record,
+					state: FindingStatus.ENFORCED,
+				};
 			}
 		} else if (event.type === FindingStatus.RESOLVED) {
 			const record = findings[event.fingerprint];
 			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, state: FindingStatus.RESOLVED };
+				findings[event.fingerprint] = {
+					...record,
+					state: FindingStatus.RESOLVED,
+				};
 			}
 		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
 			axioms[event.axiom_id] = {

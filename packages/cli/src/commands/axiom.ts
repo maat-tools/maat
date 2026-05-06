@@ -13,7 +13,7 @@ type AxiomOptions = {
 export class Axiom extends MaatCommandBase implements MaatCommand {
 
     public async action(options: AxiomOptions) {
-        if (this.ledger === null) {
+        if (!this.isLedgerProvided()) {
             console.error('No ledger configured. An axiom cannot be recorded without a ledger.');
             process.exit(1);
         }

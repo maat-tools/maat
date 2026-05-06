@@ -19,8 +19,8 @@
 		"maat": "bun run packages/cli/src/index.ts"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "latest",
-		"@types/bun": "latest",
-		"typescript": "^5.0.0"
+		"@biomejs/biome": "2.4.14",
+		"@types/bun": "1.3.13",
+		"typescript": "5.9.3"
 	}
 }

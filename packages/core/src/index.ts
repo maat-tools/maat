@@ -1,9 +1,11 @@
-import { ulid } from 'ulid';
 import { createHash } from 'node:crypto';
+import { ulid } from 'ulid';
 import {
 	FindingStatus,
+	type AxiomDeclaredEvent,
 	type CollectorRegistry,
 	type Finding,
+	type FindingRecord,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
 	type LedgerEvent,
@@ -59,79 +61,39 @@ export function defineConfig(config: MaatConfig): MaatConfig {
 	return config;
 }
 
-type JsonObject = object & {
-	toJSON?: (key: string) => unknown;
-};
-
-function serializeStableValue(
-	value: unknown,
-	seen: WeakSet<object>,
-): string | undefined {
-	if (value === null) return 'null';
-
-	switch (typeof value) {
-		case 'boolean':
-		case 'number':
-		case 'string':
-			return JSON.stringify(value);
-		case 'bigint':
-			throw new TypeError(
-				'Cannot generate a stable fingerprint for BigInt values',
-			);
-		case 'function':
-		case 'symbol':
-		case 'undefined':
-			return undefined;
+export function stableStringify(value: unknown): string {
+	if (value === null || typeof value !== 'object') {
+		return JSON.stringify(value) ?? 'null';
 	}
-
-	const objectValue = value as JsonObject;
-	const toJSON = objectValue.toJSON;
-	if (typeof toJSON === 'function') {
-		return serializeStableValue(toJSON.call(objectValue, ''), seen);
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(',')}]`;
 	}
-
-	if (seen.has(objectValue)) {
-		throw new TypeError(
-			'Cannot generate a stable fingerprint for circular structures',
-		);
-	}
-
-	seen.add(objectValue);
-
-	if (Array.isArray(objectValue)) {
-		const items = objectValue.map(
-			(item) => serializeStableValue(item, seen) ?? 'null',
-		);
-		seen.delete(objectValue);
-		return `[${items.join(',')}]`;
-	}
-
-	const record = objectValue as Record<string, unknown>;
-	const properties = Object.keys(record)
+	const obj = value as Record<string, unknown>;
+	const pairs = Object.keys(obj)
 		.sort()
-		.flatMap((key) => {
-			const serialized = serializeStableValue(record[key], seen);
-			return serialized === undefined
-				? []
-				: [`${JSON.stringify(key)}:${serialized}`];
-		});
-
-	seen.delete(objectValue);
-	return `{${properties.join(',')}}`;
+		.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`);
+	return `{${pairs.join(',')}}`;
 }
 
-function stableStringify(data: unknown): string {
-	const serialized = serializeStableValue(data, new WeakSet());
-	if (serialized === undefined) {
-		throw new TypeError(
-			'Cannot generate a stable fingerprint for unsupported root values',
-		);
+export function stableHash(value: unknown): string {
+	return createHash('sha256').update(stableStringify(value)).digest('hex');
+}
+
+export function fingerprintFinding(finding: {
+	ruleId: string;
+	message: string;
+	artifacts: unknown[];
+}): string {
+	return stableHash({ ruleId: finding.ruleId, message: finding.message, artifacts: finding.artifacts });
+}
+
+export abstract class RuleBase {
+	generateFingerprint(data: Record<string, unknown>): string {
+		return stableHash(data);
 	}
-
-	return serialized;
 }
 
-type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECLARED>;
+type FindingEventStatus = Exclude<FindingStatus, typeof FindingStatus.AXIOM_DECLARED | typeof FindingStatus.RESOLVED>;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
 	abstract append(event: LedgerEventInput): Promise<void>;
@@ -154,13 +116,57 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				return { ...base, type, fingerprint: finding.fingerprint };
 		}
 	}
-}
 
-export abstract class RuleBase {
-	abstract readonly id: string;
+	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
+		const findings = { ...snapshot.findings };
+		const axioms = { ...snapshot.axioms };
 
-	public generateFingerprint(data: unknown): string {
-		return createHash('sha256').update(stableStringify({ ruleId: this.id, data })).digest('hex');
+		if (event.type === FindingStatus.OBSERVED) {
+			const existing = findings[event.fingerprint];
+			const newState = this.getNewState(existing?.state);
+			findings[event.fingerprint] = {
+				fingerprint: event.fingerprint,
+				state: newState,
+				baselined: existing?.baselined ?? false,
+				rule_id: event.rule_id,
+				message: event.message,
+				artifacts: event.artifacts,
+			} satisfies FindingRecord;
+		} else if (event.type === FindingStatus.BASELINED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, baselined: true };
+			}
+		} else if (event.type === FindingStatus.PROMOTED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, state: FindingStatus.PROMOTED };
+			}
+		} else if (event.type === FindingStatus.ENFORCED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, state: FindingStatus.ENFORCED };
+			}
+		} else if (event.type === FindingStatus.RESOLVED) {
+			const record = findings[event.fingerprint];
+			if (record !== undefined) {
+				findings[event.fingerprint] = { ...record, state: FindingStatus.RESOLVED };
+			}
+		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
+			axioms[event.axiom_id] = event satisfies AxiomDeclaredEvent;
+		}
+
+		return { last_entry_id: event.entry_id, findings, axioms };
+	}
+
+	private getNewState(existingState?: FindingStatus): FindingStatus {
+		if (!existingState) {
+			return FindingStatus.OBSERVED;
+		}
+		if (existingState === FindingStatus.RESOLVED) {
+			return FindingStatus.OBSERVED;
+		}
+		return existingState ?? FindingStatus.OBSERVED;
 	}
 }
 

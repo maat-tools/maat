@@ -35,3 +35,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# MOM (generated at runtime)
+.mom/
+.mcp.json
+.claude/
+CLAUDE.md
+AGENTS.md
+.codex/

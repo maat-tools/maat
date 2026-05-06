@@ -24,7 +24,7 @@ export interface Collector<
 export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
-	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): Finding[];
+	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];
 }
 
 export interface Insight {
@@ -52,10 +52,17 @@ export type Artifact = {
 	data: unknown;
 };
 
+export type FindingRuleOutput = {
+	ruleId: string;
+	ruleIdentifier: Record<string, unknown>;
+	message: string;
+	artifacts: Artifact[];
+};
+
 export type Finding = {
 	ruleId: string;
-	message: string;
 	fingerprint: string;
+	message: string;
 	artifacts: Artifact[];
 };
 
@@ -69,6 +76,7 @@ export const FindingStatus = {
 	BASELINED: 'finding.baselined',
 	PROMOTED: 'finding.promoted',
 	ENFORCED: 'finding.enforced',
+	RESOLVED: 'finding.resolved',
 	AXIOM_DECLARED: 'axiom.declared',
 } as const;
 
@@ -99,6 +107,11 @@ export type FindingEnforcedEvent = LedgerEntryBase & {
 	readonly note?: string;
 };
 
+export type FindingResolvedEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.RESOLVED;
+	readonly fingerprint: string;
+};
+
 export type AxiomDeclaredEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.AXIOM_DECLARED;
 	readonly axiom_id: string;
@@ -112,15 +125,14 @@ export type LedgerEvent =
 	| FindingBaselinedEvent
 	| FindingPromotedEvent
 	| FindingEnforcedEvent
+	| FindingResolvedEvent
 	| AxiomDeclaredEvent;
 
 export type LedgerEventInput = WithoutEntryId<LedgerEvent>;
 
-export type FindingState = 'observed' | 'baselined' | 'promoted' | 'enforced';
-
 export type FindingRecord = {
 	readonly fingerprint: string;
-	state: FindingState;
+	state: FindingStatus;
 	baselined: boolean;
 	readonly rule_id: string;
 	readonly message: string;

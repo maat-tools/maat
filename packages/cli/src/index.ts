@@ -21,6 +21,8 @@ import { Check } from './commands/check';
 import { Axiom } from './commands/axiom';
 import { Baseline } from './commands/baseline';
 import { Promote } from './commands/promote';
+import { Resolve } from './commands/resolve';
+import { Visualize } from './commands/visualize';
 
 const maatConfig = defineConfig({
 	collectors: [
@@ -66,9 +68,13 @@ class MaatCLI {
 			new Axiom(this.program, config, this.kernel, this.ledger, this.insights),
 			new Baseline(this.program, config, this.kernel, this.ledger, this.insights),
 			new Promote(this.program, config, this.kernel, this.ledger, this.insights),
+			new Resolve(this.program, config, this.kernel, this.ledger, this.insights),
+			new Visualize(this.program, config, this.kernel, this.ledger, this.insights),
 		];
 
-		for (const command of commands) command.register();
+		for (const command of commands) {
+			command.register();
+		}
 	}
 
 	private registerCLIInfo() {

@@ -4,7 +4,7 @@ import { MaatCommandBase } from './base';
 
 export class Baseline extends MaatCommandBase implements MaatCommand {
 	public async action() {
-		if (this.ledger === null) {
+		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot baseline without a ledger.');
 			process.exit(1);
 		}

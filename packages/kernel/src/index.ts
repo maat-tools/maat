@@ -1,9 +1,14 @@
+import { stableHash } from '@maat/core';
 import type {
 	Collector,
 	FactRegistry,
 	Finding,
 	Rule,
 } from '@maat/contracts';
+
+function generateFingerprint(ruleId: string, ruleIdentifier: Record<string, unknown>): string {
+	return stableHash({ ruleId, data: ruleIdentifier });
+}
 
 type StoredCollector = {
 	readonly id: string;
@@ -23,14 +28,15 @@ export class Kernel {
 		collector: Collector<TKeys>,
 	): this {
 		this.collectors.push(collector);
+
 		return this;
 	}
 
 	public registerRule(rule: Rule): this {
 		this.rules.push(rule);
+		
 		return this;
 	}
-
 
 	public async run(): Promise<KernelResult> {
 		const facts: Partial<FactRegistry> = {};
@@ -62,7 +68,10 @@ export class Kernel {
 				console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
 				continue;
 			}
-			findings.push(...rule.evaluate(facts as FactRegistry));
+			const fromRule = rule.evaluate(facts as FactRegistry);
+			for (const { ruleIdentifier, ...rest } of fromRule) {
+				findings.push({ ...rest, fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier) });
+			}
 		}
 
 		return { findings };

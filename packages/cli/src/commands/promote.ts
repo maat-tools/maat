@@ -9,7 +9,7 @@ type PromoteOptions = {
 
 export class Promote extends MaatCommandBase implements MaatCommand {
 	public async action(options: PromoteOptions) {
-		if (this.ledger === null) {
+		if (!this.isLedgerProvided()) {
 			console.error('No ledger configured. Cannot promote without a ledger.');
 			process.exit(1);
 		}
@@ -22,19 +22,20 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		if (record.state === 'enforced') {
+		if (record.state === FindingStatus.ENFORCED) {
 			console.warn(`Finding "${options.fingerprint}" is already enforced. Nothing to do.`);
 			return;
 		}
 
-		if (record.state === 'promoted' && !options.enforce) {
+		if (record.state === FindingStatus.PROMOTED && !options.enforce) {
 			console.warn(`Finding "${options.fingerprint}" is already promoted. Use --enforce to escalate.`);
 			return;
 		}
+		
 
 		const timestamp = new Date().toISOString();
 
-		if (record.state === 'observed') {
+		if (record.state === FindingStatus.OBSERVED) {
 			await this.ledger.append({
 				type: FindingStatus.PROMOTED,
 				timestamp,

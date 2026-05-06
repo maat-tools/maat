@@ -1,9 +1,6 @@
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
 	defineLedgerBackend,
-	FindingStatus,
-	type AxiomDeclaredEvent,
-	type FindingRecord,
 	type LedgerBackend,
 	type LedgerEvent,
 	type LedgerSnapshot,
@@ -17,7 +14,6 @@ export type {
 	FindingObservedEvent,
 	FindingPromotedEvent,
 	FindingRecord,
-	FindingState,
 	LedgerBackend,
 	LedgerEvent,
 	LedgerSnapshot,
@@ -49,7 +45,12 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			return this.rebuildSnapshot();
 		}
 
-		return JSON.parse(await file.text()) as LedgerSnapshot;
+		const text = await file.text();
+		if (text.trim().length === 0) {
+			return EMPTY_SNAPSHOT;
+		}
+
+		return JSON.parse(text) as LedgerSnapshot;
 	}
 
 	private get snapshotPath(): string {
@@ -66,41 +67,6 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		await writeFile(this.snapshotPath, `${JSON.stringify(updated, null, 2)}\n`, 'utf-8');
 	}
 
-	private applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
-		const findings = { ...snapshot.findings };
-		const axioms = { ...snapshot.axioms };
-
-		if (event.type === FindingStatus.OBSERVED) {
-			const existing = findings[event.fingerprint];
-			findings[event.fingerprint] = {
-				fingerprint: event.fingerprint,
-				state: 'observed',
-				baselined: existing?.baselined ?? false,
-				rule_id: event.rule_id,
-				message: event.message,
-				artifacts: event.artifacts,
-			} satisfies FindingRecord;
-		} else if (event.type === FindingStatus.BASELINED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, baselined: true };
-			}
-		} else if (event.type === FindingStatus.PROMOTED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, state: 'promoted' };
-			}
-		} else if (event.type === FindingStatus.ENFORCED) {
-			const record = findings[event.fingerprint];
-			if (record !== undefined) {
-				findings[event.fingerprint] = { ...record, state: 'enforced' };
-			}
-		} else if (event.type === FindingStatus.AXIOM_DECLARED) {
-			axioms[event.axiom_id] = event satisfies AxiomDeclaredEvent;
-		}
-
-		return { last_entry_id: event.entry_id, findings, axioms };
-	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
 		const file = Bun.file(this.options.path);
@@ -109,6 +75,11 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		}
 
 		const text = await file.text();
+
+		if (text.trim().length === 0) {
+			return [];
+		}
+
 		return text
 			.split('\n')
 			.filter((line) => line.trim().length > 0)
@@ -118,9 +89,11 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	private async rebuildSnapshot(): Promise<LedgerSnapshot> {
 		const events = await this.readLog();
 		let snapshot: LedgerSnapshot = EMPTY_SNAPSHOT;
+
 		for (const event of events) {
 			snapshot = this.applyEvent(snapshot, event);
 		}
+
 		await writeFile(this.snapshotPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf-8');
 
 		return snapshot;

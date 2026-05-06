@@ -2,14 +2,16 @@ import type { Finding, Insight, InsightResult, LedgerBackend } from '@maat/contr
 import type { MaatConfig } from '@maat/core';
 import type { Kernel } from '@maat/kernel';
 import type { Command } from 'commander';
+import type { Printer } from '../printer';
 
 export abstract class MaatCommandBase {
 	public constructor(
 		protected cli: Command,
 		protected config: MaatConfig,
 		protected kernel: Kernel,
-		protected ledger: LedgerBackend | null,
 		protected insights: Insight[],
+		protected printer: Printer,
+		protected ledger: LedgerBackend | null,
 	) {}
 
 	protected isLedgerProvided(): this is { ledger: LedgerBackend } {

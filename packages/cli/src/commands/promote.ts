@@ -10,7 +10,7 @@ type PromoteOptions = {
 export class Promote extends MaatCommandBase implements MaatCommand {
 	public async action({ fingerprint, enforce }: PromoteOptions) {
 		if (!this.isLedgerProvided()) {
-			console.error('No ledger configured. Cannot promote without a ledger.');
+			this.printer.error('No ledger configured. Cannot promote without a ledger.');
 			process.exit(1);
 		}
 
@@ -18,17 +18,17 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 		const record = snapshot.findings[fingerprint];
 
 		if (record === undefined) {
-			console.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
+			this.printer.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
 			process.exit(1);
 		}
 
 		if (record.state === FindingStatus.ENFORCED) {
-			console.warn(`Finding "${fingerprint}" is already enforced. Nothing to do.`);
+			this.printer.warn(`Finding "${fingerprint}" is already enforced. Nothing to do.`);
 			return;
 		}
 
 		if (record.state === FindingStatus.PROMOTED && !enforce) {
-			console.warn(`Finding "${fingerprint}" is already promoted. Use --enforce to escalate.`);
+			this.printer.warn(`Finding "${fingerprint}" is already promoted. Use --enforce to escalate.`);
 			return;
 		}
 
@@ -40,7 +40,7 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 				timestamp,
 				fingerprint,
 			});
-			console.log(`Finding "${fingerprint}" promoted.`);
+			this.printer.log(`Finding "${fingerprint}" promoted.`);
 		}
 
 		if (enforce) {
@@ -49,7 +49,7 @@ export class Promote extends MaatCommandBase implements MaatCommand {
 				timestamp,
 				fingerprint,
 			});
-			console.log(`Finding "${fingerprint}" enforced.`);
+			this.printer.log(`Finding "${fingerprint}" enforced.`);
 		}
 	}
 

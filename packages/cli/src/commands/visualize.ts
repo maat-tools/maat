@@ -23,11 +23,6 @@ function classify(record: FindingRecord): Group {
 	return STATUS_TO_GROUP[record.state] ?? 'observed';
 }
 
-function printSection(heading: string): void {
-	console.log(`\n${heading}`);
-	console.log('─'.repeat(heading.length));
-}
-
 function toFinding(record: FindingRecord): Finding {
 	return {
 		ruleId: record.rule_id,
@@ -40,7 +35,7 @@ function toFinding(record: FindingRecord): Finding {
 export class Visualize extends MaatCommandBase implements MaatCommand {
 	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			console.error('No ledger configured. Cannot visualize without a ledger.');
+			this.printer.error('No ledger configured. Cannot visualize without a ledger.');
 			process.exit(1);
 		}
 
@@ -70,7 +65,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			if (insights && this.insights.length > 0) {
 				out.insights = this.insights.flatMap((i) => i.analyze(allFindings.map(toFinding)));
 			}
-			console.log(JSON.stringify(out, null, 2));
+			this.printer.json(out);
 			return;
 		}
 
@@ -82,19 +77,19 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			}
 			hasOutput = true;
 			const heading = `${group.toUpperCase()} (${records.length})`;
-			printSection(heading);
+			this.printer.section(heading);
 			for (const r of records) {
-				console.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
+				this.printer.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
 			}
 		}
 
 		if (axioms !== false && allAxioms.length > 0) {
 			hasOutput = true;
 			const heading = `AXIOMS (${allAxioms.length})`;
-			printSection(heading);
+			this.printer.section(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				console.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
+				this.printer.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
 			}
 		}
 
@@ -103,15 +98,15 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			if (results.length > 0) {
 				hasOutput = true;
 				const heading = `INSIGHTS (${results.length})`;
-				printSection(heading);
+				this.printer.section(heading);
 				for (const result of results) {
-					console.log(`  [${result.insightId}] ${result.message}`);
+					this.printer.log(`  [${result.insightId}] ${result.message}`);
 				}
 			}
 		}
 
 		if (!hasOutput) {
-			console.log('No findings or axioms in the ledger.');
+			this.printer.log('No findings or axioms in the ledger.');
 		}
 	}
 

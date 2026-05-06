@@ -5,7 +5,7 @@ import { MaatCommandBase } from './base';
 export class Baseline extends MaatCommandBase implements MaatCommand {
 	public async action() {
 		if (!this.isLedgerProvided()) {
-			console.error('No ledger configured. Cannot baseline without a ledger.');
+			this.printer.error('No ledger configured. Cannot baseline without a ledger.');
 			process.exit(1);
 		}
 
@@ -13,7 +13,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		const toBaseline = Object.values(snapshot.findings).filter((r) => !r.baselined);
 
 		if (toBaseline.length === 0) {
-			console.log('Nothing to baseline. All observed findings are already baselined.');
+			this.printer.log('Nothing to baseline. All observed findings are already baselined.');
 			return;
 		}
 
@@ -25,7 +25,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 			});
 		}
 
-		console.log(`Baselined ${toBaseline.length} finding(s).`);
+		this.printer.log(`Baselined ${toBaseline.length} finding(s).`);
 	}
 
 	public register(): void {

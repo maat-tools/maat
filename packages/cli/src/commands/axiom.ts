@@ -70,7 +70,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 
 	private async declare(options: DeclareOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			console.error('No ledger configured. An axiom cannot be recorded without a ledger.');
+			this.printer.error('No ledger configured. An axiom cannot be recorded without a ledger.');
 			process.exit(1);
 		}
 
@@ -79,7 +79,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			const existing = snapshot.axioms[options.id];
 
 			if (existing?.active) {
-				console.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`);
+				this.printer.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`);
 				process.exit(1);
 			}
 		}
@@ -96,12 +96,12 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(fingerprints === undefined ? {} : { fingerprints }),
 		});
 
-		console.log(`Axiom "${options.id}" declared.`);
+		this.printer.log(`Axiom "${options.id}" declared.`);
 	}
 
 	private async lifecycle(type: AxiomLifecycleStatus, options: LifecycleOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			console.error('No ledger configured. Axiom lifecycle commands require a ledger.');
+			this.printer.error('No ledger configured. Axiom lifecycle commands require a ledger.');
 			process.exit(1);
 		}
 
@@ -109,12 +109,12 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		const axiom = snapshot.axioms[options.id];
 
 		if (axiom === undefined) {
-			console.error(`Axiom "${options.id}" not found in the ledger.`);
+			this.printer.error(`Axiom "${options.id}" not found in the ledger.`);
 			process.exit(1);
 		}
 
 		if (!axiom.active) {
-			console.error(`Axiom "${options.id}" is already inactive.`);
+			this.printer.error(`Axiom "${options.id}" is already inactive.`);
 			process.exit(1);
 		}
 
@@ -125,6 +125,6 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 
-		console.log(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
+		this.printer.log(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
 	}
 }

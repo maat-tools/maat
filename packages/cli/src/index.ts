@@ -25,6 +25,7 @@ import { Promote } from './commands/promote';
 import { Resolve } from './commands/resolve';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
+import { Printer } from './printer';
 
 type PluginEntry = string | [string, Record<string, unknown>];
 
@@ -41,6 +42,7 @@ class MaatCLI {
 	private kernel: Kernel = new Kernel();
 	private ledger: LedgerBackend | null = null;
 	private insights: Insight[] = [];
+	private printer: Printer = new Printer();
 
 	public constructor() {
 		this.program
@@ -74,11 +76,11 @@ class MaatCLI {
 
 	private registerCommands(maatConfig: MaatConfig, options: { warnMissingLedger?: boolean } = {}) {
 		if (!this.ledger && (options.warnMissingLedger ?? true)) {
-			console.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.');
+			this.printer.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.');
 		}
 
 		const config = { ...maatConfig, check: maatConfig.check ?? { strict: true } };
-		const args = [this.program, config, this.kernel, this.ledger, this.insights] as const;
+		const args = [this.program, config, this.kernel, this.insights, this.printer, this.ledger] as const;
 		const commands: MaatCommand[] = [
 			new Check(...args),
 			new Axiom(...args),

@@ -73,4 +73,4 @@ Design decisions are documented in [docs/adr/](docs/adr/).
 
 ## License
 
-MIT
+Apache-2.0

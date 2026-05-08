@@ -58,7 +58,7 @@ jobs:
 
       - name: Publish to npm
         run: |
-          npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}"
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
           for pkg in contracts vocabulary core kernel collector-ts coupling-rules connascence-rules file-ledger cli; do
             (cd packages/$pkg && npm publish --access public)
           done

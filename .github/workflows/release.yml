@@ -58,9 +58,8 @@ jobs:
 
       - name: Publish to npm
         run: |
-          jq 'del(.workspaces)' package.json > tmp.json && mv tmp.json package.json
           for pkg in contracts vocabulary core kernel collector-ts coupling-rules connascence-rules file-ledger cli; do
-            npm publish packages/$pkg --access public
+            (cd packages/$pkg && npm publish --access public)
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

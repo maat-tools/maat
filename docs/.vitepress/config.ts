@@ -36,7 +36,7 @@ const guideAndPluginSidebar = [
 
 export default defineConfig({
   title: 'maat',
-  description: 'Fact-based architecture analysis for codebases.',
+  description: 'Turn implicit architecture knowledge into deterministic checks.',
   base: '/maat/',
 
   head: [

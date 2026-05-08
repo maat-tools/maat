@@ -9,10 +9,10 @@ import { withBase } from 'vitepress'
 
 <section class="maat-hero">
   <div class="maat-hero-copy">
-    <p class="maat-kicker">Fact-based architecture analysis for codebases</p>
-    <h1>Maat checks architecture rules against facts collected from your repository.</h1>
+    <p class="maat-kicker">Architecture checks for large codebases</p>
+    <h1>Turn implicit architecture knowledge into deterministic checks.</h1>
     <p class="maat-lead">
-      Collect structural and semantic facts, run deterministic rules, and keep accepted exceptions in version control.
+      Maat helps teams capture the coupling, boundaries, and codebase rules that usually live in a few developers' heads.
     </p>
     <div class="maat-actions">
       <a class="maat-button maat-button-primary" :href="withBase('/guide/getting-started.html')">Read the guide</a>
@@ -26,7 +26,7 @@ import { withBase } from 'vitepress'
 
 <section class="maat-note">
   <p>
-    Maat is not a linter, an AI reviewer, or a diagram generator. It is a collector-based analysis tool: collectors extract facts from a repository, rules evaluate those facts, and the ledger records what was accepted.
+    Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of accepted exceptions.
   </p>
 </section>
 
@@ -34,13 +34,13 @@ import { withBase } from 'vitepress'
 
 <section class="maat-panel">
   <p>
-    Architecture rules are often written in places the compiler cannot see: planning docs, ADRs, review comments, diagrams, and conversations.
+    Large codebases collect rules that are hard to see from one file: which modules may talk to each other, which data shapes are public, which duplicated policies must stay consistent, and which shortcuts have become dangerous.
   </p>
   <p>
-    Maat moves part of that intent into executable rules. Today it ships with a TypeScript collector for source structure. The same model can support other collectors, including semantic ones, without changing the kernel.
+    Those rules often live in review comments, ADRs, debugging sessions, and the memory of people who know the codebase well. Maat gives teams a path to make that knowledge explicit.
   </p>
   <p>
-    It does not decide whether the architecture is good. It reports rule violations and keeps accepted exceptions in version control.
+    A team can write collectors for the facts its codebase needs, write rules for the policies it cares about, and keep the accepted exceptions in version control.
   </p>
 </section>
 
@@ -50,7 +50,7 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Greenfield</p>
     <h3>Write the rules before the shortcuts settle in.</h3>
-    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. `maat check` can run locally and in CI.</p>
+    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. <code>maat check</code> can run locally and in CI.</p>
     <ul>
       <li>Prevent accidental dependencies before they become precedent.</li>
       <li>Keep domain code independent from infrastructure and framework details.</li>
@@ -59,8 +59,8 @@ import { withBase } from 'vitepress'
   </section>
   <section>
     <p class="maat-mode">Brownfield</p>
-    <h3>Add checks without pretending the codebase is clean.</h3>
-    <p>Existing systems can baseline known violations, keep them visible, and promote only the findings the team is ready to enforce.</p>
+    <h3>Start from what the codebase already taught you.</h3>
+    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, then promote only the findings the team is ready to enforce.</p>
     <ul>
       <li>Separate new violations from existing debt.</li>
       <li>Track accepted exceptions with author, timestamp, and rationale.</li>
@@ -100,11 +100,11 @@ import { withBase } from 'vitepress'
 <div class="maat-flow" aria-label="what maat does when it runs">
   <div>
     <strong>Collect facts</strong>
-    <span>Collectors turn repository structure, metadata, or other inputs into facts.</span>
+    <span>Collectors turn repository structure, metadata, or team-specific signals into facts.</span>
   </div>
   <div>
     <strong>Check rules</strong>
-    <span>Rules compare collected facts with the configured boundaries.</span>
+    <span>Rules compare those facts with the policies the team chose to encode.</span>
   </div>
   <div>
     <strong>Report findings</strong>
@@ -118,7 +118,7 @@ import { withBase } from 'vitepress'
 
 ## Configuration example
 
-Maat currently ships with a TypeScript collector. Collectors are separate from the kernel, so other languages and semantic sources can be added by implementing the collector interface.
+Maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors and rules for codebase-specific problems.
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -150,19 +150,19 @@ maat axiom declare \
 <div class="maat-faq">
   <section>
     <h3>Is Maat a linter?</h3>
-    <p>No. Linters usually check local syntax, style, or code patterns. Maat checks facts collected from the repository against architecture rules, then records accepted findings in a ledger.</p>
+    <p>No. Linters usually check local syntax, style, or common code patterns. Maat is for architecture rules that need facts from more than one place in the repository.</p>
   </section>
   <section>
     <h3>How is it different from dependency rules?</h3>
-    <p>Dependency rules are one input. Maat can express package and layer boundaries, but the collector model is broader: rules can run over any fact type a collector provides.</p>
+    <p>Dependency rules are one use case. Maat can express package and layer boundaries, but the collector model is broader: rules can run over any fact type a collector provides.</p>
   </section>
   <section>
     <h3>How is it different from architecture unit tests?</h3>
     <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings, promote reviewed findings, enforce selected rules, and resolve fixed ones.</p>
   </section>
   <section>
-    <h3>Is this a fitness function tool?</h3>
-    <p>It can be used that way. A Maat rule is a deterministic fitness function over collected facts, with ledger support for adoption and history.</p>
+    <h3>Can we write our own checks?</h3>
+    <p>Yes. Maat is built around plugins: collectors gather facts, rules evaluate them, and the kernel keeps the check path deterministic.</p>
   </section>
 </div>
 

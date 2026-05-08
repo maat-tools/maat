@@ -118,11 +118,11 @@ Then adopt checks gradually:
 # Save current findings to the configured ledger
 maat check --ledger
 
-# Accept current findings as the starting point (expires in 90 days by default)
+# Accept current findings as the starting point (expires in 30 days by default)
 maat baseline
 
-# Accept current findings with a custom expiry window (90–120 days)
-maat baseline --expires-in 120
+# Accept current findings with a shorter expiry window (1–90 days)
+maat baseline --expires-in 30
 
 # Mark one finding as reviewed
 maat promote --fingerprint <fingerprint>
@@ -134,7 +134,7 @@ maat promote --fingerprint <fingerprint> --enforce
 maat resolve --fingerprint <fingerprint>
 ```
 
-Baselines are time-limited: after the expiry window (default 90 days, maximum 120 days), `maat check` exits with failure for those findings and requires the team to revisit. Permanent baselines are intentionally not supported.
+Baselines are time-limited: after the expiry window (1–90 days, default 90), `maat check` exits with failure for those findings and requires the team to revisit. Permanent baselines are intentionally not supported.
 
 The ledger keeps append-only history for findings, axioms, and lifecycle events. Commit it with the codebase so decisions travel with the architecture they describe.
 
@@ -157,7 +157,7 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 | `maat axiom declare` | Record a human-authored architectural claim in the ledger. |
 | `maat axiom supersede` | Mark an axiom as replaced by a newer decision. |
 | `maat axiom revoke` | Revoke an axiom that no longer applies. |
-| `maat baseline` | Baseline currently observed findings. Expires in 90–120 days, forcing periodic review. |
+| `maat baseline` | Baseline currently observed findings. Expires in 1–90 days, forcing periodic review. |
 | `maat promote` | Mark a finding as reviewed. Use `--enforce` to make it a CI gate. |
 | `maat resolve` | Confirm intentional resolution of a promoted or enforced finding. |
 | `maat visualize` | Print current ledger state: findings, axioms, and optional insights. |

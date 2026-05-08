@@ -308,7 +308,7 @@ describe('baseline', () => {
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.OBSERVED);
 	});
 
-	test('baseline stores expires_at ~90 days from now by default', async () => {
+	test('baseline stores expires_at ~30 days from now by default', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
@@ -320,9 +320,9 @@ describe('baseline', () => {
 		const expiresAt = state.findings[FINGERPRINT]?.baseline_expires_at;
 		expect(expiresAt).toBeDefined();
 		const expiresMs = new Date(expiresAt as string).getTime();
-		const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
-		expect(expiresMs).toBeGreaterThanOrEqual(before + ninetyDaysMs);
-		expect(expiresMs).toBeLessThanOrEqual(after + ninetyDaysMs);
+		const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+		expect(expiresMs).toBeGreaterThanOrEqual(before + thirtyDaysMs);
+		expect(expiresMs).toBeLessThanOrEqual(after + thirtyDaysMs);
 	});
 
 	test('--expires-in with valid custom value stores correct expires_at', async () => {
@@ -330,24 +330,41 @@ describe('baseline', () => {
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
 		const before = Date.now();
-		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '100' });
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '30' });
 		const after = Date.now();
 
 		const state = await ledger.getState();
 		const expiresAt = state.findings[FINGERPRINT]?.baseline_expires_at;
 		expect(expiresAt).toBeDefined();
 		const expiresMs = new Date(expiresAt as string).getTime();
-		const hundredDaysMs = 100 * 24 * 60 * 60 * 1000;
-		expect(expiresMs).toBeGreaterThanOrEqual(before + hundredDaysMs);
-		expect(expiresMs).toBeLessThanOrEqual(after + hundredDaysMs);
+		const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+		expect(expiresMs).toBeGreaterThanOrEqual(before + thirtyDaysMs);
+		expect(expiresMs).toBeLessThanOrEqual(after + thirtyDaysMs);
 	});
 
-	test('--expires-in below minimum → exits 1', async () => {
+	test('--expires-in 1 (minimum) → stores correct expires_at', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+
+		const before = Date.now();
+		await new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '1' });
+		const after = Date.now();
+
+		const state = await ledger.getState();
+		const expiresAt = state.findings[FINGERPRINT]?.baseline_expires_at;
+		expect(expiresAt).toBeDefined();
+		const expiresMs = new Date(expiresAt as string).getTime();
+		const oneDayMs = 1 * 24 * 60 * 60 * 1000;
+		expect(expiresMs).toBeGreaterThanOrEqual(before + oneDayMs);
+		expect(expiresMs).toBeLessThanOrEqual(after + oneDayMs);
+	});
+
+	test('--expires-in 0 → exits 1', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
 		await expect(
-			new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '89' }),
+			new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '0' }),
 		).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
@@ -357,7 +374,7 @@ describe('baseline', () => {
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 
 		await expect(
-			new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '121' }),
+			new Baseline(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({ expiresIn: '91' }),
 		).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});

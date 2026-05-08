@@ -2,9 +2,8 @@ import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
-const BASELINE_MIN_DAYS = 90;
-const BASELINE_MAX_DAYS = 120;
-const BASELINE_DEFAULT_DAYS = 90;
+const BASELINE_MAX_DAYS = 90;
+const BASELINE_DEFAULT_DAYS = 30;
 
 type BaselineOptions = {
 	expiresIn?: string;
@@ -56,8 +55,8 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 			this.printer.error(`--expires-in must be an integer number of days.`);
 			return null;
 		}
-		if (days < BASELINE_MIN_DAYS) {
-			this.printer.error(`--expires-in must be at least ${BASELINE_MIN_DAYS} days. Got: ${days}.`);
+		if (days < 1) {
+			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.`);
 			return null;
 		}
 		if (days > BASELINE_MAX_DAYS) {
@@ -73,7 +72,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 			.description('Baseline all currently observed findings, suppressing them from future check output')
 			.option(
 				'--expires-in <days>',
-				`Number of days before the baseline expires and must be revisited (${BASELINE_MIN_DAYS}–${BASELINE_MAX_DAYS})`,
+				`Number of days before the baseline expires and must be revisited (1–${BASELINE_MAX_DAYS}, default: ${BASELINE_DEFAULT_DAYS})`,
 				String(BASELINE_DEFAULT_DAYS),
 			)
 			.action((options: BaselineOptions) => this.action(options));

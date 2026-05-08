@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { MaatConfig } from '@maat/core';
+import type { MaatConfig } from '@maat-tools/core';
 
 type Env = Record<string, string | undefined>;
 

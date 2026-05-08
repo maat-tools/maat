@@ -1,3 +1,5 @@
+import type { FactRegistry } from '@maat-tools/contracts';
+
 export const CONSTANTS_CAPABILITY = 'constants' as const;
 export const IMPORTS_CAPABILITY = 'imports' as const;
 
@@ -24,7 +26,7 @@ export type Import = {
 	location: SourceLocation;
 };
 
-declare module '@maat/contracts' {
+declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		constants: Constant[];
 		imports: Import[];

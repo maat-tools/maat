@@ -1,10 +1,25 @@
 {
-	"name": "@maat/contracts",
-	"version": "0.0.1",
+	"name": "@maat-tools/contracts",
+	"version": "0.1.1",
+	"description": "Core type contracts and declaration-merging registries for collectors, rules, ledger backends, and insights",
 	"type": "module",
-	"private": true,
-	"main": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
 		"dev": "bun run src/index.ts",
 		"lint": "biome check .",
 		"test": "bun test",
@@ -13,5 +28,10 @@
 	"devDependencies": {
 		"@types/bun": "1.3.13",
 		"@biomejs/biome": "2.4.14"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/maat-tools/maat",
+		"directory": "packages/contracts"
 	}
 }

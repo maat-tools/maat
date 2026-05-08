@@ -13,20 +13,20 @@ The codebase is organized as a monorepo with a fixed set of packages, each ownin
 
 | Package | Concern |
 |---|---|
-| `@maat/contracts` | Shared TypeScript interfaces and branded factories — the only thing every package can import |
-| `@maat/vocabulary` | Canonical IR types and capability keys (what collectors produce, what rules consume) |
-| `@maat/kernel` | Orchestrates collectors → facts → rules → findings → insights; no I/O |
-| `@maat/core` | Config schema and `defineConfig` helper |
-| `@maat/collector-ts` | TypeScript AST walker; emits `constants` facts |
-| `@maat/coupling-rules` | Rule pack — Connascence of Meaning and future coupling rules |
-| `@maat/file-ledger` | Append-only NDJSON ledger backend |
-| `@maat/cli` | Entry point; wires kernel, config, and ledger |
+| `@maat-tools/contracts` | Shared TypeScript interfaces and branded factories — the only thing every package can import |
+| `@maat-tools/vocabulary` | Canonical IR types and capability keys (what collectors produce, what rules consume) |
+| `@maat-tools/kernel` | Orchestrates collectors → facts → rules → findings → insights; no I/O |
+| `@maat-tools/core` | Config schema and `defineConfig` helper |
+| `@maat-tools/collector-ts` | TypeScript AST walker; emits `constants` facts |
+| `@maat-tools/coupling-rules` | Rule pack — Connascence of Meaning and future coupling rules |
+| `@maat-tools/file-ledger` | Append-only NDJSON ledger backend |
+| `@maat-tools/cli` | Entry point; wires kernel, config, and ledger |
 
 The constraint "roughly seven packages" is intentional. Before adding a package, the proposal must name which concern it owns that is not already owned.
 
 ## Consequences
 
 - Each package has a `package.json` with its own dependency list. A collector does not pull in CLI deps.
-- `@maat/contracts` is the only shared leaf all packages may import freely. Everything else follows a strict dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`.
+- `@maat-tools/contracts` is the only shared leaf all packages may import freely. Everything else follows a strict dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`.
 - Publishing individual packages to npm is straightforward when the time comes.
 - Circular dependencies between packages are a build error by design.

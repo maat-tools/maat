@@ -1,13 +1,33 @@
 {
-	"name": "@maat/coupling-rules",
-	"version": "0.0.1",
+	"name": "@maat-tools/coupling-rules",
+	"version": "0.1.1",
+	"description": "Rules for enforcing import boundaries between architectural layers and packages",
 	"type": "module",
-	"private": true,
-	"main": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./layer": {
+			"import": "./dist/layer.js",
+			"types": "./dist/layer.d.ts"
+		},
+		"./roles": {
+			"import": "./dist/roles.js",
+			"types": "./dist/roles.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
 	},
 	"scripts": {
+		"build": "bun build src/index.ts src/layer.ts src/roles.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
 		"dev": "bun run src/index.ts",
 		"lint": "biome check .",
 		"test": "bun test",
@@ -18,8 +38,13 @@
 		"@biomejs/biome": "2.4.14"
 	},
 	"dependencies": {
-		"@maat/contracts": "workspace:*",
-		"@maat/core": "workspace:*",
-		"@maat/vocabulary": "workspace:*"
+		"@maat-tools/contracts": "workspace:*",
+		"@maat-tools/core": "workspace:*",
+		"@maat-tools/vocabulary": "workspace:*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/maat-tools/maat",
+		"directory": "packages/coupling-rules"
 	}
 }

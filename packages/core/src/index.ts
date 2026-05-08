@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import {
 	type AxiomRecord,
 	type BrandedRuleBuilder,
@@ -7,6 +6,7 @@ import {
 	type FindingEventInput,
 	type FindingRecord,
 	FindingStatus,
+	generateFingerprint,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
 	type LedgerEvent,
@@ -14,7 +14,7 @@ import {
 	type LedgerSnapshot,
 	type Rule,
 	type RuleRegistry,
-} from '@maat/contracts';
+} from '@maat-tools/contracts';
 import { ulid } from 'ulid';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
@@ -51,37 +51,9 @@ export function defineConfig(config: MaatConfig): MaatConfig {
 	return config;
 }
 
-export function stableStringify(value: unknown): string {
-	if (value === null || typeof value !== 'object') {
-		return JSON.stringify(value) ?? 'null';
-	}
-	
-	if (Array.isArray(value)) {
-		return `[${value.map(stableStringify).join(',')}]`;
-	}
-	const obj = value as Record<string, unknown>;
-	const pairs = Object.keys(obj)
-		.sort()
-		.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`);
-
-	return `{${pairs.join(',')}}`;
-}
-
-export function stableHash(value: unknown): string {
-	return createHash('sha256').update(stableStringify(value)).digest('hex');
-}
-
-export function fingerprintFinding(finding: { ruleId: string; message: string; artifacts: unknown[] }): string {
-	return stableHash({
-		ruleId: finding.ruleId,
-		message: finding.message,
-		artifacts: finding.artifacts,
-	});
-}
-
 export abstract class RuleBase {
-	public generateFingerprint(data: Record<string, unknown>): string {
-		return stableHash(data);
+	public generateFingerprint(ruleId: string, ruleIdentifier: Record<string, unknown>): string {
+		return generateFingerprint(ruleId, ruleIdentifier);
 	}
 }
 
@@ -208,4 +180,4 @@ export {
 	type LedgerBackend,
 	type Rule,
 	type RuleBuilder,
-} from '@maat/contracts';
+} from '@maat-tools/contracts';

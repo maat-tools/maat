@@ -1,4 +1,4 @@
-import { type Finding, type FindingRecord, FindingStatus } from '@maat/contracts';
+import { type Finding, type FindingRecord, FindingStatus } from '@maat-tools/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 

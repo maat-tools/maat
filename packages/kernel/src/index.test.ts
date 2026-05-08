@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { Collector, Rule } from '@maat/contracts';
+import type { Collector, Rule } from '@maat-tools/contracts';
 import { Kernel } from './index';
 
-declare module '@maat/contracts' {
+declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		testFacts: string[];
 	}

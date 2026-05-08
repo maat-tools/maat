@@ -1,9 +1,9 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat/contracts';
-import { CONSTANTS_CAPABILITY, type Constant } from '@maat/vocabulary';
+import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { CONSTANTS_CAPABILITY, type Constant } from '@maat-tools/vocabulary';
 
-declare module '@maat/contracts' {
+declare module '@maat-tools/contracts' {
 	interface RuleRegistry {
-		'@maat/connascence-rules/com': CoMRuleOptions;
+		'@maat-tools/connascence-rules/com': CoMRuleOptions;
 	}
 }
 

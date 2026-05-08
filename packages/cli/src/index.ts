@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-
 import {
 	type Insight,
 	isCollector,
@@ -13,9 +11,9 @@ import {
 	isRuleFactory,
 	isRuleSet,
 	type LedgerBackend,
-} from '@maat/contracts';
-import type { MaatConfig } from '@maat/core';
-import { Kernel } from '@maat/kernel';
+} from '@maat-tools/contracts';
+import type { MaatConfig } from '@maat-tools/core';
+import { Kernel } from '@maat-tools/kernel';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
 import { Axiom } from './commands/axiom';
@@ -48,7 +46,7 @@ class MaatCLI {
 		this.program
 			.name('maat')
 			.description('maat cli')
-			.version('0.0.1')
+			.version('0.1.0')
 			.option('-c, --config <path>', 'Path to a maat config file');
 	}
 
@@ -103,7 +101,7 @@ class MaatCLI {
 			if (!isCollectorFactory(factory)) {
 				throw new Error(
 					`Plugin "${collectorId}" default export is not a valid CollectorFactory. ` +
-						`Use defineCollector() from @maat/contracts to define it.`,
+						`Use defineCollector() from @maat-tools/contracts to define it.`,
 				);
 			}
 
@@ -151,7 +149,7 @@ class MaatCLI {
 			} else {
 				throw new Error(
 					`Plugin "${ruleId}" default export is not a valid RuleFactory or RuleSet. ` +
-						`Use defineRule() or defineRuleSet() from @maat/contracts to define it.`,
+						`Use defineRule() or defineRuleSet() from @maat-tools/contracts to define it.`,
 				);
 			}
 		}
@@ -180,7 +178,7 @@ class MaatCLI {
 			} else {
 				throw new Error(
 					`Insight "${insightId}" default export is not a valid InsightFactory or InsightSet. ` +
-						`Use defineInsight() or defineInsightSet() from @maat/contracts to define it.`,
+						`Use defineInsight() or defineInsightSet() from @maat-tools/contracts to define it.`,
 				);
 			}
 		}
@@ -197,7 +195,7 @@ class MaatCLI {
 		if (!isLedgerBackendFactory(factory)) {
 			throw new Error(
 				`Ledger backend "${backendId}" default export is not a valid LedgerBackendFactory. ` +
-					`Use defineLedgerBackend() from @maat/contracts to define it.`,
+					`Use defineLedgerBackend() from @maat-tools/contracts to define it.`,
 			);
 		}
 

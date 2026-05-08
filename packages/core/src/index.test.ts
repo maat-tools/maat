@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { FindingStatus, type LedgerEventInput, type LedgerSnapshot } from '@maat/contracts';
-import { LedgerBackendBase, stableHash, stableStringify } from './index';
+import { FindingStatus, type LedgerEventInput, type LedgerSnapshot } from '@maat-tools/contracts';
+import { LedgerBackendBase } from './index';
 
 // Concrete subclass to expose protected applyEvent
 class TestLedger extends LedgerBackendBase {
@@ -27,37 +27,6 @@ const baseFinding = {
 	message: 'msg',
 	artifacts: [],
 };
-
-describe('stableStringify', () => {
-	test('sorts object keys', () => {
-		expect(stableStringify({ b: 1, a: 2 })).toBe(stableStringify({ a: 2, b: 1 }));
-	});
-
-	test('sorts nested object keys', () => {
-		expect(stableStringify({ z: { b: 1, a: 2 } })).toBe(stableStringify({ z: { a: 2, b: 1 } }));
-	});
-
-	test('preserves array order', () => {
-		expect(stableStringify([3, 1, 2])).toBe('[3,1,2]');
-	});
-
-	test('handles primitives', () => {
-		expect(stableStringify(null)).toBe('null');
-		expect(stableStringify('hello')).toBe('"hello"');
-		expect(stableStringify(42)).toBe('42');
-		expect(stableStringify(true)).toBe('true');
-	});
-});
-
-describe('stableHash', () => {
-	test('same input produces same hash', () => {
-		expect(stableHash({ b: 1, a: 2 })).toBe(stableHash({ a: 2, b: 1 }));
-	});
-
-	test('different inputs produce different hashes', () => {
-		expect(stableHash({ a: 1 })).not.toBe(stableHash({ a: 2 }));
-	});
-});
 
 describe('LedgerBackendBase.applyEvent', () => {
 	test('OBSERVED on new fingerprint creates record with OBSERVED state', () => {

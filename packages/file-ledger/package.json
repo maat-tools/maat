@@ -1,10 +1,25 @@
 {
-	"name": "@maat/file-ledger",
-	"version": "0.0.1",
+	"name": "@maat-tools/file-ledger",
+	"version": "0.1.1",
+	"description": "NDJSON file-based ledger backend for persisting finding events to disk",
 	"type": "module",
-	"private": true,
-	"main": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
 		"dev": "bun run src/index.ts",
 		"lint": "biome check .",
 		"test": "bun test",
@@ -15,6 +30,12 @@
 		"@biomejs/biome": "2.4.14"
 	},
 	"dependencies": {
-		"@maat/contracts": "workspace:*"
+		"@maat-tools/contracts": "workspace:*",
+		"@maat-tools/core": "workspace:*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/maat-tools/maat",
+		"directory": "packages/file-ledger"
 	}
 }

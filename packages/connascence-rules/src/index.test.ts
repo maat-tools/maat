@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { Constant } from '@maat/vocabulary';
+import type { Constant } from '@maat-tools/vocabulary';
 import { ConnascenceOfMeaningRule } from './com';
 
 function makeConstant(overrides: Partial<Constant> = {}): Constant {

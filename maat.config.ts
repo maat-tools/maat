@@ -3,21 +3,22 @@ import { layer } from './packages/coupling-rules/src/layer';
 import { Pure } from './packages/coupling-rules/src/roles';
 
 export default defineConfig({
+	check: { strict: true },
 	collectors: [
 		[
-			'@maat/collector-ts',
+			'@maat-tools/collector-ts',
 			{
 				tsConfigFilePath: './tsconfig.json',
 			},
 		],
 	],
 	rules: [
-		layer('@maat/contracts').is(Pure).allows(),
-		layer('@maat/vocabulary').is(Pure).allows('@maat/contracts'),
-		layer('@maat/core').is(Pure).allows('@maat/contracts'),
-		layer('@maat/kernel').is(Pure).allows('@maat/contracts'),
-		layer('@maat/coupling-rules').is(Pure).allows('@maat/contracts', '@maat/vocabulary'),
-		layer('@maat/connascence-rules').is(Pure).allows('@maat/contracts', '@maat/vocabulary', '@maat/core'),
+		layer('@maat-tools/contracts').is(Pure).allows('node:crypto'),
+		layer('@maat-tools/vocabulary').is(Pure).allows('@maat-tools/contracts'),
+		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid'),
+		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts'),
+		layer('@maat-tools/coupling-rules').is(Pure).allows('@maat-tools/contracts', '@maat-tools/vocabulary', 'node:path'),
+		layer('@maat-tools/connascence-rules').is(Pure).allows('@maat-tools/contracts', '@maat-tools/vocabulary', '@maat-tools/core'),
 	],
-	ledger: ['@maat/file-ledger', { path: './maat-ledger.ndjson' }],
+	ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
 });

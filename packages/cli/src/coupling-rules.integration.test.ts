@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
-import { TSCollector } from '@maat/collector-ts';
-import type { Finding } from '@maat/contracts';
-import { layer, Pure } from '@maat/coupling-rules';
-import { Kernel } from '@maat/kernel';
+import { TSCollector } from '@maat-tools/collector-ts';
+import type { Finding } from '@maat-tools/contracts';
+import { layer, Pure } from '@maat-tools/coupling-rules';
+import { Kernel } from '@maat-tools/kernel';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/coupling-rules/tsconfig.json');
 

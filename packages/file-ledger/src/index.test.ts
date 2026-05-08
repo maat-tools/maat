@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FindingStatus } from '@maat/contracts';
+import { FindingStatus } from '@maat-tools/contracts';
 import { FilePathLedgerBackend } from './index';
 
 let dir: string;

@@ -56,24 +56,24 @@ LLMs may produce facts inside a `Collector` (with a committable cache keyed by c
 
 ### 3. The IR describes structure, not problems
 
-Fields on IR types in `@maat/vocabulary` must answer "what is this thing and where does it sit?" — not "is this a problem?" Coupling judgments belong in rules. See [ADR-007](docs/adr/007-ir-structural-boundary.md).
+Fields on IR types in `@maat-tools/vocabulary` must answer "what is this thing and where does it sit?" — not "is this a problem?" Coupling judgments belong in rules. See [ADR-007](docs/adr/007-ir-structural-boundary.md).
 
 ### 4. Ledger events are immutable and additive
 
 Never modify or delete a ledger event type's existing fields. New optional fields may be added. Breaking schema changes require a new event type. See [ADR-003](docs/adr/003-event-sourced-ndjson-ledger.md).
 
-### 5. `@maat/contracts` is the only universal import
+### 5. `@maat-tools/contracts` is the only universal import
 
-Packages may import from `@maat/contracts` freely. All other cross-package imports must follow the dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`. Circular dependencies are a build error.
+Packages may import from `@maat-tools/contracts` freely. All other cross-package imports must follow the dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`. Circular dependencies are a build error.
 
 ## Contributing a rule or collector
 
 Rules and collectors are the primary extension points. The design targets external packages (`@your-org/maat-rules-*`) that plug in via `maat.config.ts` — the same mechanism maat uses internally.
 
 1. Implement `Rule<TNeeds>` and export a `BrandedRuleFactory` via `defineRule()`.
-2. If your rule needs new facts, add a capability to `@maat/vocabulary` (or your own vocabulary package) and implement the corresponding `Collector`.
+2. If your rule needs new facts, add a capability to `@maat-tools/vocabulary` (or your own vocabulary package) and implement the corresponding `Collector`.
 3. Write unit tests using plain fact objects — no mocking infrastructure needed since `evaluate()` is pure.
-4. Once `@maat/rule-tester` ships, include the determinism assertion in your test suite.
+4. Once `@maat-tools/rule-tester` ships, include the determinism assertion in your test suite.
 
 ## Submitting changes
 

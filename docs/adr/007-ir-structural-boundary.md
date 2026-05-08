@@ -5,9 +5,9 @@
 
 ## Context
 
-The Intermediate Representation (IR) is the shared vocabulary between collectors and rules. It lives in `@maat/vocabulary`. Its design is the most critical architectural decision in maat because it determines what rules can express and what collectors must compute.
+The Intermediate Representation (IR) is the shared data format between collectors and rules. It lives in `@maat-tools/vocabulary`. Its shape determines what rules can express and what collectors must compute.
 
-There is a natural pressure for collectors to be "helpful" — to pre-compute coupling signals, flag suspicious patterns, or annotate facts with semantic meaning. This pressure must be resisted.
+Collectors should not pre-compute rule results, flag suspicious patterns, or annotate facts with semantic meaning.
 
 ## Decision
 
@@ -41,10 +41,10 @@ The IR will grow as rules expose gaps. The discipline is:
 2. If no → add a structural field to the IR, have the collector populate it.
 3. Validate the new field against the boundary test above.
 
-**IR creep warning:** fields accumulating until the collector is performing semantic analysis under a different name. The boundary test is the guard.
+**IR creep warning:** fields can accumulate until the collector is doing rule work under a different name. The boundary test is the guard.
 
 ## Consequences
 
-- The `Constant` type in `@maat/vocabulary` contains only: `kind`, `value`, `raw`, `context` (syntactic role), and `location`. No semantic flags.
+- The `Constant` type in `@maat-tools/vocabulary` contains only: `kind`, `value`, `raw`, `context` (syntactic role), and `location`. No semantic flags.
 - The `ConnascenceOfMeaningRule` determines whether a value appears in enough distinct files to constitute a finding. That threshold logic is in the rule, not the collector.
 - A future linter or automated test should validate that IR fields are structural-only.

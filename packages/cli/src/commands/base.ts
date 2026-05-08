@@ -1,6 +1,6 @@
-import type { Finding, Insight, InsightResult, LedgerBackend } from '@maat/contracts';
-import type { MaatConfig } from '@maat/core';
-import type { Kernel } from '@maat/kernel';
+import type { Finding, Insight, InsightResult, LedgerBackend } from '@maat-tools/contracts';
+import type { MaatConfig } from '@maat-tools/core';
+import type { Kernel } from '@maat-tools/kernel';
 import type { Command } from 'commander';
 import type { Printer } from '../printer';
 

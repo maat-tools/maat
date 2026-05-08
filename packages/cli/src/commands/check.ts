@@ -1,4 +1,4 @@
-import { type Finding, FindingStatus, type LedgerBackend, type LedgerSnapshot } from '@maat/contracts';
+import { type Finding, FindingStatus, type LedgerBackend, type LedgerSnapshot } from '@maat-tools/contracts';
 import type { Printer } from '../printer';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';

@@ -1,6 +1,6 @@
 {
 	"name": "maat",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"private": true,
 	"description": "Architectural governance tool for TypeScript — deterministic detection, attributed decisions, permanent ledger, opt-in enforcement.",
 	"keywords": [
@@ -15,12 +15,16 @@
 	"license": "Apache-2.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/maatjs/maat"
+		"url": "https://github.com/maat-tools/maat"
 	},
 	"workspaces": [
 		"packages/*"
 	],
 	"scripts": {
+		"build": "for pkg in contracts vocabulary core kernel collector-ts coupling-rules connascence-rules file-ledger cli; do bun run --cwd packages/$pkg build; done",
+		"docs:dev": "vitepress dev docs",
+		"docs:build": "vitepress build docs",
+		"docs:preview": "vitepress preview docs",
 		"lint": "biome check .",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
@@ -29,6 +33,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.4.14",
 		"@types/bun": "1.3.13",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"vitepress": "^1.6.4"
 	}
 }

@@ -2,11 +2,10 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type FindingRuleOutput, FindingStatus } from '@maat/contracts';
-import type { MaatConfig } from '@maat/core';
-import { stableHash } from '@maat/core';
-import { FilePathLedgerBackend } from '@maat/file-ledger';
-import { Kernel } from '@maat/kernel';
+import { type FindingRuleOutput, FindingStatus, generateFingerprint } from '@maat-tools/contracts';
+import type { MaatConfig } from '@maat-tools/core';
+import { FilePathLedgerBackend } from '@maat-tools/file-ledger';
+import { Kernel } from '@maat-tools/kernel';
 import { Command } from 'commander';
 import { Printer } from '../printer';
 import { Axiom } from './axiom';
@@ -33,11 +32,7 @@ const RULE_OUTPUT: FindingRuleOutput = {
 	artifacts: [],
 };
 
-// Kernel computes fingerprint as stableHash({ ruleId, data: ruleIdentifier })
-const FINGERPRINT = stableHash({
-	ruleId: RULE_OUTPUT.ruleId,
-	data: RULE_OUTPUT.ruleIdentifier,
-});
+const FINGERPRINT = generateFingerprint(RULE_OUTPUT.ruleId, RULE_OUTPUT.ruleIdentifier);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

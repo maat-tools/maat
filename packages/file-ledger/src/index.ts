@@ -1,12 +1,12 @@
-import { appendFile, writeFile } from 'node:fs/promises';
+import { access, appendFile, readFile, writeFile } from 'node:fs/promises';
 import {
 	defineLedgerBackend,
 	type LedgerBackend,
 	type LedgerEvent,
 	type LedgerEventInput,
 	type LedgerSnapshot,
-} from '@maat/contracts';
-import { LedgerBackendBase } from '../../core/src';
+} from '@maat-tools/contracts';
+import { LedgerBackendBase } from '@maat-tools/core';
 
 export type {
 	AxiomDeclaredEvent,
@@ -18,9 +18,9 @@ export type {
 	LedgerBackend,
 	LedgerEvent,
 	LedgerSnapshot,
-} from '@maat/contracts';
+} from '@maat-tools/contracts';
 
-export { defineLedgerBackend } from '@maat/contracts';
+export { defineLedgerBackend } from '@maat-tools/contracts';
 
 type FilePathLedgerOptions = {
 	path: string;
@@ -46,8 +46,8 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	public async getState(): Promise<LedgerSnapshot> {
-		const snapshotFile = Bun.file(this.snapshotPath);
-		if (!(await snapshotFile.exists())) {
+		const exists = await access(this.snapshotPath).then(() => true).catch(() => false);
+		if (!exists) {
 			return this.rebuildSnapshot();
 		}
 		return this.loadSnapshot();
@@ -58,7 +58,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	private async loadSnapshot(): Promise<LedgerSnapshot> {
-		const text = await Bun.file(this.snapshotPath).text();
+		const text = await readFile(this.snapshotPath, 'utf-8');
 		return text.trim().length === 0 ? EMPTY_SNAPSHOT : (JSON.parse(text) as LedgerSnapshot);
 	}
 
@@ -67,17 +67,17 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	private async updateSnapshot(event: LedgerEvent): Promise<void> {
-		const snapshotFile = Bun.file(this.snapshotPath);
-		const current = (await snapshotFile.exists()) ? await this.loadSnapshot() : EMPTY_SNAPSHOT;
+		const exists = await access(this.snapshotPath).then(() => true).catch(() => false);
+		const current = exists ? await this.loadSnapshot() : EMPTY_SNAPSHOT;
 		await this.persistSnapshot(this.applyEvent(current, event));
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
-		const file = Bun.file(this.options.path);
-		if (!(await file.exists())) {
+		const exists = await access(this.options.path).then(() => true).catch(() => false);
+		if (!exists) {
 			return [];
 		}
-		const text = await file.text();
+		const text = await readFile(this.options.path, 'utf-8');
 
 		return text.trim().length === 0
 			? []
@@ -99,9 +99,9 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 }
 
-declare module '@maat/contracts' {
+declare module '@maat-tools/contracts' {
 	interface LedgerBackendRegistry {
-		'@maat/ledger': FilePathLedgerOptions;
+		'@maat-tools/ledger': FilePathLedgerOptions;
 	}
 }
 

@@ -1,8 +1,8 @@
 # IR Structural Boundary (Axiom)
 
-> **Status: pending enforcement** — This is an architectural axiom to be enforced by maat on itself once the rule authoring DSL supports it. Until then it is a human-declared invariant.
+> **Status: pending enforcement** — This axiom should be checked by maat once the rule authoring DSL supports it. Until then it is a manual invariant.
 
-The Intermediate Representation (IR) is the shared vocabulary between collectors and rules. Its design is the most critical architectural decision in maat.
+The Intermediate Representation (IR) is the shared data format between collectors and rules.
 
 ## The Core Boundary
 
@@ -45,8 +45,8 @@ The IR will grow over time as rules expose gaps. This is expected. The disciplin
 2. If no → add a field to the IR, have the collector populate it
 3. Validate the new field against the boundary test above
 
-Watch for **IR creep**: fields accumulating until the collector is doing semantic analysis under a different name. The boundary test is the guard.
+Watch for **IR creep**: fields accumulating until the collector is doing rule work under a different name. The boundary test is the guard.
 
 ## Verifying the Boundary
 
-When the tooling is mature enough, write a rule that validates the IR itself — checking that collector output conforms to structural-only conventions. This acts as a guardrail against IR creep during development.
+When the tooling is mature enough, add a rule that validates collector output against structural-only conventions.

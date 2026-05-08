@@ -1,10 +1,25 @@
 {
-	"name": "@maat/vocabulary",
-	"version": "0.0.1",
+	"name": "@maat-tools/vocabulary",
+	"version": "0.1.1",
+	"description": "Shared fact type definitions (imports and constants) used by collectors and rules",
 	"type": "module",
-	"private": true,
-	"main": "./src/index.ts",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
 		"lint": "biome check .",
 		"typecheck": "tsc --noEmit"
 	},
@@ -13,6 +28,11 @@
 		"@biomejs/biome": "2.4.14"
 	},
 	"dependencies": {
-		"@maat/contracts": "workspace:*"
+		"@maat-tools/contracts": "workspace:*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/maat-tools/maat",
+		"directory": "packages/vocabulary"
 	}
 }

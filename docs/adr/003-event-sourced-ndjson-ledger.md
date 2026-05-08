@@ -5,7 +5,7 @@
 
 ## Context
 
-maat's core value proposition is memory over time: it must record not just the current state of architectural findings, but when each state transition happened and who caused it. A mutable store (database, JSON file rewritten on every run) loses this history and introduces merge conflicts in version control.
+maat stores finding history, not only current finding state. Each state transition needs an author and timestamp. A mutable store (database, JSON file rewritten on every run) loses this history and creates unnecessary merge conflicts in version control.
 
 ## Decision
 
@@ -17,9 +17,9 @@ Current event types:
 |---|---|
 | `finding.observed` | Detector produced a new finding |
 | `finding.baselined` | Human accepted a finding as part of the current baseline |
-| `finding.promoted` | Human promoted a finding to a property (acknowledged claim) |
-| `finding.enforced` | Human escalated a finding to enforced (CI gate) |
-| `axiom.declared` | Human declared an architectural claim the tool cannot verify |
+| `finding.promoted` | User marked a finding as reviewed |
+| `finding.enforced` | User made a finding enforceable by CI |
+| `axiom.declared` | User added a manual claim the tool cannot verify |
 
 The current state of any finding is derived by replaying events in order (the fold pattern). The ledger file is a valid append target from multiple sequential runs with no coordination required.
 
@@ -34,5 +34,5 @@ The current state of any finding is derived by replaying events in order (the fo
 
 - The ledger file grows monotonically. It is never compacted or rewritten in V1.
 - The fold function (`readAll → fold`) must be efficient enough for the typical ledger size. For large codebases with long histories, a snapshot/checkpoint mechanism may be needed in a future version.
-- Ledger files should be committed to version control alongside the codebase. This is intentional — the ledger is a project artifact, not a build artifact.
+- Ledger files should be committed to version control alongside the codebase. The ledger is source data, not build output.
 - Changing the schema of an existing event type is not allowed. New fields may be added (additive only). Breaking changes require a new event type.

@@ -1,4 +1,4 @@
-import { FindingStatus } from '@maat/contracts';
+import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 

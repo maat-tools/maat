@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { isAbsolute, resolve } from 'node:path';
-import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat/vocabulary';
+import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat-tools/vocabulary';
 import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/sample-project/tsconfig.json');
@@ -76,5 +76,42 @@ describe('TSCollector.collect() — imports fact', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { constants } = await collector.collect();
 		expect(constants.length).toBeGreaterThan(0);
+	});
+});
+
+const CROSS_PACKAGE_TSCONFIG = resolve(import.meta.dir, '../fixtures/cross-package/pkg-a/tsconfig.json');
+
+describe('TSCollector.collect() — cross-package specifier normalization', () => {
+	test('same-package relative import keeps its original specifier', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
+		const { imports } = await collector.collect();
+		const found = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === './helper');
+		expect(found).toBeDefined();
+	});
+
+	test('cross-package relative import is rewritten to the destination package name', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
+		const { imports } = await collector.collect();
+		const raw = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier.startsWith('../'));
+		expect(raw).toBeUndefined(); // the raw ../ form must not survive
+
+		const normalized = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
+		expect(normalized).toBeDefined();
+	});
+
+	test('normalized specifier still carries the correct file and location', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
+		const { imports } = await collector.collect();
+		const imp = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
+		expect(imp?.file).toBe('src/index.ts');
+		expect(imp?.location.line).toBeGreaterThan(0);
+	});
+
+	test('pkg-b own files are not affected', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
+		const { imports } = await collector.collect();
+		// pkg-b/src/index.ts has no imports at all
+		const pkgBImports = imports.filter((i) => i.packageName === '@fixture/pkg-b');
+		expect(pkgBImports).toHaveLength(0);
 	});
 });

@@ -1,13 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { type Collector, defineCollector, type FactRegistry } from '@maat/contracts';
+import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
+import * as micromatch from 'micromatch';
 import {
 	CONSTANTS_CAPABILITY,
 	type Constant,
 	type ConstantContext,
 	IMPORTS_CAPABILITY,
 	type Import,
-} from '@maat/vocabulary';
+} from '@maat-tools/vocabulary';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
@@ -57,9 +58,11 @@ function resolvePackageName(filePath: string): string | null {
 				const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 				const name = typeof pkg.name === 'string' ? pkg.name : null;
 				packageNameCache.set(dir, name);
+
 				return name;
 			} catch {
 				packageNameCache.set(dir, null);
+
 				return null;
 			}
 		}
@@ -74,11 +77,28 @@ function resolvePackageName(filePath: string): string | null {
 	return null;
 }
 
+function normalizeSpecifier(specifier: string, fromAbsoluteFile: string, fromPackage: string | null): string {
+	if (!specifier.startsWith('./') && !specifier.startsWith('../')) {
+		return specifier;
+	}
+
+	const absoluteDest = resolve(dirname(fromAbsoluteFile), specifier);
+	const destPackage = resolvePackageName(absoluteDest);
+
+	if (destPackage !== null && destPackage !== fromPackage) {
+		return destPackage;
+	}
+
+	return specifier;
+}
+
 function collectImports(sourceFile: SourceFile, file: string, packageName: string | null): Import[] {
+	const absoluteFile = sourceFile.getFilePath();
+	
 	return sourceFile.getImportDeclarations().map((decl) => ({
 		file,
 		packageName,
-		specifier: decl.getModuleSpecifierValue(),
+		specifier: normalizeSpecifier(decl.getModuleSpecifierValue(), absoluteFile, packageName),
 		location: {
 			file,
 			line: decl.getStartLineNumber(),
@@ -126,7 +146,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		const resolvedPath = resolve(this.config.tsConfigFilePath);
 		const projectRoot = dirname(resolvedPath);
 		const project = new Project({ tsConfigFilePath: resolvedPath });
-		const excludeGlobs = (this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS).map((p) => new Bun.Glob(p));
+		const excludePatterns = this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
 
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
@@ -135,7 +155,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 			const absoluteFile = sourceFile.getFilePath();
 			const file = toProjectRelativePath(projectRoot, absoluteFile);
 
-			if (excludeGlobs.some((g) => g.match(file))) {
+			if (micromatch.isMatch(file, excludePatterns)) {
 				continue;
 			}
 
@@ -148,9 +168,9 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 	}
 }
 
-declare module '@maat/contracts' {
+declare module '@maat-tools/contracts' {
 	interface CollectorRegistry {
-		'@maat/collector-ts': TSInput;
+		'@maat-tools/collector-ts': TSInput;
 	}
 }
 

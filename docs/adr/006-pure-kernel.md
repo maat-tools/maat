@@ -15,7 +15,7 @@ The kernel is the component that orchestrates fact collection, rule evaluation, 
 
 The kernel and all rules it runs are pure: given the same inputs, they always produce the same outputs with no observable side effects.
 
-**Kernel (`@maat/kernel`):**
+**Kernel (`@maat-tools/kernel`):**
 - `Kernel.run()` is an orchestrator, not a judge. It collects facts, dispatches to rules, dispatches to insights, and returns the combined result.
 - The kernel does not write to the ledger, does not make network calls, and does not invoke LLMs.
 - Collectors may be async (they read files from disk) but their results are deterministic for a given filesystem state.
@@ -27,7 +27,7 @@ The kernel and all rules it runs are pure: given the same inputs, they always pr
 
 **LLM boundary:**
 - LLMs may produce facts *inside a collector* (e.g., a future prose-analysis collector). The collector is responsible for determinism via a committable cache keyed by content hash × model × prompt version.
-- The kernel and rules never call an LLM. This boundary is inviolable.
+- The kernel and rules never call an LLM. This boundary is required for reproducible findings.
 
 ## Consequences
 

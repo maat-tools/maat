@@ -1,4 +1,4 @@
-import type { Artifact, Finding, InsightResult, Rule } from '@maat/contracts';
+import type { Artifact, Finding, InsightResult, Rule } from '@maat-tools/contracts';
 import chalk from 'chalk';
 
 function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {

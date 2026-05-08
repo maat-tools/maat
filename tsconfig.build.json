@@ -1,0 +1,15 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"emitDeclarationOnly": true,
+		"declaration": true,
+		"declarationMap": true,
+		"moduleResolution": "node",
+		"module": "ESNext",
+		"verbatimModuleSyntax": false,
+		"allowImportingTsExtensions": false,
+		"outDir": "./dist"
+	},
+	"exclude": ["packages/cli/fixtures", "**/*.test.ts"]
+}

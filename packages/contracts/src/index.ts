@@ -54,10 +54,11 @@ export type FindingStatus = (typeof FindingStatus)[keyof typeof FindingStatus];
 
 type LedgerEntryBase = {
 	readonly entry_id: string;
+	readonly run_id: string;
 	readonly timestamp: string;
 };
 
-type WithoutEntryId<T> = T extends unknown ? Omit<T, 'entry_id'> : never;
+type WithoutEntryId<T> = T extends unknown ? Omit<T, 'entry_id' | 'run_id'> : never;
 
 export type FindingObservedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.OBSERVED;
@@ -359,7 +360,7 @@ function stableStringify(value: unknown): string {
 	const pairs = Object.keys(obj)
 		.sort()
 		.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`);
-		
+
 	return `{${pairs.join(',')}}`;
 }
 

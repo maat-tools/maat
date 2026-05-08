@@ -32,6 +32,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 	test('OBSERVED on new fingerprint creates record with OBSERVED state', () => {
 		const next = ledger.apply(emptySnapshot(), {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -46,6 +47,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 	test('OBSERVED on existing non-RESOLVED record keeps current state', () => {
 		const snapshot = ledger.apply(emptySnapshot(), {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -55,12 +57,14 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		const promoted = ledger.apply(snapshot, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.PROMOTED,
 			fingerprint: 'fp1',
 		});
 		const again = ledger.apply(promoted, {
 			entry_id: 'e3',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -75,6 +79,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		let s = emptySnapshot();
 		s = ledger.apply(s, {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -84,12 +89,14 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.RESOLVED,
 			fingerprint: 'fp1',
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e3',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -104,6 +111,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		let s = emptySnapshot();
 		s = ledger.apply(s, {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -113,6 +121,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.BASELINED,
 			fingerprint: 'fp1',
@@ -125,6 +134,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		let s = emptySnapshot();
 		s = ledger.apply(s, {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -134,6 +144,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.PROMOTED,
 			fingerprint: 'fp1',
@@ -145,6 +156,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		let s = emptySnapshot();
 		s = ledger.apply(s, {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -154,6 +166,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.ENFORCED,
 			fingerprint: 'fp1',
@@ -165,6 +178,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		let s = emptySnapshot();
 		s = ledger.apply(s, {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',
@@ -174,6 +188,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		s = ledger.apply(s, {
 			entry_id: 'e2',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.RESOLVED,
 			fingerprint: 'fp1',
@@ -184,6 +199,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 	test('AXIOM_DECLARED adds to axioms without touching findings', () => {
 		const s = ledger.apply(emptySnapshot(), {
 			entry_id: 'e1',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.AXIOM_DECLARED,
 			axiom_id: 'ax1',
@@ -197,6 +213,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 	test('any event updates last_entry_id', () => {
 		const s = ledger.apply(emptySnapshot(), {
 			entry_id: 'sentinel',
+			run_id: 'r1',
 			timestamp: 't',
 			type: FindingStatus.OBSERVED,
 			fingerprint: 'fp1',

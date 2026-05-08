@@ -44,4 +44,12 @@ CLAUDE.md
 AGENTS.md
 .codex/
 
-*/.vitepress
+*/.vitepress/*
+!docs/.vitepress/
+!docs/.vitepress/config.ts
+!docs/.vitepress/theme/
+docs/.vitepress/theme/*
+!docs/.vitepress/theme/style.css
+docs/.vitepress/.temp/
+docs/.vitepress/cache/
+docs/.vitepress/dist/

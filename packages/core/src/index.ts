@@ -66,11 +66,13 @@ type FindingEventStatus = Exclude<
 >;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
+	private readonly runId = ulid();
+
 	public abstract append(event: LedgerEventInput): Promise<void>;
 	public abstract getState(): Promise<LedgerSnapshot>;
 
 	protected stampEvent(input: LedgerEventInput): LedgerEvent {
-		return { entry_id: ulid(), ...input } as LedgerEvent;
+		return { entry_id: ulid(), run_id: this.runId, ...input } as LedgerEvent;
 	}
 
 	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {

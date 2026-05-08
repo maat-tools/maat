@@ -1,0 +1,57 @@
+import { defineConfig } from 'vitepress'
+
+export default defineConfig({
+  title: 'maat',
+  description: 'Fact-based architecture analysis for codebases.',
+  base: '/maat/',
+
+  head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/maat/maat.png' }],
+  ],
+
+  themeConfig: {
+    logo: '/maat.png',
+
+    nav: [
+      { text: 'Project', link: '/' },
+      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'ADRs', link: '/adr/001-monorepo-bounded-packages' },
+    ],
+
+    sidebar: {
+      '/guide/': [
+        {
+          text: 'Guide',
+          items: [
+            { text: 'Getting started', link: '/guide/getting-started' },
+            { text: 'Commands', link: '/guide/commands' },
+            { text: 'Determinism', link: '/guide/determinism' },
+            { text: 'Plugin system', link: '/guide/plugins' },
+            { text: 'Packages', link: '/guide/packages' },
+          ],
+        },
+      ],
+      '/adr/': [
+        {
+          text: 'Architecture decisions',
+          items: [
+            { text: '001 — Monorepo bounded packages', link: '/adr/001-monorepo-bounded-packages' },
+            { text: '002 — Declaration merging registries', link: '/adr/002-declaration-merging-registries' },
+            { text: '003 — Event-sourced NDJSON ledger', link: '/adr/003-event-sourced-ndjson-ledger' },
+            { text: '004 — ULID ledger entry IDs', link: '/adr/004-ulid-ledger-entry-ids' },
+            { text: '005 — Four-state finding lifecycle', link: '/adr/005-four-state-finding-lifecycle' },
+            { text: '006 — Pure kernel', link: '/adr/006-pure-kernel' },
+            { text: '007 — IR structural boundary', link: '/adr/007-ir-structural-boundary' },
+            { text: '008 — Bundled TypeScript parser', link: '/adr/008-bundled-typescript-parser' },
+            { text: '010 — Plugin determinism contract', link: '/adr/010-plugin-determinism-contract' },
+          ],
+        },
+      ],
+    },
+
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/maat-tools/maat' },
+    ],
+
+  },
+})

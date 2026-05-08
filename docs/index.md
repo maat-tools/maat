@@ -3,26 +3,30 @@ layout: page
 pageClass: maat-home
 ---
 
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
 <section class="maat-hero">
   <div class="maat-hero-copy">
-    <p class="maat-kicker">Static architecture checks for codebases</p>
-    <h1>Maat checks architecture rules against your repository.</h1>
+    <p class="maat-kicker">Fact-based architecture analysis for codebases</p>
+    <h1>Maat checks architecture rules against facts collected from your repository.</h1>
     <p class="maat-lead">
-      Define boundaries, run checks, and keep a record of the exceptions you accepted.
+      Collect structural and semantic facts, run deterministic rules, and keep accepted exceptions in version control.
     </p>
     <div class="maat-actions">
-      <a class="maat-button maat-button-primary" href="/guide/getting-started">Read the guide</a>
+      <a class="maat-button maat-button-primary" :href="withBase('/guide/getting-started.html')">Read the guide</a>
       <a class="maat-button" href="https://github.com/maat-tools/maat">View source</a>
     </div>
   </div>
   <div class="maat-hero-art" aria-label="maat balance icon">
-    <img src="/maat.png" alt="" />
+    <img :src="withBase('/maat.png')" alt="" />
   </div>
 </section>
 
 <section class="maat-note">
   <p>
-    Maat is not a framework, an AI reviewer, or a diagram generator. It is a small tool for checking whether the structure of a repository still matches the rules written for it.
+    Maat is not a linter, an AI reviewer, or a diagram generator. It is a collector-based analysis tool: collectors extract facts from a repository, rules evaluate those facts, and the ledger records what was accepted.
   </p>
 </section>
 
@@ -33,7 +37,7 @@ pageClass: maat-home
     Architecture rules are often written in places the compiler cannot see: planning docs, ADRs, review comments, diagrams, and conversations.
   </p>
   <p>
-    Maat moves part of that intent into executable rules. It checks package and layer relationships, reports violations, and records decisions in a ledger that lives with the repository.
+    Maat moves part of that intent into executable rules. Today it ships with a TypeScript collector for source structure. The same model can support other collectors, including semantic ones, without changing the kernel.
   </p>
   <p>
     It does not decide whether the architecture is good. It reports rule violations and keeps accepted exceptions in version control.
@@ -69,8 +73,8 @@ pageClass: maat-home
 
 <div class="maat-grid">
   <section>
-    <h3>Deterministic checks</h3>
-    <p>Same repository state, same findings. No hidden state, no randomness, no LLM judgment inside the gate.</p>
+    <h3>Deterministic analysis</h3>
+    <p>Same collected facts, same findings. No hidden state, no randomness, no LLM judgment inside the gate.</p>
   </section>
   <section>
     <h3>File-based history</h3>
@@ -82,16 +86,25 @@ pageClass: maat-home
   </section>
 </div>
 
+<section class="maat-note">
+  <p>
+    Official rules from the <code>maat-tools/maat</code> repository are deterministic by guarantee. Third-party plugins are supported through public interfaces, but their behavior is the responsibility of the package author and the team that installs them.
+  </p>
+  <p>
+    Read more about <a :href="withBase('/guide/determinism.html')">the determinism guarantee</a> and <a :href="withBase('/guide/plugins.html')">the plugin system</a>.
+  </p>
+</section>
+
 ## What happens when it runs
 
 <div class="maat-flow" aria-label="what maat does when it runs">
   <div>
-    <strong>Read code</strong>
-    <span>Collectors turn repository structure into facts.</span>
+    <strong>Collect facts</strong>
+    <span>Collectors turn repository structure, metadata, or other inputs into facts.</span>
   </div>
   <div>
     <strong>Check rules</strong>
-    <span>Rules compare those facts with the configured boundaries.</span>
+    <span>Rules compare collected facts with the configured boundaries.</span>
   </div>
   <div>
     <strong>Report findings</strong>
@@ -105,7 +118,7 @@ pageClass: maat-home
 
 ## Configuration example
 
-Maat currently ships with a TypeScript collector. Collectors are separate from the kernel, so other languages can be added by implementing the collector interface.
+Maat currently ships with a TypeScript collector. Collectors are separate from the kernel, so other languages and semantic sources can be added by implementing the collector interface.
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -131,6 +144,27 @@ maat axiom declare \
   --claim "The domain layer has no infrastructure dependencies." \
   --note "Keeps the domain testable without spinning up real I/O."
 ```
+
+## FAQ
+
+<div class="maat-faq">
+  <section>
+    <h3>Is Maat a linter?</h3>
+    <p>No. Linters usually check local syntax, style, or code patterns. Maat checks facts collected from the repository against architecture rules, then records accepted findings in a ledger.</p>
+  </section>
+  <section>
+    <h3>How is it different from dependency rules?</h3>
+    <p>Dependency rules are one input. Maat can express package and layer boundaries, but the collector model is broader: rules can run over any fact type a collector provides.</p>
+  </section>
+  <section>
+    <h3>How is it different from architecture unit tests?</h3>
+    <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings, promote reviewed findings, enforce selected rules, and resolve fixed ones.</p>
+  </section>
+  <section>
+    <h3>Is this a fitness function tool?</h3>
+    <p>It can be used that way. A Maat rule is a deterministic fitness function over collected facts, with ledger support for adoption and history.</p>
+  </section>
+</div>
 
 ## Status
 

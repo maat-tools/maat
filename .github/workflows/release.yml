@@ -48,6 +48,9 @@ jobs:
           for pkg in packages/*/package.json; do
             jq ".version = \"$VERSION\"" "$pkg" > tmp.json && mv tmp.json "$pkg"
           done
+          for pkg in packages/*/package.json; do
+            sed -i "s/\"workspace:\*\"/\"$VERSION\"/g" "$pkg"
+          done
 
       - name: Build
         run: bun run build

@@ -49,6 +49,7 @@ AGENTS.md
 !docs/.vitepress/config.ts
 !docs/.vitepress/theme/
 docs/.vitepress/theme/*
+!docs/.vitepress/theme/index.ts
 !docs/.vitepress/theme/style.css
 docs/.vitepress/.temp/
 docs/.vitepress/cache/

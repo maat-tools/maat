@@ -1,5 +1,3 @@
-import type { FactRegistry } from '@maat-tools/contracts';
-
 export const CONSTANTS_CAPABILITY = 'constants' as const;
 export const IMPORTS_CAPABILITY = 'imports' as const;
 

@@ -46,7 +46,9 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	public async getState(): Promise<LedgerSnapshot> {
-		const exists = await access(this.snapshotPath).then(() => true).catch(() => false);
+		const exists = await access(this.snapshotPath)
+			.then(() => true)
+			.catch(() => false);
 		if (!exists) {
 			return this.rebuildSnapshot();
 		}
@@ -67,13 +69,17 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	private async updateSnapshot(event: LedgerEvent): Promise<void> {
-		const exists = await access(this.snapshotPath).then(() => true).catch(() => false);
+		const exists = await access(this.snapshotPath)
+			.then(() => true)
+			.catch(() => false);
 		const current = exists ? await this.loadSnapshot() : EMPTY_SNAPSHOT;
 		await this.persistSnapshot(this.applyEvent(current, event));
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
-		const exists = await access(this.options.path).then(() => true).catch(() => false);
+		const exists = await access(this.options.path)
+			.then(() => true)
+			.catch(() => false);
 		if (!exists) {
 			return [];
 		}

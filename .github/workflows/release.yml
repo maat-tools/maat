@@ -46,10 +46,11 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           for pkg in packages/*/package.json; do
-            jq ".version = \"$VERSION\"" "$pkg" > tmp.json && mv tmp.json "$pkg"
-          done
-          for pkg in packages/*/package.json; do
-            sed -i "s/\"workspace:\*\"/\"$VERSION\"/g" "$pkg"
+            jq --arg v "$VERSION" '
+              .version = $v |
+              if .dependencies then .dependencies = (.dependencies | map_values(if . == "workspace:*" then $v else . end)) else . end |
+              if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if . == "workspace:*" then $v else . end)) else . end
+            ' "$pkg" > tmp.json && mv tmp.json "$pkg"
           done
 
       - name: Build

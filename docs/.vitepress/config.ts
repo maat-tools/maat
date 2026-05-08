@@ -1,5 +1,39 @@
 import { defineConfig } from 'vitepress'
 
+const guideAndPluginSidebar = [
+  {
+    text: 'Guide',
+    items: [
+      { text: 'Getting started', link: '/guide/getting-started' },
+      { text: 'Commands', link: '/guide/commands' },
+      { text: 'Determinism', link: '/guide/determinism' },
+      { text: 'Plugin system', link: '/guide/plugins' },
+    ],
+  },
+  {
+    text: 'Plugins',
+    items: [
+      { text: 'All plugins', link: '/plugins/' },
+      {
+        text: 'Coupling rules',
+        link: '/plugins/coupling-rules/',
+        collapsed: false,
+        items: [
+          { text: 'layer(target)', link: '/plugins/coupling-rules/layer' },
+        ],
+      },
+      {
+        text: 'Connascence rules',
+        link: '/plugins/connascence-rules/',
+        collapsed: false,
+        items: [
+          { text: 'com', link: '/plugins/connascence-rules/com' },
+        ],
+      },
+    ],
+  },
+]
+
 export default defineConfig({
   title: 'maat',
   description: 'Fact-based architecture analysis for codebases.',
@@ -15,22 +49,13 @@ export default defineConfig({
     nav: [
       { text: 'Project', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Plugins', link: '/plugins/' },
       { text: 'ADRs', link: '/adr/001-monorepo-bounded-packages' },
     ],
 
     sidebar: {
-      '/guide/': [
-        {
-          text: 'Guide',
-          items: [
-            { text: 'Getting started', link: '/guide/getting-started' },
-            { text: 'Commands', link: '/guide/commands' },
-            { text: 'Determinism', link: '/guide/determinism' },
-            { text: 'Plugin system', link: '/guide/plugins' },
-            { text: 'Packages', link: '/guide/packages' },
-          ],
-        },
-      ],
+      '/guide/': guideAndPluginSidebar,
+      '/plugins/': guideAndPluginSidebar,
       '/adr/': [
         {
           text: 'Architecture decisions',

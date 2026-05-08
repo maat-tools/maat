@@ -135,16 +135,16 @@ describe('LayerRule.evaluate() — allowlist', () => {
 			.is(Pure)
 			.allows(/^@maat-tools\//)
 			.build();
-			const findings = rule.evaluate({
-				imports: [makeImport({ specifier: '@maat-tools/contracts' })],
-			});
-			expect(findings).toHaveLength(0);
+		const findings = rule.evaluate({
+			imports: [makeImport({ specifier: '@maat-tools/contracts' })],
 		});
+		expect(findings).toHaveLength(0);
+	});
 
-		test('regexp pattern — non-matching specifier is a finding', () => {
-			const rule = layer('@maat-tools/kernel')
-				.is(Pure)
-				.allows(/^@maat-tools\//)
+	test('regexp pattern — non-matching specifier is a finding', () => {
+		const rule = layer('@maat-tools/kernel')
+			.is(Pure)
+			.allows(/^@maat-tools\//)
 			.build();
 		const findings = rule.evaluate({
 			imports: [makeImport({ specifier: 'uuid' })],

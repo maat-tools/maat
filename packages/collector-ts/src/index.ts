@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
-import * as micromatch from 'micromatch';
 import {
 	CONSTANTS_CAPABILITY,
 	type Constant,
@@ -9,6 +8,7 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 } from '@maat-tools/vocabulary';
+import * as micromatch from 'micromatch';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
@@ -94,7 +94,7 @@ function normalizeSpecifier(specifier: string, fromAbsoluteFile: string, fromPac
 
 function collectImports(sourceFile: SourceFile, file: string, packageName: string | null): Import[] {
 	const absoluteFile = sourceFile.getFilePath();
-	
+
 	return sourceFile.getImportDeclarations().map((decl) => ({
 		file,
 		packageName,

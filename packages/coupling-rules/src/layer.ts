@@ -1,5 +1,12 @@
 import { dirname, join, normalize } from 'node:path';
-import { type Artifact, type BrandedRuleBuilder, defineRuleBuilder, type FindingRuleOutput, type Rule, type RuleBuilder } from '@maat-tools/contracts';
+import {
+	type Artifact,
+	type BrandedRuleBuilder,
+	defineRuleBuilder,
+	type FindingRuleOutput,
+	type Rule,
+	type RuleBuilder,
+} from '@maat-tools/contracts';
 import { IMPORTS_CAPABILITY, type Import } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';
 
@@ -177,7 +184,7 @@ class LayerRule implements Rule<'imports'> {
 	public describeArtifact(artifact: Artifact): Record<string, string> {
 		if (artifact.kind === 'import') {
 			const imp = artifact.data as Import;
-			
+
 			return { file: imp.file, specifier: imp.specifier };
 		}
 

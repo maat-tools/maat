@@ -18,7 +18,9 @@ export default defineConfig({
 		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid'),
 		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts'),
 		layer('@maat-tools/coupling-rules').is(Pure).allows('@maat-tools/contracts', '@maat-tools/vocabulary', 'node:path'),
-		layer('@maat-tools/connascence-rules').is(Pure).allows('@maat-tools/contracts', '@maat-tools/vocabulary', '@maat-tools/core'),
+		layer('@maat-tools/connascence-rules')
+			.is(Pure)
+			.allows('@maat-tools/contracts', '@maat-tools/vocabulary', '@maat-tools/core'),
 	],
 	ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
 });

@@ -62,6 +62,7 @@ describe('FilePathLedgerBackend', () => {
 			type: FindingStatus.BASELINED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp1',
+			expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
 		});
 		await ledger.append({
 			type: FindingStatus.OBSERVED,

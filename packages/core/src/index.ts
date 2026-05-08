@@ -75,7 +75,11 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		return { entry_id: ulid(), run_id: this.runId, ...input } as LedgerEvent;
 	}
 
-	public buildEntry(finding: Finding, type: FindingEventStatus): FindingEventInput {
+	public buildEntry(
+		finding: Finding,
+		type: FindingEventStatus,
+		options?: { expiresInDays?: number },
+	): FindingEventInput {
 		const base = { timestamp: new Date().toISOString() };
 
 		switch (type) {
@@ -88,8 +92,11 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 					message: finding.message,
 					artifacts: finding.artifacts,
 				};
-			case FindingStatus.BASELINED:
-				return { ...base, type, fingerprint: finding.fingerprint };
+			case FindingStatus.BASELINED: {
+				const days = options?.expiresInDays ?? 90;
+				const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+				return { ...base, type, fingerprint: finding.fingerprint, expires_at };
+			}
 			case FindingStatus.PROMOTED:
 				return { ...base, type, fingerprint: finding.fingerprint };
 			case FindingStatus.ENFORCED:
@@ -117,7 +124,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 			case FindingStatus.BASELINED: {
 				const record = findings[event.fingerprint];
 				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, baselined: true };
+					findings[event.fingerprint] = { ...record, baselined: true, baseline_expires_at: event.expires_at };
 				}
 				break;
 			}

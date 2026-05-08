@@ -72,9 +72,17 @@ Baselines all currently observed findings so future `maat check` output focuses 
 
 ```bash
 maat baseline
+maat baseline --expires-in 90
+maat baseline --expires-in 120
 ```
 
 Requires a configured ledger.
+
+| Option | Purpose |
+|---|---|
+| `--expires-in <days>` | Days until the baseline must be revisited (90–120, default: 90). |
+
+Each baseline is time-limited. Once the expiry date is reached, `maat check` starts exiting with failure for those findings, forcing the team to revisit the decision: resolve the underlying issue, re-baseline with a new expiry, or promote and enforce. Permanent baselines are intentionally not supported.
 :::
 
 ::: details `maat promote` — Mark a finding as reviewed

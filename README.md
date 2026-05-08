@@ -1,22 +1,45 @@
 # maat
 
 <p align="center">
-  <img src="docs/assets/maat.png" alt="maat balance icon" width="88" />
+  <img src="docs/assets/maat.png" alt="maat balance icon" width="96" />
 </p>
 
-> *"It does not tell you what to build. It tells you when you are breaking what you built."*
+<p align="center">
+  <strong>Fact-based architecture analysis for codebases.</strong>
+</p>
 
-maat is an architectural governance tool for TypeScript codebases. It enforces the structural rules you define, detects coupling that is hard to find, and records architectural decisions as permanent, attributed ledger entries.
+Maat checks architecture rules against facts collected from your repository. It collects structural and semantic facts, runs deterministic rules, reports findings with stable fingerprints, and keeps accepted exceptions in version control.
 
-The foundation is **determinism**. The kernel is a pure function: given the same codebase state, it always produces the same findings. No randomness, no LLM in the evaluation path, no hidden state.
+Maat is not a linter, an AI reviewer, or a diagram generator. It is a collector-based analysis tool: collectors extract facts from a repository, rules evaluate those facts, and the ledger records what was accepted.
 
-## Two modes of use
+## Why Maat exists
 
-### Greenfield — rules as law
+Architecture rules often live where the compiler cannot see them: planning docs, ADRs, review comments, diagrams, and conversations.
 
-You are building something new. You know what the architecture should be. maat enforces it from day one so it can never drift.
+Maat moves part of that intent into executable rules. Today it ships with a TypeScript collector for source structure. The same model can support other collectors, including semantic ones, without changing the kernel.
 
-Define your rules in `maat.config.ts`:
+It does not decide whether the architecture is good. It reports rule violations and lets your team decide what to baseline, promote, enforce, or resolve.
+
+## How it works
+
+1. **Collect facts**: collectors turn repository structure, metadata, or other inputs into facts.
+2. **Check rules**: rules compare collected facts with the configured boundaries.
+3. **Report findings**: violations are shown with stable fingerprints.
+4. **Update the ledger**: accepted findings and decisions are stored with the repository.
+
+The official Maat rules are deterministic by guarantee: same collected facts, same rule version, same findings. There is no hidden state, randomness, network access, or LLM judgment inside the check path.
+
+## Getting started
+
+Install the CLI:
+
+```bash
+npm install -g @maat-tools/cli
+# or
+bun add -g @maat-tools/cli
+```
+
+Add `maat.config.ts` to your project root:
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -33,54 +56,7 @@ export default defineConfig({
 })
 ```
 
-Add `maat check` to CI. Any violation is a build failure. The ledger is optional — `strict: true` is enough.
-
-To record *why* you made an architectural decision, use axioms:
-
-```bash
-maat axiom declare \
-  --id "domain-purity" \
-  --scope "@myapp/domain" \
-  --claim "The domain layer has no infrastructure dependencies." \
-  --note "Keeps the domain testable without spinning up real I/O."
-```
-
-Axioms live in the ledger alongside your code. They are the human side of governance.
-
-### Brownfield — managing existing coupling
-
-You inherited a codebase with existing violations. You can't fix them all today.
-
-```bash
-# Accept the current state as baseline — suppresses known violations
-maat check --ledger
-maat baseline
-
-# As you review, promote findings to acknowledged claims
-maat promote --fingerprint <id>
-
-# Escalate to a hard CI gate when you're ready to enforce
-maat promote --fingerprint <id> --enforce
-
-# When a violation is finally fixed, confirm the resolution
-maat resolve --fingerprint <id>
-```
-
-Findings move through a linear lifecycle:
-
-```
-observed → promoted → enforced
-```
-
-Every state transition is recorded with the author and timestamp.
-
-## Getting started
-
-```bash
-npm install -g @maat-tools/cli   # or: bun add -g @maat-tools/cli
-```
-
-Add `maat.config.ts` to your project root (see examples above), then:
+Run:
 
 ```bash
 maat check
@@ -90,43 +66,127 @@ The CLI searches upward from the current directory for `maat.config.ts`. You can
 
 ```bash
 maat --config ./path/to/maat.config.ts check
-# or via env: MAAT_CONFIG=./maat.config.ts maat check
+# or
+MAAT_CONFIG=./maat.config.ts maat check
 ```
+
+## New codebases
+
+Use `check.strict: true` when new violations should fail the command. Add `maat check` to CI and review architecture rules as code.
+
+```ts
+export default defineConfig({
+  check: { strict: true },
+  collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
+  rules: [
+    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+  ],
+})
+```
+
+Use axioms for architectural claims that are not checked by a collector or rule yet:
+
+```bash
+maat axiom declare \
+  --id "domain-purity" \
+  --scope "@myapp/domain" \
+  --claim "The domain layer has no infrastructure dependencies." \
+  --note "Keeps the domain testable without spinning up real I/O."
+```
+
+## Existing codebases
+
+Use the ledger when the current codebase already has violations you do not want to fail immediately.
+
+```ts
+import { defineConfig } from '@maat-tools/core'
+
+export default defineConfig({
+  check: { strict: true },
+  collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
+  rules: [
+    // your rules
+  ],
+  ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
+})
+```
+
+Then adopt checks gradually:
+
+```bash
+# Save current findings to the configured ledger
+maat check --ledger
+
+# Accept current findings as the starting point (expires in 90 days by default)
+maat baseline
+
+# Accept current findings with a custom expiry window (90–120 days)
+maat baseline --expires-in 120
+
+# Mark one finding as reviewed
+maat promote --fingerprint <fingerprint>
+
+# Make one reviewed finding fail future checks
+maat promote --fingerprint <fingerprint> --enforce
+
+# Confirm that a promoted or enforced finding was fixed
+maat resolve --fingerprint <fingerprint>
+```
+
+Baselines are time-limited: after the expiry window (default 90 days, maximum 120 days), `maat check` exits with failure for those findings and requires the team to revisit. Permanent baselines are intentionally not supported.
+
+The ledger keeps append-only history for findings, axioms, and lifecycle events. Commit it with the codebase so decisions travel with the architecture they describe.
+
+## Official plugins
+
+| Package | Purpose |
+|---|---|
+| `@maat-tools/collector-ts` | Collects TypeScript imports and constants from a project |
+| `@maat-tools/coupling-rules` | Enforces import boundaries between packages and architectural layers |
+| `@maat-tools/connascence-rules` | Detects Connascence of Meaning signals across package boundaries |
+| `@maat-tools/file-ledger` | Stores finding and axiom history in append-only NDJSON |
+
+Maat also exposes public interfaces for third-party collectors, rules, insights, and ledger backends. Third-party packages are outside the official determinism guarantee, so teams should review them before using them in CI.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `maat check` | Scan for architectural findings. `--ledger` to sync with ledger. |
+| `maat check` | Run configured collectors and rules. Use `--ledger` to sync findings with the ledger. |
 | `maat axiom declare` | Record a human-authored architectural claim in the ledger. |
-| `maat axiom supersede` | Mark an axiom as replaced by a newer one. |
+| `maat axiom supersede` | Mark an axiom as replaced by a newer decision. |
 | `maat axiom revoke` | Revoke an axiom that no longer applies. |
-| `maat baseline` | Accept current findings as the starting point. |
-| `maat promote` | Promote a finding to acknowledged; `--enforce` to make it a CI gate. |
+| `maat baseline` | Baseline currently observed findings. Expires in 90–120 days, forcing periodic review. |
+| `maat promote` | Mark a finding as reviewed. Use `--enforce` to make it a CI gate. |
 | `maat resolve` | Confirm intentional resolution of a promoted or enforced finding. |
-| `maat visualize` | Display current ledger state: findings, axioms, insights. |
+| `maat visualize` | Print current ledger state: findings, axioms, and optional insights. |
 
 ## Packages
 
 | Package | Role |
 |---|---|
-| `@maat-tools/contracts` | Shared TypeScript interfaces and branded factories |
-| `@maat-tools/vocabulary` | Canonical IR types and capability keys |
-| `@maat-tools/kernel` | Orchestrates collectors → facts → rules → findings |
-| `@maat-tools/core` | Config schema and `defineConfig` |
-| `@maat-tools/collector-ts` | TypeScript AST walker |
-| `@maat-tools/coupling-rules` | Rule pack — layer dependency allowlists |
-| `@maat-tools/connascence-rules` | Rule pack — Connascence of Meaning |
-| `@maat-tools/file-ledger` | Append-only NDJSON ledger backend |
-| `@maat-tools/cli` | CLI entry point |
+| `@maat-tools/contracts` | Shared interfaces, factories, and declaration-merging registries |
+| `@maat-tools/vocabulary` | Shared fact type definitions |
+| `@maat-tools/kernel` | Pure analysis engine that runs collectors and rules |
+| `@maat-tools/core` | Config schema, entry resolution, and base ledger behavior |
+| `@maat-tools/collector-ts` | TypeScript source collector |
+| `@maat-tools/coupling-rules` | Built-in layer and package boundary rules |
+| `@maat-tools/connascence-rules` | Built-in Connascence of Meaning rules |
+| `@maat-tools/file-ledger` | File-based ledger backend |
+| `@maat-tools/cli` | Command-line interface |
 
-## Architecture
+## Documentation
 
-Design decisions are documented in [docs/adr/](docs/adr/).
+- [Getting started](docs/guide/getting-started.md)
+- [Commands](docs/guide/commands.md)
+- [Determinism](docs/guide/determinism.md)
+- [Plugin system](docs/guide/plugins.md)
+- [Architecture decisions](docs/adr/)
 
 ## Status
 
-`0.1.0` — early development release. The CLI works end-to-end. APIs are not yet stable and packages are not yet published to npm. See [CHANGELOG.md](CHANGELOG.md).
+Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline, promote, enforce, and resolve flows. Package APIs can still change while the collector and rule interfaces settle.
 
 ## License
 

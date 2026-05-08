@@ -48,8 +48,8 @@ jobs:
           for pkg in packages/*/package.json; do
             jq --arg v "$VERSION" '
               .version = $v |
-              if .dependencies then .dependencies = (.dependencies | map_values(if . == "workspace:*" then $v else . end)) else . end |
-              if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if . == "workspace:*" then $v else . end)) else . end
+              if .dependencies then .dependencies = (.dependencies | map_values(if test("^workspace:") then $v else . end)) else . end |
+              if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if test("^workspace:") then $v else . end)) else . end
             ' "$pkg" > tmp.json && mv tmp.json "$pkg"
           done
 
@@ -58,7 +58,7 @@ jobs:
 
       - name: Publish to npm
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
           for pkg in contracts vocabulary core kernel collector-ts coupling-rules connascence-rules file-ledger cli; do
             (cd packages/$pkg && npm publish --access public)
           done

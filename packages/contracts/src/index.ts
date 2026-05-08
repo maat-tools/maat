@@ -71,6 +71,7 @@ export type FindingObservedEvent = LedgerEntryBase & {
 export type FindingBaselinedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.BASELINED;
 	readonly fingerprint: string;
+	readonly expires_at: string;
 };
 
 export type FindingPromotedEvent = LedgerEntryBase & {
@@ -136,6 +137,7 @@ export type FindingRecord = {
 	readonly fingerprint: string;
 	state: FindingStatus;
 	baselined: boolean;
+	readonly baseline_expires_at?: string;
 	readonly rule_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
@@ -182,7 +184,7 @@ export interface Insight {
 export interface LedgerBackend {
 	append(event: LedgerEventInput): Promise<void>;
 	getState(): Promise<LedgerSnapshot>;
-	buildEntry(finding: Finding, type: FindingStatus): FindingEventInput;
+	buildEntry(finding: Finding, type: FindingStatus, options?: { expiresInDays?: number }): FindingEventInput;
 }
 
 export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (

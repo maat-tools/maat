@@ -125,6 +125,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 			timestamp: 't',
 			type: FindingStatus.BASELINED,
 			fingerprint: 'fp1',
+			expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
 		});
 		expect(s.findings.fp1?.baselined).toBe(true);
 		expect(s.findings.fp1?.state).toBe(FindingStatus.OBSERVED);
@@ -237,12 +238,13 @@ describe('LedgerBackendBase.buildEntry', () => {
 		}
 	});
 
-	test('BASELINED has only fingerprint (no message or artifacts)', () => {
+	test('BASELINED includes fingerprint and expires_at (no message or artifacts)', () => {
 		const event = ledger.buildEntry(baseFinding, FindingStatus.BASELINED);
 		expect(event.type).toBe(FindingStatus.BASELINED);
 		expect('message' in event).toBe(false);
 		expect('artifacts' in event).toBe(false);
 		expect(event.fingerprint).toBe(baseFinding.fingerprint);
+		expect('expires_at' in event).toBe(true);
 	});
 
 	test('PROMOTED has only fingerprint', () => {

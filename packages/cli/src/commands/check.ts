@@ -15,6 +15,7 @@ type LedgerAnalysis = {
 	axiomExceptedFingerprints: Set<string>;
 	hasRegressions: boolean;
 	hasPendingResolutions: boolean;
+	hasExpiredBaselines: boolean;
 };
 
 export class Check extends MaatCommandBase implements MaatCommand {
@@ -84,6 +85,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const axiomExceptedFingerprints = new Set<string>();
 		let hasRegressions = false;
 		let hasPendingResolutions = false;
+		let hasExpiredBaselines = false;
+		const now = Date.now();
 
 		for (const axiom of Object.values(snapshot.axioms)) {
 			if (axiom.active && axiom.fingerprints) {
@@ -95,7 +98,13 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		for (const record of Object.values(snapshot.findings)) {
 			if (record.baselined) {
-				baselinedFingerprints.add(record.fingerprint);
+				const expired =
+					record.baseline_expires_at !== undefined && new Date(record.baseline_expires_at).getTime() <= now;
+				if (expired) {
+					hasExpiredBaselines = true;
+				} else {
+					baselinedFingerprints.add(record.fingerprint);
+				}
 			}
 			if (record.state === FindingStatus.ENFORCED) {
 				enforcedFingerprints.add(record.fingerprint);
@@ -117,6 +126,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			axiomExceptedFingerprints,
 			hasRegressions,
 			hasPendingResolutions,
+			hasExpiredBaselines,
 		};
 	}
 
@@ -170,10 +180,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	}
 
 	private evaluateExitConditions(visibleFindings: Finding[], analysis: LedgerAnalysis, printer: Printer): void {
-		const { enforcedFingerprints, hasRegressions, hasPendingResolutions } = analysis;
+		const { enforcedFingerprints, hasRegressions, hasPendingResolutions, hasExpiredBaselines } = analysis;
 		const hasEnforcedViolations = visibleFindings.some((f) => enforcedFingerprints.has(f.fingerprint));
 
-		if (hasEnforcedViolations || hasRegressions || hasPendingResolutions) {
+		if (hasEnforcedViolations || hasRegressions || hasPendingResolutions || hasExpiredBaselines) {
 			if (hasEnforcedViolations) {
 				printer.error(
 					'One or more findings are currently enforced. Please address these issues to comply with the defined architecture.',
@@ -187,6 +197,11 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			if (hasPendingResolutions) {
 				printer.error(
 					'One or more findings that were previously promoted or enforced are no longer detected. Please confirm their resolution.',
+				);
+			}
+			if (hasExpiredBaselines) {
+				printer.error(
+					"One or more baselined findings have expired. Please revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.",
 				);
 			}
 			process.exit(1);

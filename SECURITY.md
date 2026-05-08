@@ -10,7 +10,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report vulnerabilities by email to [marcos.defendicc@gmail.com](mailto:marcos.defendicc@gmail.com). Include:
+Report vulnerabilities using [GitHub's private vulnerability reporting](https://github.com/maat-tools/maat/security/advisories/new). Include:
 
 - A description of the vulnerability and its potential impact
 - Steps to reproduce

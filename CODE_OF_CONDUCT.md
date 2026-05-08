@@ -18,7 +18,7 @@ maat is a tool for understanding codebases. Contributions are evaluated on techn
 
 ## Enforcement
 
-Violations can be reported to [marcos.defendicc@gmail.com](mailto:marcos.defendicc@gmail.com). Reports are handled privately. Maintainers may remove content, close issues, or ban contributors at their discretion.
+Violations can be reported by opening a private message to a maintainer via [github.com/maat-tools](https://github.com/maat-tools). Reports are handled privately. Maintainers may remove content, close issues, or ban contributors at their discretion.
 
 ## Scope
 

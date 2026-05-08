@@ -11,7 +11,7 @@ Thank you for your interest in contributing. This document covers how to set up 
 ## Setup
 
 ```bash
-git clone https://github.com/maatjs/maat
+git clone https://github.com/maat-tools/maat
 cd maat
 bun install
 ```
@@ -41,6 +41,15 @@ packages/
 ```
 
 Before adding a new package, it must clearly own a concern not already owned by an existing one.
+
+## Ledger and snapshot
+
+Two files travel with the repository and must be committed:
+
+- **`maat-ledger.ndjson`** — the append-only event log. Every finding lifecycle event, axiom declaration, and architectural decision is recorded here. Never edit or delete lines.
+- **`maat-ledger.snapshot.json`** — a pre-computed projection of the ledger, used as a read cache so the CLI does not have to replay all events on every run. It is generated automatically by maat when the ledger is written. Commit it alongside the ledger so that CI and other contributors start from the current state rather than replaying the full history.
+
+If you run any `maat` command that mutates the ledger, both files will be updated. Stage both in the same commit.
 
 ## Architectural constraints
 
@@ -93,6 +102,19 @@ Scope: contracts, kernel, cli, collector-ts, coupling-rules, file-ledger, vocabu
 
 Example: `feat(coupling-rules): add threshold option to CoM rule`
 
+## Decision-making
+
+Architectural decisions are recorded as axioms in `maat-ledger.ndjson`. Run `maat visualize` to review current decisions before opening a significant PR.
+
+Changes that affect the following areas require a GitHub issue for discussion **before** a PR is opened:
+
+- `@maat-tools/kernel` or `@maat-tools/contracts` (the pure core)
+- Public APIs of any published package
+- The ledger event schema
+- Collector or rule interfaces in `@maat-tools/vocabulary`
+
+For rule packs, collectors, CLI UX, and documentation, a PR with a clear description is sufficient. The maintainer has final say on merges.
+
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/maatjs/maat/discussions) for questions about design or usage. Use [Issues](https://github.com/maatjs/maat/issues) for bugs and feature requests.
+Open a [GitHub Discussion](https://github.com/maat-tools/maat/discussions) for questions about design or usage. Use [Issues](https://github.com/maat-tools/maat/issues) for bugs and feature requests.

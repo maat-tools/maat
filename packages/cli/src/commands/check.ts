@@ -11,10 +11,8 @@ type CheckOptions = {
 
 type LedgerAnalysis = {
 	baselinedFingerprints: Set<string>;
-	enforcedFingerprints: Set<string>;
 	axiomExceptedFingerprints: Set<string>;
 	hasRegressions: boolean;
-	hasPendingResolutions: boolean;
 	hasExpiredBaselines: boolean;
 };
 
@@ -50,14 +48,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const analysis = this.analyzeLedgerState(snapshot, currentFingerprints);
 
 		if (options.ledger === true) {
-			await this.syncLedgerEvents(
-				this.ledger,
-				snapshot.findings,
-				currentFindings,
-				currentFingerprints,
-				analysis,
-				printer,
-			);
+			await this.syncLedgerEvents(this.ledger, snapshot.findings, currentFindings, currentFingerprints, analysis);
 		}
 
 		const visibleFindings = options.showBaselined
@@ -81,10 +72,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private analyzeLedgerState(snapshot: LedgerSnapshot, currentFingerprints: Set<string>): LedgerAnalysis {
 		const baselinedFingerprints = new Set<string>();
-		const enforcedFingerprints = new Set<string>();
 		const axiomExceptedFingerprints = new Set<string>();
 		let hasRegressions = false;
-		let hasPendingResolutions = false;
 		let hasExpiredBaselines = false;
 		const now = Date.now();
 
@@ -106,26 +95,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					baselinedFingerprints.add(record.fingerprint);
 				}
 			}
-			if (record.state === FindingStatus.ENFORCED) {
-				enforcedFingerprints.add(record.fingerprint);
-			}
 			if (record.state === FindingStatus.RESOLVED && currentFingerprints.has(record.fingerprint)) {
 				hasRegressions = true;
-			}
-			if (
-				(record.state === FindingStatus.PROMOTED || record.state === FindingStatus.ENFORCED) &&
-				!currentFingerprints.has(record.fingerprint)
-			) {
-				hasPendingResolutions = true;
 			}
 		}
 
 		return {
 			baselinedFingerprints,
-			enforcedFingerprints,
 			axiomExceptedFingerprints,
 			hasRegressions,
-			hasPendingResolutions,
 			hasExpiredBaselines,
 		};
 	}
@@ -136,7 +114,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		currentFindings: Finding[],
 		currentFingerprints: Set<string>,
 		analysis: LedgerAnalysis,
-		printer: Printer,
 	): Promise<void> {
 		const timestamp = new Date().toISOString();
 
@@ -150,10 +127,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					timestamp,
 					fingerprint: record.fingerprint,
 				});
-			} else if (record.state === FindingStatus.PROMOTED || record.state === FindingStatus.ENFORCED) {
-				printer.warn(
-					`[maat] Finding "${record.fingerprint}" (${record.state}) is no longer detected. Run 'maat resolve --fingerprint ${record.fingerprint}' to confirm resolution.`,
-				);
 			}
 		}
 
@@ -162,6 +135,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			analysis.baselinedFingerprints,
 			analysis.axiomExceptedFingerprints,
 		)) {
+			if (findingsSnapshot[finding.fingerprint]?.state === FindingStatus.RESOLVED) {
+				continue;
+			}
 			await ledger.append({
 				type: FindingStatus.OBSERVED,
 				timestamp,
@@ -180,23 +156,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	}
 
 	private evaluateExitConditions(visibleFindings: Finding[], analysis: LedgerAnalysis, printer: Printer): void {
-		const { enforcedFingerprints, hasRegressions, hasPendingResolutions, hasExpiredBaselines } = analysis;
-		const hasEnforcedViolations = visibleFindings.some((f) => enforcedFingerprints.has(f.fingerprint));
+		const { hasRegressions, hasExpiredBaselines } = analysis;
 
-		if (hasEnforcedViolations || hasRegressions || hasPendingResolutions || hasExpiredBaselines) {
-			if (hasEnforcedViolations) {
-				printer.error(
-					'One or more findings are currently enforced. Please address these issues to comply with the defined architecture.',
-				);
-			}
+		if (hasRegressions || hasExpiredBaselines) {
 			if (hasRegressions) {
 				printer.error(
 					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.',
-				);
-			}
-			if (hasPendingResolutions) {
-				printer.error(
-					'One or more findings that were previously promoted or enforced are no longer detected. Please confirm their resolution.',
 				);
 			}
 			if (hasExpiredBaselines) {

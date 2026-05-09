@@ -9,14 +9,13 @@ type VisualizeOptions = {
 	json?: boolean;
 };
 
-type Group = 'enforced' | 'promoted' | 'observed' | 'baselined';
+type Group = 'resolved' | 'observed' | 'baselined';
 
-const GROUP_ORDER: Group[] = ['enforced', 'promoted', 'observed', 'baselined'];
+const GROUP_ORDER: Group[] = ['resolved', 'observed', 'baselined'];
 
 const STATUS_TO_GROUP: Partial<Record<FindingStatus, Group>> = {
-	[FindingStatus.ENFORCED]: 'enforced',
-	[FindingStatus.PROMOTED]: 'promoted',
 	[FindingStatus.BASELINED]: 'baselined',
+	[FindingStatus.RESOLVED]: 'resolved',
 };
 
 function classify(record: FindingRecord): Group {
@@ -114,7 +113,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		this.cli
 			.command('visualize')
 			.description('Display the current state of findings, axioms, and insights from the ledger')
-			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, promoted, enforced')
+			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, resolved')
 			.option('--no-axioms', 'Hide declared axioms')
 			.option('--insights', 'Run insights against the current ledger state')
 			.option('--json', 'Output as JSON')

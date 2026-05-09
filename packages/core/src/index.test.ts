@@ -44,7 +44,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 		expect(next.findings.fp1?.baselined).toBe(false);
 	});
 
-	test('OBSERVED on existing non-RESOLVED record keeps current state', () => {
+	test('OBSERVED on existing OBSERVED record keeps current state', () => {
 		const snapshot = ledger.apply(emptySnapshot(), {
 			entry_id: 'e1',
 			run_id: 'r1',
@@ -55,14 +55,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 			message: 'msg',
 			artifacts: [],
 		});
-		const promoted = ledger.apply(snapshot, {
-			entry_id: 'e2',
-			run_id: 'r1',
-			timestamp: 't',
-			type: FindingStatus.PROMOTED,
-			fingerprint: 'fp1',
-		});
-		const again = ledger.apply(promoted, {
+		const again = ledger.apply(snapshot, {
 			entry_id: 'e3',
 			run_id: 'r1',
 			timestamp: 't',
@@ -72,7 +65,7 @@ describe('LedgerBackendBase.applyEvent', () => {
 			message: 'msg',
 			artifacts: [],
 		});
-		expect(again.findings.fp1?.state).toBe(FindingStatus.PROMOTED);
+		expect(again.findings.fp1?.state).toBe(FindingStatus.OBSERVED);
 	});
 
 	test('OBSERVED on RESOLVED fingerprint resets to OBSERVED', () => {
@@ -129,50 +122,6 @@ describe('LedgerBackendBase.applyEvent', () => {
 		});
 		expect(s.findings.fp1?.baselined).toBe(true);
 		expect(s.findings.fp1?.state).toBe(FindingStatus.OBSERVED);
-	});
-
-	test('PROMOTED sets state to PROMOTED', () => {
-		let s = emptySnapshot();
-		s = ledger.apply(s, {
-			entry_id: 'e1',
-			run_id: 'r1',
-			timestamp: 't',
-			type: FindingStatus.OBSERVED,
-			fingerprint: 'fp1',
-			rule_id: 'r',
-			message: 'msg',
-			artifacts: [],
-		});
-		s = ledger.apply(s, {
-			entry_id: 'e2',
-			run_id: 'r1',
-			timestamp: 't',
-			type: FindingStatus.PROMOTED,
-			fingerprint: 'fp1',
-		});
-		expect(s.findings.fp1?.state).toBe(FindingStatus.PROMOTED);
-	});
-
-	test('ENFORCED sets state to ENFORCED', () => {
-		let s = emptySnapshot();
-		s = ledger.apply(s, {
-			entry_id: 'e1',
-			run_id: 'r1',
-			timestamp: 't',
-			type: FindingStatus.OBSERVED,
-			fingerprint: 'fp1',
-			rule_id: 'r',
-			message: 'msg',
-			artifacts: [],
-		});
-		s = ledger.apply(s, {
-			entry_id: 'e2',
-			run_id: 'r1',
-			timestamp: 't',
-			type: FindingStatus.ENFORCED,
-			fingerprint: 'fp1',
-		});
-		expect(s.findings.fp1?.state).toBe(FindingStatus.ENFORCED);
 	});
 
 	test('RESOLVED sets state to RESOLVED', () => {
@@ -245,19 +194,5 @@ describe('LedgerBackendBase.buildEntry', () => {
 		expect('artifacts' in event).toBe(false);
 		expect(event.fingerprint).toBe(baseFinding.fingerprint);
 		expect('expires_at' in event).toBe(true);
-	});
-
-	test('PROMOTED has only fingerprint', () => {
-		const event = ledger.buildEntry(baseFinding, FindingStatus.PROMOTED);
-		expect(event.type).toBe(FindingStatus.PROMOTED);
-		expect('message' in event).toBe(false);
-		expect(event.fingerprint).toBe(baseFinding.fingerprint);
-	});
-
-	test('ENFORCED has only fingerprint', () => {
-		const event = ledger.buildEntry(baseFinding, FindingStatus.ENFORCED);
-		expect(event.type).toBe(FindingStatus.ENFORCED);
-		expect('message' in event).toBe(false);
-		expect(event.fingerprint).toBe(baseFinding.fingerprint);
 	});
 });

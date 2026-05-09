@@ -2,7 +2,7 @@
 
 Maat checks architecture rules against facts collected from your repository.
 
-The first run should answer a small question: "can this codebase collect facts and report findings?" After that, you can decide which findings should be baselined, reviewed, enforced, or ignored for now.
+The first run should answer a small question: "can this codebase collect facts and report findings?" After that, you can decide which findings should be baselined, resolved, or ignored for now.
 
 ## Installation
 
@@ -89,30 +89,28 @@ maat baseline
 
 A baseline means: "we saw this finding, we are not fixing it in this pass, and we want to revisit it later." Baselines expire, so old architectural debt does not become invisible.
 
-## Finding lifecycle
+## Finding decisions
 
-A finding can move through a few states:
+A finding is the current output of a rule. Its fingerprint is the stable identity Maat uses to recognize the same architectural fact across runs.
 
-- `observed`: Maat currently sees it.
-- `baselined`: accepted temporarily so the team can adopt checks gradually.
-- `promoted`: reviewed and considered important.
-- `enforced`: promoted and used as a gate; future checks fail while it is still present.
-- `resolved`: intentionally fixed.
+The ledger records decisions about those fingerprints:
+
+- `observed`: Maat saw the finding and saved it to the ledger. No human decision has been made yet.
+- `baselined`: the finding is temporarily accepted as existing debt. This is a suppression flag, not a full lifecycle state; unexpired baselines are hidden from normal `maat check` output unless you pass `--show-baselined`.
+- `resolved`: this exact fingerprint was intentionally fixed. If the same fingerprint appears again later, `maat check` treats it as a regression.
+
+In short: baseline means "not now"; resolve means "this exact finding was fixed."
 
 Use these commands when you are ready to move a finding:
 
 ```bash
-# Mark a finding as reviewed
-maat promote --fingerprint <fingerprint>
-
-# Make that finding fail future checks while it still exists
-maat promote --fingerprint <fingerprint> --enforce
-
-# Mark a fixed finding as resolved
+# Mark a fixed fingerprint as resolved
 maat resolve --fingerprint <fingerprint>
 ```
 
-Promoted and enforced findings should have a decision maker. Maat records the decision in the ledger, but it does not attach findings to users or teams. With the default NDJSON ledger, commit the ledger file and let the repository history show who made the decision, when it was reviewed, and why it changed.
+Resolved findings should have a decision maker. Maat records the decision in the ledger, but it does not attach findings to users or teams. With the default NDJSON ledger, commit the ledger file and let the repository history show who made the decision, when it was reviewed, and why it changed.
+
+Resolution is fingerprint-specific. If another finding from the same rule appears with a different fingerprint, Maat treats it as a new finding, not as a regression of the resolved one.
 
 ## Manual architecture claims
 
@@ -130,6 +128,6 @@ An axiom is not an automated check. It is a recorded decision or claim the team 
 
 ## Next steps
 
-- Read the [commands reference](./commands.md) for every CLI option.
+- Read the [commands reference](/commands/) for every CLI option.
 - Read the [plugin guide](./plugins.md) when you want to write custom collectors or rules.
 - Read the [determinism guide](./determinism.md) before running third-party plugins in CI.

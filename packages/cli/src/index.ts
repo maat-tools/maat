@@ -19,7 +19,6 @@ import type { MaatCommand } from './commands';
 import { Axiom } from './commands/axiom';
 import { Baseline } from './commands/baseline';
 import { Check } from './commands/check';
-import { Promote } from './commands/promote';
 import { Resolve } from './commands/resolve';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
@@ -83,7 +82,6 @@ class MaatCLI {
 			new Check(...args),
 			new Axiom(...args),
 			new Baseline(...args),
-			new Promote(...args),
 			new Resolve(...args),
 			new Visualize(...args),
 		];

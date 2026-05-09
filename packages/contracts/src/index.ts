@@ -42,8 +42,6 @@ export type InsightResult = {
 export const FindingStatus = {
 	OBSERVED: 'finding.observed',
 	BASELINED: 'finding.baselined',
-	PROMOTED: 'finding.promoted',
-	ENFORCED: 'finding.enforced',
 	RESOLVED: 'finding.resolved',
 	AXIOM_DECLARED: 'axiom.declared',
 	AXIOM_SUPERSEDED: 'axiom.superseded',
@@ -74,29 +72,12 @@ export type FindingBaselinedEvent = LedgerEntryBase & {
 	readonly expires_at: string;
 };
 
-export type FindingPromotedEvent = LedgerEntryBase & {
-	readonly type: typeof FindingStatus.PROMOTED;
-	readonly fingerprint: string;
-	readonly note?: string;
-};
-
-export type FindingEnforcedEvent = LedgerEntryBase & {
-	readonly type: typeof FindingStatus.ENFORCED;
-	readonly fingerprint: string;
-	readonly note?: string;
-};
-
 export type FindingResolvedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.RESOLVED;
 	readonly fingerprint: string;
 };
 
-export type FindingEvent =
-	| FindingObservedEvent
-	| FindingBaselinedEvent
-	| FindingPromotedEvent
-	| FindingEnforcedEvent
-	| FindingResolvedEvent;
+export type FindingEvent = FindingObservedEvent | FindingBaselinedEvent | FindingResolvedEvent;
 
 export type FindingEventInput = WithoutEntryId<FindingEvent>;
 
@@ -124,8 +105,6 @@ export type AxiomRevokedEvent = LedgerEntryBase & {
 export type LedgerEvent =
 	| FindingObservedEvent
 	| FindingBaselinedEvent
-	| FindingPromotedEvent
-	| FindingEnforcedEvent
 	| FindingResolvedEvent
 	| AxiomDeclaredEvent
 	| AxiomSupersededEvent

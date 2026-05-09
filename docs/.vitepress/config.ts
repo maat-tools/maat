@@ -5,9 +5,35 @@ const guideAndPluginSidebar = [
     text: 'Guide',
     items: [
       { text: 'Getting started', link: '/guide/getting-started' },
-      { text: 'Commands', link: '/guide/commands' },
       { text: 'Determinism', link: '/guide/determinism' },
       { text: 'Plugin system', link: '/guide/plugins' },
+    ],
+  },
+  {
+    text: 'Commands',
+    items: [
+      { text: 'All commands', link: '/commands/' },
+      {
+        text: 'Finding workflow',
+        link: '/commands/check',
+        collapsed: false,
+        items: [
+          { text: 'maat check', link: '/commands/check' },
+          { text: 'maat baseline', link: '/commands/baseline' },
+          { text: 'maat resolve', link: '/commands/resolve' },
+          { text: 'maat visualize', link: '/commands/visualize' },
+        ],
+      },
+      {
+        text: 'Axioms',
+        link: '/commands/axiom-declare',
+        collapsed: false,
+        items: [
+          { text: 'maat axiom declare', link: '/commands/axiom-declare' },
+          { text: 'maat axiom supersede', link: '/commands/axiom-supersede' },
+          { text: 'maat axiom revoke', link: '/commands/axiom-revoke' },
+        ],
+      },
     ],
   },
   {
@@ -49,12 +75,14 @@ export default defineConfig({
     nav: [
       { text: 'Project', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Commands', link: '/commands/' },
       { text: 'Plugins', link: '/plugins/' },
       { text: 'ADRs', link: '/adr/001-monorepo-bounded-packages' },
     ],
 
     sidebar: {
       '/guide/': guideAndPluginSidebar,
+      '/commands/': guideAndPluginSidebar,
       '/plugins/': guideAndPluginSidebar,
       '/adr/': [
         {

@@ -11,9 +11,7 @@ import { LedgerBackendBase } from '@maat-tools/core';
 export type {
 	AxiomDeclaredEvent,
 	FindingBaselinedEvent,
-	FindingEnforcedEvent,
 	FindingObservedEvent,
-	FindingPromotedEvent,
 	FindingRecord,
 	LedgerBackend,
 	LedgerEvent,

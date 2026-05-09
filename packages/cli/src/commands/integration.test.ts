@@ -11,7 +11,6 @@ import { Printer } from '../printer';
 import { Axiom } from './axiom';
 import { Baseline } from './baseline';
 import { Check } from './check';
-import { Promote } from './promote';
 import { Resolve } from './resolve';
 
 // ── fixtures ────────────────────────────────────────────────────────────────
@@ -169,29 +168,15 @@ describe('check with ledger', () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
-	test('finding ENFORCED still present → exit 1', async () => {
+	test('resolved regression stays resolved after check --ledger', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-			enforce: true,
-		});
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true }); // observe
+		await makeCheck([], ledger).action({ ledger: true }); // auto-resolve
 
 		await expect(makeCheck([RULE_OUTPUT], ledger).action({ ledger: true })).rejects.toThrow('process.exit');
-		expect(exitSpy).toHaveBeenCalledWith(1);
-	});
 
-	test('finding PROMOTED still present → does not exit', async () => {
-		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-		});
-
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-		expect(exitSpy).not.toHaveBeenCalled();
+		const state = await ledger.getState();
+		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.RESOLVED);
 	});
 
 	test('finding BASELINED, non-strict → does not exit', async () => {
@@ -278,19 +263,6 @@ describe('check with ledger', () => {
 		});
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.OBSERVED);
-	});
-
-	test('--silent with enforced finding → still exits 1', async () => {
-		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-			enforce: true,
-		});
-		await expect(makeCheck([RULE_OUTPUT], ledger).action({ ledger: true, silent: true })).rejects.toThrow(
-			'process.exit',
-		);
-		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
 
@@ -387,35 +359,6 @@ describe('baseline', () => {
 	});
 });
 
-// ── promote ───────────────────────────────────────────────────────────────────
-
-describe('promote', () => {
-	test('promote → finding state becomes PROMOTED', async () => {
-		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-		});
-
-		const state = await ledger.getState();
-		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.PROMOTED);
-	});
-
-	test('promote --enforce → finding state becomes ENFORCED', async () => {
-		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
-		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-			enforce: true,
-		});
-
-		const state = await ledger.getState();
-		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.ENFORCED);
-	});
-});
-
 // ── axiom ─────────────────────────────────────────────────────────────────────
 
 describe('axiom', () => {
@@ -436,13 +379,9 @@ describe('axiom', () => {
 // ── resolve ───────────────────────────────────────────────────────────────────
 
 describe('resolve', () => {
-	test('resolve a PROMOTED finding → state becomes RESOLVED', async () => {
+	test('resolve an observed finding → state becomes RESOLVED', async () => {
 		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
-
-		await new Promote(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
-			fingerprint: FINGERPRINT,
-		});
 
 		await new Resolve(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
 			fingerprint: FINGERPRINT,

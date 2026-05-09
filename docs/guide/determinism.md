@@ -34,15 +34,15 @@ Third-party package authors are expected to follow the plugin determinism contra
 
 Official ledger backends preserve append-only history. The current file ledger writes NDJSON events by appending lines and derives current state by replaying those events.
 
-The generated ledger file can be committed to version control so accepted findings, enforced decisions, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
+The generated ledger file can be committed to version control so accepted findings, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
 
-Maat does not bind a finding or ledger event to a user identity. Stronger decisions such as promoted and enforced findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps Maat independent from Git hosting providers, identity systems, and external approval flows.
+Maat does not bind a finding or ledger event to a user identity. Decisions such as baselining or resolving findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps Maat independent from Git hosting providers, identity systems, and external approval flows.
 
 Third-party ledger backends must preserve the same event-log semantics, but the TypeScript interface cannot enforce that by itself.
 
 ## Why this matters
 
-The ledger records decisions about findings. If a finding is not reproducible, the recorded decision becomes weak: a future run may not be able to explain, resolve, or enforce the same architectural fact.
+The ledger records decisions about findings. If a finding is not reproducible, the recorded decision becomes weak: a future run may not be able to explain or resolve the same architectural fact.
 
 Use official rules when you need the project-level determinism guarantee. Use third-party packages when you accept responsibility for their behavior.
 

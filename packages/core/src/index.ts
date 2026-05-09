@@ -97,11 +97,9 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 				return { ...base, type, fingerprint: finding.fingerprint, expires_at };
 			}
-			case FindingStatus.PROMOTED:
-				return { ...base, type, fingerprint: finding.fingerprint };
-			case FindingStatus.ENFORCED:
-				return { ...base, type, fingerprint: finding.fingerprint };
 		}
+
+		throw new Error(`Unsupported finding event type: ${type}`);
 	}
 
 	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
@@ -128,8 +126,6 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				}
 				break;
 			}
-			case FindingStatus.PROMOTED:
-			case FindingStatus.ENFORCED:
 			case FindingStatus.RESOLVED: {
 				const record = findings[event.fingerprint];
 				if (record !== undefined) {

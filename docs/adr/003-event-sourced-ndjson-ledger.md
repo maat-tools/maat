@@ -5,7 +5,7 @@
 
 ## Context
 
-maat stores finding history, not only current finding state. Stronger transitions such as promotion and enforcement need a responsible decision maker, but the ledger should not couple findings to an identity provider, Git host, or external approval system. A mutable store (database, JSON file rewritten on every run) loses review context and creates unnecessary merge conflicts in version control.
+maat stores finding history, not only current finding state. Decisions such as baselining or resolving a finding need a responsible decision maker, but the ledger should not couple findings to an identity provider, Git host, or external approval system. A mutable store (database, JSON file rewritten on every run) loses review context and creates unnecessary merge conflicts in version control.
 
 ## Decision
 
@@ -17,8 +17,7 @@ Current event types:
 |---|---|
 | `finding.observed` | Detector produced a new finding |
 | `finding.baselined` | Human accepted a finding as part of the current baseline |
-| `finding.promoted` | User marked a finding as reviewed |
-| `finding.enforced` | User made a finding enforceable by CI |
+| `finding.resolved` | User confirmed an exact finding fingerprint was fixed |
 | `axiom.declared` | User added a manual claim the tool cannot verify |
 
 The current state of any finding is derived by replaying events in order (the fold pattern). The ledger file is a valid append target from multiple sequential runs with no coordination required.

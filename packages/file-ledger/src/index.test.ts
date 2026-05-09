@@ -33,12 +33,8 @@ const observedEvent = {
 
 describe('FilePathLedgerBackend', () => {
 	test('throws when path does not end with .ndjson', () => {
-		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger.json' })).toThrow(
-			'path must end with ".ndjson"',
-		);
-		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger' })).toThrow(
-			'path must end with ".ndjson"',
-		);
+		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger.json' })).toThrow('path must end with ".ndjson"');
+		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger' })).toThrow('path must end with ".ndjson"');
 	});
 
 	test('getState with no file returns empty snapshot', async () => {
@@ -90,7 +86,7 @@ describe('FilePathLedgerBackend', () => {
 	test('getState rebuilds from NDJSON when snapshot is missing', async () => {
 		await ledger.append(observedEvent);
 		await ledger.append({
-			type: FindingStatus.PROMOTED,
+			type: FindingStatus.RESOLVED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp1',
 		});
@@ -100,6 +96,6 @@ describe('FilePathLedgerBackend', () => {
 
 		const fresh = new FilePathLedgerBackend({ path: ledgerPath });
 		const state = await fresh.getState();
-		expect(state.findings.fp1?.state).toBe(FindingStatus.PROMOTED);
+		expect(state.findings.fp1?.state).toBe(FindingStatus.RESOLVED);
 	});
 });

@@ -26,7 +26,7 @@ import { withBase } from 'vitepress'
 
 <section class="maat-note">
   <p>
-    Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of accepted exceptions.
+    Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of explicit decisions about findings.
   </p>
 </section>
 
@@ -60,7 +60,7 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Brownfield</p>
     <h3>Start from what the codebase already taught you.</h3>
-    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, then promote only the findings the team is ready to enforce.</p>
+    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, baseline existing findings, and keep fixed fingerprints from quietly regressing.</p>
     <ul>
       <li>Separate new violations from existing debt.</li>
       <li>Track accepted exceptions in the same repository history as the code.</li>
@@ -82,7 +82,7 @@ import { withBase } from 'vitepress'
   </section>
   <section>
     <h3>Incremental adoption</h3>
-    <p>The tool should work before the codebase is clean. Existing violations can be baselined, promoted, enforced, or resolved over time.</p>
+    <p>The tool should work before the codebase is clean. Existing violations can be baselined or resolved over time.</p>
   </section>
 </div>
 
@@ -158,7 +158,7 @@ maat axiom declare \
   </section>
   <section>
     <h3>How is it different from architecture unit tests?</h3>
-    <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings, promote reviewed findings, enforce selected rules, and resolve fixed ones.</p>
+    <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings and mark fixed fingerprints as resolved so exact regressions are caught later.</p>
   </section>
   <section>
     <h3>Can we write our own checks?</h3>
@@ -170,7 +170,7 @@ maat axiom declare \
 
 <section class="maat-panel">
   <p>
-    Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline, promote, enforce, and resolve flows.
+    Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline and resolve flows.
   </p>
   <p>
     The model is stable enough to inspect and experiment with, but package APIs can still change while the collector and rule interfaces settle.

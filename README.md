@@ -18,7 +18,7 @@ Architecture rules often live where the compiler cannot see them: planning docs,
 
 Maat moves part of that intent into executable rules. Today it ships with a TypeScript collector for source structure. The same model can support other collectors, including semantic ones, without changing the kernel.
 
-It does not decide whether the architecture is good. It reports rule violations and lets your team decide what to baseline, promote, enforce, or resolve.
+It does not decide whether the architecture is good. It reports rule violations and lets your team decide what to baseline or resolve.
 
 ## How it works
 
@@ -124,13 +124,7 @@ maat baseline
 # Accept current findings with a shorter expiry window (1–90 days)
 maat baseline --expires-in 30
 
-# Mark one finding as reviewed
-maat promote --fingerprint <fingerprint>
-
-# Make one reviewed finding fail future checks
-maat promote --fingerprint <fingerprint> --enforce
-
-# Confirm that a promoted or enforced finding was fixed
+# Mark one fixed fingerprint as resolved
 maat resolve --fingerprint <fingerprint>
 ```
 
@@ -138,7 +132,7 @@ Baselines are time-limited: after the expiry window (1–90 days, default 90), `
 
 The ledger keeps append-only history for findings, axioms, and lifecycle events. Commit it with the codebase so decisions travel with the architecture they describe.
 
-Maat records decision state, not user identity. For stronger decisions such as promoted or enforced findings, ownership should come from the committed ledger diff, commit author, and review history.
+Maat records decision state, not user identity. For decisions such as baselining or resolving findings, ownership should come from the committed ledger diff, commit author, and review history.
 
 ## Official plugins
 
@@ -160,8 +154,7 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 | `maat axiom supersede` | Mark an axiom as replaced by a newer decision. |
 | `maat axiom revoke` | Revoke an axiom that no longer applies. |
 | `maat baseline` | Baseline currently observed findings. Expires in 1–90 days, forcing periodic review. |
-| `maat promote` | Mark a finding as reviewed. Use `--enforce` to make it a CI gate. |
-| `maat resolve` | Confirm intentional resolution of a promoted or enforced finding. |
+| `maat resolve` | Mark one exact finding fingerprint as intentionally fixed. |
 | `maat visualize` | Print current ledger state: findings, axioms, and optional insights. |
 
 ## Packages
@@ -181,14 +174,14 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
-- [Commands](docs/guide/commands.md)
+- [Commands](docs/commands/)
 - [Determinism](docs/guide/determinism.md)
 - [Plugin system](docs/guide/plugins.md)
 - [Architecture decisions](docs/adr/)
 
 ## Status
 
-Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline, promote, enforce, and resolve flows. Package APIs can still change while the collector and rule interfaces settle.
+Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline and resolve flows. Package APIs can still change while the collector and rule interfaces settle.
 
 ## License
 

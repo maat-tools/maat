@@ -39,10 +39,7 @@ describe('layer()', () => {
 	});
 
 	test('.allows() returns a new object each call but accumulates patterns', () => {
-		const rule = layer('@maat-tools/kernel')
-			.allows('@maat-tools/contracts')
-			.allows('@maat-tools/vocabulary')
-			.build();
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').allows('@maat-tools/vocabulary').build();
 		expect(isRule(rule)).toBe(true);
 	});
 
@@ -239,14 +236,21 @@ describe('PureLayerRule — external deps in allows()', () => {
 });
 
 describe('PureLayerRule — transitive check', () => {
-	test('dep imports from outside budget — not caught by kernel rule, only by contracts own rule', () => {
-		// @maat-tools/kernel only watches its own direct imports.
-		// @maat-tools/contracts importing node:crypto is @maat-tools/contracts' responsibility.
+	test('dep imports from outside budget — caught by default', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate({
-			imports: [makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' })],
+			imports: [
+				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
+				makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' }),
+			],
 		});
-		expect(findings).toHaveLength(0);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({
+			target: '@maat-tools/kernel',
+			via: '@maat-tools/contracts',
+			specifier: 'node:crypto',
+		});
+		expect(findings[0]?.message).toContain('transitive dependency');
 	});
 
 	test('contracts own rule catches its own violation', () => {
@@ -256,6 +260,17 @@ describe('PureLayerRule — transitive check', () => {
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('@maat-tools/contracts');
+	});
+
+	test('transitive: false preserves direct-only behavior', () => {
+		const rule = layer('@maat-tools/kernel').is(Pure, { transitive: false }).allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate({
+			imports: [
+				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
+				makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' }),
+			],
+		});
+		expect(findings).toHaveLength(0);
 	});
 });
 

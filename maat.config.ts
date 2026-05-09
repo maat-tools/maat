@@ -13,7 +13,7 @@ export default defineConfig({
 		],
 	],
 	rules: [
-		layer('@maat-tools/contracts').is(Pure).allows('@maat-tools/contracts'),
+		layer('@maat-tools/contracts').is(Pure).allows('node:crypto'),
 		layer('@maat-tools/vocabulary').is(Pure).allows('@maat-tools/contracts'),
 		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid'),
 		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts'),

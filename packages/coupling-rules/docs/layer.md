@@ -13,6 +13,15 @@ layer(target)
 	.build();
 ```
 
+`Pure` accepts an optional package-mode transitive check setting:
+
+```ts
+layer(target)
+	.is(Pure, { transitive: false })
+	.allows(...patterns)
+	.build();
+```
+
 `.allows()` accepts any mix of strings and regular expressions:
 
 | Pattern | What it matches |
@@ -35,6 +44,7 @@ The rule watches every import recorded with `packageName === target`. For each o
 
 - Relative `./` and `../` specifiers are skipped.
 - Any specifier not matched by `allows()` is flagged.
+- For `Pure` rules, allowed local package dependencies are followed transitively by default.
 
 | File | Import | Result |
 |---|---|---|
@@ -43,7 +53,7 @@ The rule watches every import recorded with `packageName === target`. For each o
 | `packages/kernel/src/index.ts` | `@maat-tools/core` | Blocked: not in `allows()` |
 | `packages/kernel/src/index.ts` | `node:crypto` | Blocked: not in `allows()` |
 | `packages/kernel/src/index.ts` | `./utils` | Allowed: relative import |
-| `packages/contracts/src/index.ts` | `node:crypto` | Ignored: wrong package |
+| `packages/contracts/src/index.ts` | `node:crypto` | Blocked for kernel when reached through allowed `@maat-tools/contracts` |
 
 ## Path Mode
 
@@ -88,6 +98,15 @@ If `allows()` only contains path globs, package imports such as `react` or `node
 
 ## `is(Pure)`
 
-`is(Pure)` marks the rule as a pure layer boundary. Evaluation is identical, but the rule id and finding message carry the pure-layer intent.
+`is(Pure)` marks the rule as a pure layer boundary. Direct imports must match `allows()`.
 
-Purity is per package. It does not transitively police dependencies; each package declares its own rule.
+In package mode, purity is transitive by default. If `@maat-tools/kernel` allows `@maat-tools/contracts`, and `@maat-tools/contracts` imports `node:crypto`, the kernel rule reports `node:crypto` unless kernel also allows it.
+
+Use `{ transitive: false }` to preserve direct-only behavior:
+
+```ts
+layer('@maat-tools/kernel')
+	.is(Pure, { transitive: false })
+	.allows('@maat-tools/contracts')
+	.build();
+```

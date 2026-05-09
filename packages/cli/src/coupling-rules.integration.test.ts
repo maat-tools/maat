@@ -49,8 +49,8 @@ describe('coupling-rules integration — package mode', () => {
 	const KERNEL_RULE = 'coupling/pure-imports:@fixture/kernel@v1';
 	const CONTRACTS_RULE = 'coupling/pure-imports:@fixture/contracts@v1';
 
-	test('total findings from kernel rule: exactly 2', () => {
-		expect(findingsFor(KERNEL_RULE)).toHaveLength(2);
+	test('total findings from kernel rule: exactly 3', () => {
+		expect(findingsFor(KERNEL_RULE)).toHaveLength(3);
 	});
 
 	test('VIOLATION: @fixture/kernel imports @fixture/core (not in allows)', () => {
@@ -74,9 +74,8 @@ describe('coupling-rules integration — package mode', () => {
 		expect(findingsFor(CONTRACTS_RULE)).toHaveLength(0);
 	});
 
-	test('no transitive enforcement: @fixture/contracts importing node:crypto is not caught by the kernel rule', () => {
-		// kernel only polices its own package — contracts' node:crypto is contracts' business
-		expect(hasNoViolation(KERNEL_RULE, 'pkg-contracts/src/index.ts', 'node:crypto')).toBe(true);
+	test('VIOLATION: @fixture/contracts importing node:crypto is caught by the kernel rule transitively', () => {
+		expect(hasViolation(KERNEL_RULE, '@fixture/contracts', 'node:crypto')).toBe(true);
 	});
 
 	test('VIOLATION: cross-package relative import normalized to @fixture/shared (not in allows)', () => {
@@ -162,7 +161,7 @@ describe('coupling-rules integration — path mode', () => {
 // ─── overall ─────────────────────────────────────────────────────────────────
 
 describe('coupling-rules integration — overall', () => {
-	test('total finding count across all rules: exactly 6', () => {
-		expect(findings).toHaveLength(6);
+	test('total finding count across all rules: exactly 7', () => {
+		expect(findings).toHaveLength(7);
 	});
 });

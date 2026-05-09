@@ -35,6 +35,9 @@ const EMPTY_SNAPSHOT: LedgerSnapshot = {
 export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBackend {
 	public constructor(private readonly options: FilePathLedgerOptions) {
 		super();
+		if (!options.path.endsWith('.ndjson')) {
+			throw new Error(`FilePathLedgerBackend: path must end with ".ndjson", got: "${options.path}"`);
+		}
 	}
 
 	public async append(input: LedgerEventInput): Promise<void> {

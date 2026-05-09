@@ -32,6 +32,15 @@ const observedEvent = {
 } as const;
 
 describe('FilePathLedgerBackend', () => {
+	test('throws when path does not end with .ndjson', () => {
+		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger.json' })).toThrow(
+			'path must end with ".ndjson"',
+		);
+		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger' })).toThrow(
+			'path must end with ".ndjson"',
+		);
+	});
+
 	test('getState with no file returns empty snapshot', async () => {
 		const state = await ledger.getState();
 		expect(state.last_entry_id).toBeNull();

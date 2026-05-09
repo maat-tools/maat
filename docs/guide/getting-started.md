@@ -1,5 +1,9 @@
 # Getting started
 
+Maat checks architecture rules against facts collected from your repository.
+
+The first run should answer a small question: "can this codebase collect facts and report findings?" After that, you can decide which findings should be baselined, reviewed, enforced, or ignored for now.
+
 ## Installation
 
 ```bash
@@ -8,7 +12,7 @@ npm install -g @maat-tools/cli
 bun add -g @maat-tools/cli
 ```
 
-## Quick start
+## Add a config
 
 Add `maat.config.ts` to your project root:
 
@@ -27,11 +31,19 @@ export default defineConfig({
 })
 ```
 
-Then run:
+This config does three things:
+
+- `collectors` tells Maat how to collect facts from the repository.
+- `rules` tells Maat which architecture rules to check.
+- `check.strict` makes visible findings fail the command.
+
+## Run a check
 
 ```bash
 maat check
 ```
+
+Maat prints findings with stable fingerprints. A fingerprint identifies the same finding across runs, so the ledger can track what happened to it later.
 
 The CLI searches upward from the current directory for `maat.config.ts`. You can also pass it explicitly:
 
@@ -42,9 +54,21 @@ maat --config ./path/to/maat.config.ts check
 
 ## New projects
 
-Use `strict: true` when new violations should fail the command.
+For a new project, keep `check.strict: true` and add `maat check` to CI. Any visible finding exits non-zero.
+
+Start with rules that are easy to explain in code review: package boundaries, layer boundaries, and dependency direction. Add more specific rules when the team has a real pattern it wants to preserve.
+
+## Existing projects
+
+Existing codebases usually have findings on the first run. Use a ledger when you want to keep those findings visible without blocking every change immediately.
+
+Add a ledger backend to the config:
 
 ```ts
+import { defineConfig } from '@maat-tools/core'
+import { layer } from '@maat-tools/coupling-rules'
+import { Pure } from '@maat-tools/coupling-rules/roles'
+
 export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
@@ -52,12 +76,47 @@ export default defineConfig({
     layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
     layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
   ],
+  ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
 })
 ```
 
-Add `maat check` to CI. Any violation exits non-zero.
+Then record the current findings and baseline them:
 
-Use axioms for rules that are not checked by a collector or rule yet:
+```bash
+maat check --ledger
+maat baseline
+```
+
+A baseline means: "we saw this finding, we are not fixing it in this pass, and we want to revisit it later." Baselines expire, so old architectural debt does not become invisible.
+
+## Finding lifecycle
+
+A finding can move through a few states:
+
+- `observed`: Maat currently sees it.
+- `baselined`: accepted temporarily so the team can adopt checks gradually.
+- `promoted`: reviewed and considered important.
+- `enforced`: promoted and used as a gate; future checks fail while it is still present.
+- `resolved`: intentionally fixed.
+
+Use these commands when you are ready to move a finding:
+
+```bash
+# Mark a finding as reviewed
+maat promote --fingerprint <fingerprint>
+
+# Make that finding fail future checks while it still exists
+maat promote --fingerprint <fingerprint> --enforce
+
+# Mark a fixed finding as resolved
+maat resolve --fingerprint <fingerprint>
+```
+
+Every state transition is recorded with author and timestamp.
+
+## Manual architecture claims
+
+Some rules are not checked by a collector or rule yet. Use an axiom when you want to record a manual architecture claim in the ledger.
 
 ```bash
 maat axiom declare \
@@ -67,31 +126,10 @@ maat axiom declare \
   --note "Keeps the domain testable without spinning up real I/O."
 ```
 
-Axioms are stored in the ledger.
+An axiom is not an automated check. It is a recorded decision or claim the team wants to keep next to the codebase.
 
-## Existing projects
+## Next steps
 
-Use the ledger when the current codebase already has violations you do not want to fail immediately.
-
-```bash
-# Accept the current state as baseline
-maat check --ledger
-maat baseline
-
-# Mark a finding as reviewed
-maat promote --fingerprint <id>
-
-# Make the finding fail future checks
-maat promote --fingerprint <id> --enforce
-
-# Mark a fixed finding as resolved
-maat resolve --fingerprint <id>
-```
-
-Findings move through a linear lifecycle:
-
-```
-observed → promoted → enforced
-```
-
-Every state transition is recorded with author and timestamp.
+- Read the [commands reference](./commands.md) for every CLI option.
+- Read the [plugin guide](./plugins.md) when you want to write custom collectors or rules.
+- Read the [determinism guide](./determinism.md) before running third-party plugins in CI.

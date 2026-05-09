@@ -5,7 +5,7 @@
 
 ## Context
 
-maat stores finding history, not only current finding state. Each state transition needs an author and timestamp. A mutable store (database, JSON file rewritten on every run) loses this history and creates unnecessary merge conflicts in version control.
+maat stores finding history, not only current finding state. Stronger transitions such as promotion and enforcement need a responsible decision maker, but the ledger should not couple findings to an identity provider, Git host, or external approval system. A mutable store (database, JSON file rewritten on every run) loses review context and creates unnecessary merge conflicts in version control.
 
 ## Decision
 
@@ -29,10 +29,12 @@ The current state of any finding is derived by replaying events in order (the fo
 - It diffs cleanly in version control — each run appends lines, no rewrite conflicts.
 - It requires zero infrastructure: no server, no migration, no connection string.
 - The format is unambiguous for tooling: `jq`, `grep`, `wc -l` all work directly.
+- Decision ownership stays in the repository workflow: the committed ledger diff, commit author, review, and surrounding change history.
 
 ## Consequences
 
 - The ledger file grows monotonically. It is never compacted or rewritten in V1.
 - The fold function (`readAll → fold`) must be efficient enough for the typical ledger size. For large codebases with long histories, a snapshot/checkpoint mechanism may be needed in a future version.
 - Ledger files should be committed to version control alongside the codebase. The ledger is source data, not build output.
+- Ledger events are not bound to actors by Maat. Event timestamps support ordering, while ownership comes from the version-control history of the ledger file.
 - Changing the schema of an existing event type is not allowed. New fields may be added (additive only). Breaking changes require a new event type.

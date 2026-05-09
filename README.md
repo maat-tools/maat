@@ -138,6 +138,8 @@ Baselines are time-limited: after the expiry window (1–90 days, default 90), `
 
 The ledger keeps append-only history for findings, axioms, and lifecycle events. Commit it with the codebase so decisions travel with the architecture they describe.
 
+Maat records decision state, not user identity. For stronger decisions such as promoted or enforced findings, ownership should come from the committed ledger diff, commit author, and review history.
+
 ## Official plugins
 
 | Package | Purpose |

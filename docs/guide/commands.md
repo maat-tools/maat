@@ -88,6 +88,8 @@ Each baseline is time-limited. Once the expiry date is reached, `maat check` sta
 ::: details `maat promote` — Mark a finding as reviewed
 Promotes an observed finding to acknowledged. Add `--enforce` to make future `maat check` runs fail while that finding is still detected.
 
+This is a decision, not just a local command. Maat records the state change in the ledger, but the responsible person or team comes from the committed ledger diff and the repository review process.
+
 ```bash
 maat promote --fingerprint <fingerprint>
 maat promote --fingerprint <fingerprint> --enforce

@@ -112,7 +112,7 @@ maat promote --fingerprint <fingerprint> --enforce
 maat resolve --fingerprint <fingerprint>
 ```
 
-Every state transition is recorded with author and timestamp.
+Promoted and enforced findings should have a decision maker. Maat records the decision in the ledger, but it does not attach findings to users or teams. With the default NDJSON ledger, commit the ledger file and let the repository history show who made the decision, when it was reviewed, and why it changed.
 
 ## Manual architecture claims
 

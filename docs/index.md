@@ -63,7 +63,7 @@ import { withBase } from 'vitepress'
     <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, then promote only the findings the team is ready to enforce.</p>
     <ul>
       <li>Separate new violations from existing debt.</li>
-      <li>Track accepted exceptions with author, timestamp, and rationale.</li>
+      <li>Track accepted exceptions in the same repository history as the code.</li>
       <li>Turn repeated review comments into checks.</li>
     </ul>
   </section>
@@ -78,7 +78,7 @@ import { withBase } from 'vitepress'
   </section>
   <section>
     <h3>File-based history</h3>
-    <p>The ledger records findings and state changes in a file that can be committed with the codebase.</p>
+    <p>The ledger records findings and state changes in a file that can be committed with the codebase. Maat stores the decision; repository history stores who made it.</p>
   </section>
   <section>
     <h3>Incremental adoption</h3>

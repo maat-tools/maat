@@ -34,7 +34,9 @@ Third-party package authors are expected to follow the plugin determinism contra
 
 Official ledger backends preserve append-only history. The current file ledger writes NDJSON events by appending lines and derives current state by replaying those events.
 
-The generated ledger file can be committed to Git so accepted findings, enforced decisions, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
+The generated ledger file can be committed to version control so accepted findings, enforced decisions, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
+
+Maat does not bind a finding or ledger event to a user identity. Stronger decisions such as promoted and enforced findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps Maat independent from Git hosting providers, identity systems, and external approval flows.
 
 Third-party ledger backends must preserve the same event-log semantics, but the TypeScript interface cannot enforce that by itself.
 

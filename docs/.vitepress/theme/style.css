@@ -181,6 +181,11 @@
   color: var(--vp-c-brand-1);
 }
 
+.maat-home :not(pre) > code {
+  color: var(--vp-c-brand-1);
+  font-weight: 700;
+}
+
 .maat-panel {
   margin-top: 20px;
   border: 1px solid var(--vp-c-divider);

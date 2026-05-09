@@ -1,6 +1,5 @@
 import {
 	type AxiomRecord,
-	type BrandedRuleBuilder,
 	type CollectorRegistry,
 	type Finding,
 	type FindingEventInput,
@@ -13,6 +12,7 @@ import {
 	type LedgerEventInput,
 	type LedgerSnapshot,
 	type Rule,
+	type RuleBuilder,
 	type RuleRegistry,
 } from '@maat-tools/contracts';
 import { ulid } from 'ulid';

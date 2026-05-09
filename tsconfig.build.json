@@ -17,8 +17,10 @@
 			"@maat-tools/core": ["packages/core/dist/index.d.ts"],
 			"@maat-tools/kernel": ["packages/kernel/dist/index.d.ts"],
 			"@maat-tools/collector-ts": ["packages/collector-ts/dist/index.d.ts"],
+			"@maat-tools/collector-git": ["packages/collector-git/dist/index.d.ts"],
 			"@maat-tools/coupling-rules": ["packages/coupling-rules/dist/index.d.ts"],
 			"@maat-tools/connascence-rules": ["packages/connascence-rules/dist/index.d.ts"],
+			"@maat-tools/git-rules": ["packages/git-rules/dist/index.d.ts"],
 			"@maat-tools/file-ledger": ["packages/file-ledger/dist/index.d.ts"],
 			"@maat-tools/cli": ["packages/cli/dist/index.d.ts"]
 		}

@@ -57,6 +57,18 @@ const guideAndPluginSidebar = [
           { text: 'com', link: '/plugins/connascence-rules/com' },
         ],
       },
+      {
+        text: 'Git collector',
+        link: '/plugins/collector-git/',
+      },
+      {
+        text: 'Git rules',
+        link: '/plugins/git-rules/',
+        collapsed: false,
+        items: [
+          { text: 'churn', link: '/plugins/git-rules/churn' },
+        ],
+      },
     ],
   },
 ]

@@ -1,5 +1,9 @@
 # `@maat-tools/connascence-rules`
 
+::: info Needs
+`constants` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides constants
+:::
+
 Built-in rules for detecting connascence in source code.
 
 ## Rules

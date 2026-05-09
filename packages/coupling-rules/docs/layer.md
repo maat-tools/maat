@@ -1,5 +1,9 @@
 # `layer(target)`
 
+::: info Needs
+`imports` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides imports
+:::
+
 `layer(target)` builds a rule for enforcing import boundaries. Two modes are supported, auto-detected from the target string.
 
 ## Builder API

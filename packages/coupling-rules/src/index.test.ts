@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isRule, isRuleBuilder, RULE_BUILDER_BRAND } from '@maat-tools/contracts';
+import { type BrandedRuleBuilder, isRule, isRuleBuilder, RULE_BUILDER_BRAND } from '@maat-tools/contracts';
 import type { Import } from '@maat-tools/vocabulary';
 import { layer } from './layer';
 import { Pure } from './roles';
@@ -23,13 +23,13 @@ describe('layer()', () => {
 	test('.is() returns a branded RuleBuilder', () => {
 		const ready = layer('@maat-tools/kernel').is(Pure);
 		expect(isRuleBuilder(ready)).toBe(true);
-		expect(ready[RULE_BUILDER_BRAND]).toBe(true);
+		expect((ready as unknown as BrandedRuleBuilder)[RULE_BUILDER_BRAND]).toBe(true);
 	});
 
 	test('.allows() returns a branded RuleBuilder', () => {
 		const ready = layer('@maat-tools/kernel').allows('@maat-tools/contracts');
 		expect(isRuleBuilder(ready)).toBe(true);
-		expect(ready[RULE_BUILDER_BRAND]).toBe(true);
+		expect((ready as unknown as BrandedRuleBuilder)[RULE_BUILDER_BRAND]).toBe(true);
 	});
 
 	test('.is() returns a new object (not the initial builder)', () => {

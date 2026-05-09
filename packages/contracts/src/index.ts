@@ -300,11 +300,7 @@ export function isRule(obj: unknown): obj is Rule {
 }
 
 export function isRuleBuilder(obj: unknown): obj is RuleBuilder {
-	return (
-		typeof obj === 'object' &&
-		obj !== null &&
-		typeof (obj as RuleBuilder).build === 'function'
-	);
+	return typeof obj === 'object' && obj !== null && typeof (obj as RuleBuilder).build === 'function';
 }
 
 export function isInsightFactory(fn: unknown): fn is BrandedInsightFactory<Record<string, never>> {

@@ -85,7 +85,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		if (!exists) {
 			return [];
 		}
-		
+
 		const text = await readFile(this.options.path, 'utf-8');
 
 		return text.trim().length === 0

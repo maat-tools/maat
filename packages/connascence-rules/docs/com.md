@@ -1,5 +1,9 @@
 # `com`
 
+::: info Needs
+`constants` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides constants
+:::
+
 `com` detects Connascence of Meaning: the same literal value appearing across multiple files often means separate pieces of code depend on the same hidden concept.
 
 ## What It Checks

@@ -1,5 +1,9 @@
 # `@maat-tools/coupling-rules`
 
+::: info Needs
+`imports` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides imports
+:::
+
 Rules for enforcing import boundaries between packages and architectural layers.
 
 ## Rules

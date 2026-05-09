@@ -26,7 +26,9 @@
 	},
 	"dependencies": {
 		"@maat-tools/collector-ts": "workspace:*",
+		"@maat-tools/collector-git": "workspace:*",
 		"@maat-tools/connascence-rules": "workspace:*",
+		"@maat-tools/git-rules": "workspace:*",
 		"@maat-tools/contracts": "workspace:*",
 		"@maat-tools/core": "workspace:*",
 		"@maat-tools/coupling-rules": "workspace:*",

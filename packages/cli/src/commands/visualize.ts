@@ -97,7 +97,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			hasOutput = true;
 			const heading = `INSIGHTS (${results.length})`;
 			this.printer.section(heading);
-			
+
 			for (const result of results) {
 				this.printer.log(`  [${result.insightId}] ${result.message}`);
 			}

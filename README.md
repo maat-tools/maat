@@ -12,6 +12,8 @@ Maat checks architecture rules against facts collected from your repository. It 
 
 Maat is not a linter, an AI reviewer, or a diagram generator. It is a collector-based analysis tool: collectors extract facts from a repository, rules evaluate those facts, and the ledger records what was accepted.
 
+Read more in `ABOUT.md`.
+
 ## Why Maat exists
 
 Architecture rules often live where the compiler cannot see them: planning docs, ADRs, review comments, diagrams, and conversations.

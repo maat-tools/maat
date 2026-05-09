@@ -148,6 +148,7 @@ function isMaatConfig(value: unknown): value is MaatConfig {
 async function pathExists(filePath: string): Promise<boolean> {
 	try {
 		await access(filePath);
+
 		return true;
 	} catch {
 		return false;
@@ -158,5 +159,6 @@ function formatError(error: unknown): string {
 	if (error instanceof Error) {
 		return error.message;
 	}
+	
 	return String(error);
 }

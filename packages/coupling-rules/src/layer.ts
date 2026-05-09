@@ -1,11 +1,9 @@
 import { dirname, join, normalize } from 'node:path';
 import {
 	type Artifact,
-	type BrandedRuleBuilder,
 	defineRuleBuilder,
 	type FindingRuleOutput,
 	type Rule,
-	type RuleBuilder,
 } from '@maat-tools/contracts';
 import { IMPORTS_CAPABILITY, type Import } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';
@@ -139,6 +137,7 @@ class PureLayerRule implements Rule<'imports'> {
 
 			return { file: imp.file, specifier: imp.specifier };
 		}
+
 		return { value: String(artifact.data) };
 	}
 }
@@ -192,25 +191,14 @@ class LayerRule implements Rule<'imports'> {
 	}
 }
 
-export class LayerBuilder implements RuleBuilder {
-	public readonly target: string;
-	private role: Role | null = null;
-	private allowed: (string | RegExp)[] = [];
+class LayerBuilderState {
+	public role: Role | null = null;
+	public readonly allowed: (string | RegExp)[] = [];
 
-	public constructor(target: string) {
-		this.target = target;
-	}
-
-	public is(role: Role): this {
-		this.role = role;
-
-		return this;
-	}
-
-	public allows(...patterns: (string | RegExp)[]): this {
-		this.allowed.push(...patterns);
-
-		return this;
+	public constructor(public readonly target: string) {
+		if (!target) {
+			throw new Error('layer() requires a non-empty target');
+		}
 	}
 
 	public build(): Rule<'imports'> {
@@ -225,6 +213,37 @@ export class LayerBuilder implements RuleBuilder {
 	}
 }
 
-export function layer(target: string): LayerBuilder & BrandedRuleBuilder {
-	return defineRuleBuilder(new LayerBuilder(target));
+export interface LayerReadyBuilder {
+	build(): Rule<'imports'>;
+	allows(...patterns: (string | RegExp)[]): LayerReadyBuilder;
+}
+
+export interface LayerInitialBuilder {
+	is(role: Role): LayerReadyBuilder;
+	allows(...patterns: (string | RegExp)[]): LayerReadyBuilder;
+}
+
+function makeReadyBuilder(state: LayerBuilderState): LayerReadyBuilder {
+	return defineRuleBuilder({
+		build: () => state.build(),
+		allows(...patterns: (string | RegExp)[]): LayerReadyBuilder {
+			state.allowed.push(...patterns);
+			return makeReadyBuilder(state);
+		},
+	});
+}
+
+export function layer(target: string): LayerInitialBuilder {
+	const state = new LayerBuilderState(target);
+
+	return {
+		is(role: Role): LayerReadyBuilder {
+			state.role = role;
+			return makeReadyBuilder(state);
+		},
+		allows(...patterns: (string | RegExp)[]): LayerReadyBuilder {
+			state.allowed.push(...patterns);
+			return makeReadyBuilder(state);
+		},
+	};
 }

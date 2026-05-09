@@ -22,6 +22,7 @@ export abstract class MaatCommandBase {
 		if (this.insights.length === 0) {
 			return [];
 		}
+		
 		const allResults: InsightResult[] = [];
 		for (const insight of this.insights) {
 			allResults.push(...insight.analyze(visibleFindings));

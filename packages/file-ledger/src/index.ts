@@ -62,6 +62,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 
 	private async loadSnapshot(): Promise<LedgerSnapshot> {
 		const text = await readFile(this.snapshotPath, 'utf-8');
+
 		return text.trim().length === 0 ? EMPTY_SNAPSHOT : (JSON.parse(text) as LedgerSnapshot);
 	}
 
@@ -84,6 +85,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		if (!exists) {
 			return [];
 		}
+		
 		const text = await readFile(this.options.path, 'utf-8');
 
 		return text.trim().length === 0

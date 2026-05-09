@@ -11,7 +11,6 @@ import {
 	isRuleBuilder,
 	isRuleFactory,
 	isRuleSet,
-	RULE_BUILDER_BRAND,
 	RULE_FACTORY_BRAND,
 	RULE_SET_BRAND,
 } from './index';
@@ -145,16 +144,17 @@ describe('isInsight', () => {
 });
 
 describe('defineRuleBuilder', () => {
-	test('returns object with RULE_BUILDER_BRAND', () => {
-		const builder = defineRuleBuilder({
+	test('returns the same object (identity)', () => {
+		const original = {
 			build: () => ({
 				id: 'r',
 				needFacts: ['x' as never],
 				evaluate: () => [],
 				describeArtifact: () => ({}),
 			}),
-		});
-		expect(builder[RULE_BUILDER_BRAND]).toBe(true);
+		};
+		const result = defineRuleBuilder(original);
+		expect(result).toBe(original);
 	});
 
 	test('preserves all original methods on the builder', () => {
@@ -173,7 +173,7 @@ describe('defineRuleBuilder', () => {
 });
 
 describe('isRuleBuilder', () => {
-	test('true for branded builder', () => {
+	test('true for any object with build()', () => {
 		const builder = defineRuleBuilder({
 			build: () => ({
 				id: 'r',
@@ -185,12 +185,12 @@ describe('isRuleBuilder', () => {
 		expect(isRuleBuilder(builder)).toBe(true);
 	});
 
-	test('false for unbranded object with build()', () => {
+	test('true for plain object with build() — structural check', () => {
 		expect(
 			isRuleBuilder({
 				build: () => ({ id: 'r', needFacts: [], evaluate: () => [] }),
 			}),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	test('false for null', () => {

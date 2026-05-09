@@ -15,20 +15,39 @@ function makeImport(overrides: Partial<Import> = {}): Import {
 }
 
 describe('layer()', () => {
-	test('returns a branded RuleBuilder', () => {
+	test('initial builder is NOT a branded RuleBuilder (build() not yet available)', () => {
 		const builder = layer('@maat-tools/kernel');
-		expect(isRuleBuilder(builder)).toBe(true);
-		expect(builder[RULE_BUILDER_BRAND]).toBe(true);
+		expect(isRuleBuilder(builder)).toBe(false);
 	});
 
-	test('.is(Pure) returns the same builder instance', () => {
-		const builder = layer('@maat-tools/kernel');
-		expect(builder.is(Pure)).toBe(builder);
+	test('.is() returns a branded RuleBuilder', () => {
+		const ready = layer('@maat-tools/kernel').is(Pure);
+		expect(isRuleBuilder(ready)).toBe(true);
+		expect(ready[RULE_BUILDER_BRAND]).toBe(true);
 	});
 
-	test('.allows() returns the same builder instance', () => {
-		const builder = layer('@maat-tools/kernel');
-		expect(builder.allows('@maat-tools/contracts')).toBe(builder);
+	test('.allows() returns a branded RuleBuilder', () => {
+		const ready = layer('@maat-tools/kernel').allows('@maat-tools/contracts');
+		expect(isRuleBuilder(ready)).toBe(true);
+		expect(ready[RULE_BUILDER_BRAND]).toBe(true);
+	});
+
+	test('.is() returns a new object (not the initial builder)', () => {
+		const initial = layer('@maat-tools/kernel');
+		const ready = initial.is(Pure);
+		expect(ready).not.toBe(initial);
+	});
+
+	test('.allows() returns a new object each call but accumulates patterns', () => {
+		const rule = layer('@maat-tools/kernel')
+			.allows('@maat-tools/contracts')
+			.allows('@maat-tools/vocabulary')
+			.build();
+		expect(isRule(rule)).toBe(true);
+	});
+
+	test('throws when target is empty', () => {
+		expect(() => layer('')).toThrow('layer() requires a non-empty target');
 	});
 
 	test('.build() returns a valid Rule', () => {

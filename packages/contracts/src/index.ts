@@ -242,7 +242,7 @@ export function defineRuleSet<T>(factories: BrandedRuleFactory<T>[]): BrandedRul
 	};
 }
 
-export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T & { readonly [RULE_BUILDER_BRAND]: true } {
+export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T {
 	return Object.assign(builder, { [RULE_BUILDER_BRAND]: true as const });
 }
 
@@ -299,11 +299,10 @@ export function isRule(obj: unknown): obj is Rule {
 	);
 }
 
-export function isRuleBuilder(obj: unknown): obj is BrandedRuleBuilder {
+export function isRuleBuilder(obj: unknown): obj is RuleBuilder {
 	return (
 		typeof obj === 'object' &&
 		obj !== null &&
-		(obj as Record<symbol, unknown>)[RULE_BUILDER_BRAND] === true &&
 		typeof (obj as RuleBuilder).build === 'function'
 	);
 }

@@ -31,7 +31,7 @@ export type RuleEntry =
 	| (string & {})
 	| [string & {}, Record<string, unknown>]
 	| Rule
-	| BrandedRuleBuilder;
+	| RuleBuilder;
 
 export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>];
 
@@ -95,6 +95,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 			case FindingStatus.BASELINED: {
 				const days = options?.expiresInDays ?? 90;
 				const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
 				return { ...base, type, fingerprint: finding.fingerprint, expires_at };
 			}
 		}
@@ -161,6 +162,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		if (!existingState || existingState === FindingStatus.RESOLVED) {
 			return FindingStatus.OBSERVED;
 		}
+
 		return existingState;
 	}
 }

@@ -129,5 +129,6 @@ An axiom is not an automated check. It is a recorded decision or claim the team 
 ## Next steps
 
 - Read the [commands reference](/commands/) for every CLI option.
+- Read the [adoption guide](./adoption.md) for greenfield and brownfield workflows.
 - Read the [plugin guide](./plugins.md) when you want to write custom collectors or rules.
 - Read the [determinism guide](./determinism.md) before running third-party plugins in CI.

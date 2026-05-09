@@ -267,6 +267,19 @@
   content: '';
 }
 
+.maat-adoption-more {
+  margin-top: 16px;
+}
+
+.maat-adoption-more a {
+  color: var(--vp-c-brand-1);
+  font-weight: 700;
+}
+
+.maat-adoption-more a:hover {
+  color: var(--vp-c-brand-2);
+}
+
 .maat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

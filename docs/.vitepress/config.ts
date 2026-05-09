@@ -5,6 +5,7 @@ const guideAndPluginSidebar = [
     text: 'Guide',
     items: [
       { text: 'Getting started', link: '/guide/getting-started' },
+      { text: 'Greenfield and brownfield', link: '/guide/adoption' },
       { text: 'Determinism', link: '/guide/determinism' },
       { text: 'Plugin system', link: '/guide/plugins' },
     ],

@@ -50,7 +50,7 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Greenfield</p>
     <h3>Write the rules before the shortcuts settle in.</h3>
-    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. <code>maat check</code> can run locally and in CI.</p>
+    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. <code>maat check</code> fails the pull request before active findings become normal ledger state.</p>
     <ul>
       <li>Prevent accidental dependencies before they become precedent.</li>
       <li>Keep domain code independent from infrastructure and framework details.</li>
@@ -60,7 +60,7 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Brownfield</p>
     <h3>Start from what the codebase already taught you.</h3>
-    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, baseline existing findings, and keep fixed fingerprints from quietly regressing.</p>
+    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, baseline existing findings in dedicated ledger PRs, and keep fixed fingerprints from quietly regressing.</p>
     <ul>
       <li>Separate new violations from existing debt.</li>
       <li>Track accepted exceptions in the same repository history as the code.</li>
@@ -68,6 +68,10 @@ import { withBase } from 'vitepress'
     </ul>
   </section>
 </div>
+
+<p class="maat-adoption-more">
+  <a :href="withBase('/guide/adoption.html')">Read more about greenfield and brownfield workflows</a>
+</p>
 
 ## Design choices
 

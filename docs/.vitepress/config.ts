@@ -85,6 +85,14 @@ const guideAndPluginSidebar = [
           },
         ],
       },
+      {
+        text: 'Insights',
+        link: '/plugins/insights/',
+        collapsed: false,
+        items: [
+          { text: 'erosion', link: '/plugins/insights/erosion' },
+        ],
+      },
     ],
   },
 ]

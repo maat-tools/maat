@@ -155,7 +155,12 @@ class MaatCLI {
 
 	private async configureInsights(maatConfig: MaatConfig) {
 		for (const entry of maatConfig.insights ?? []) {
-			const [insightId, options] = resolveEntry(entry);
+			if (isInsight(entry)) {
+				this.insights.push(entry);
+				continue;
+			}
+
+			const [insightId, options] = resolveEntry(entry as PluginEntry);
 			const exported = (await import(insightId)).default;
 
 			if (isInsightSet(exported)) {

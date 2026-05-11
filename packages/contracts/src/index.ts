@@ -157,6 +157,7 @@ export interface RuleBuilder {
 export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
+	readonly usesLedger: boolean;
 	analyze(findings: Finding[]): InsightResult[];
 }
 

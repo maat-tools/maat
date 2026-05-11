@@ -6,6 +6,7 @@ import {
 	type FindingRecord,
 	FindingStatus,
 	generateFingerprint,
+	type Insight,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
 	type LedgerEvent,
@@ -33,7 +34,7 @@ export type RuleEntry =
 	| Rule
 	| RuleBuilder;
 
-export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>];
+export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>] | Insight;
 
 export type LedgerEntry =
 	| keyof LedgerBackendRegistry
@@ -45,7 +46,8 @@ export type MaatConfig = {
 	check?: { strict: boolean };
 	collectors: CollectorEntry[];
 	rules: RuleEntry[];
-} & ({ ledger: LedgerEntry; insights?: InsightEntry[] } | { ledger?: never; insights?: never });
+	insights?: InsightEntry[];
+} & ({ ledger: LedgerEntry } | { ledger?: never });
 
 export function defineConfig(config: MaatConfig): MaatConfig {
 	return config;

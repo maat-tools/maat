@@ -80,7 +80,7 @@ export class Printer {
 		if (this.silent) {
 			return;
 		}
-		console.log(`${chalk.magenta(`[Insight: ${result.insightId}]`)} ${result.message}`, result.data);
+		console.log(`  ${chalk.magenta(`[${result.insightId}]`)} ${result.message}`);
 	}
 
 	public json(data: unknown): void {

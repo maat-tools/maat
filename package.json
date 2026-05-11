@@ -21,7 +21,7 @@
 		"packages/*"
 	],
 	"scripts": {
-		"build": "for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules git-rules file-ledger cli; do bun run --cwd packages/$pkg build; done",
+		"build": "for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
 		"docs:dev": "vitepress dev docs",
 		"docs:build": "vitepress build docs",
 		"docs:preview": "vitepress preview docs",

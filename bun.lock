@@ -28,6 +28,7 @@
         "@maat-tools/coupling-rules": "workspace:*",
         "@maat-tools/file-ledger": "workspace:*",
         "@maat-tools/git-rules": "workspace:*",
+        "@maat-tools/insights": "workspace:*",
         "@maat-tools/kernel": "workspace:*",
         "chalk": "^5.6.2",
         "commander": "14.0.3",
@@ -129,6 +130,17 @@
         "@maat-tools/contracts": "workspace:*",
         "@types/micromatch": "^4.0.10",
         "micromatch": "^4.0.8",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "2.4.14",
+        "@types/bun": "1.3.13",
+      },
+    },
+    "packages/insights": {
+      "name": "@maat-tools/insights",
+      "version": "0.1.0",
+      "dependencies": {
+        "@maat-tools/contracts": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.14",
@@ -334,6 +346,8 @@
     "@maat-tools/file-ledger": ["@maat-tools/file-ledger@workspace:packages/file-ledger"],
 
     "@maat-tools/git-rules": ["@maat-tools/git-rules@workspace:packages/git-rules"],
+
+    "@maat-tools/insights": ["@maat-tools/insights@workspace:packages/insights"],
 
     "@maat-tools/kernel": ["@maat-tools/kernel@workspace:packages/kernel"],
 

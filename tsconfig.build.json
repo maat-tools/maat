@@ -22,6 +22,7 @@
 			"@maat-tools/connascence-rules": ["packages/connascence-rules/dist/index.d.ts"],
 			"@maat-tools/git-rules": ["packages/git-rules/dist/index.d.ts"],
 			"@maat-tools/file-ledger": ["packages/file-ledger/dist/index.d.ts"],
+			"@maat-tools/insights": ["packages/insights/dist/index.d.ts"],
 			"@maat-tools/cli": ["packages/cli/dist/index.d.ts"]
 		}
 	},

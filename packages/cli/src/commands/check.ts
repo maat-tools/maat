@@ -160,7 +160,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	}
 
 	private printInsights(findings: Finding[], printer: Printer): void {
-		for (const result of this.runInsightsIfEnabled(findings)) {
+		const results = this.runInsightsIfEnabled(findings);
+		if (results.length === 0) return;
+		printer.section(`INSIGHTS (${results.length})`);
+		for (const result of results) {
 			printer.insight(result);
 		}
 	}

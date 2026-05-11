@@ -1,11 +1,13 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
 import { TSCollector } from '@maat-tools/collector-ts';
+
 import type { Finding } from '@maat-tools/contracts';
 import { layer, Pure } from '@maat-tools/coupling-rules';
 import { Kernel } from '@maat-tools/kernel';
 
-const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/coupling-rules/tsconfig.json');
+const FIXTURE_DIR = resolve(import.meta.dir, '../fixtures/coupling-rules');
+const FIXTURE_TSCONFIG = resolve(FIXTURE_DIR, 'tsconfig.json');
 
 const RULES = [
 	// pkg-contracts may use node built-ins
@@ -21,12 +23,18 @@ const RULES = [
 let findings: Finding[];
 
 beforeAll(async () => {
-	const kernel = new Kernel();
-	kernel.registerCollector(new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG }));
-	for (const rule of RULES) {
-		kernel.registerRule(rule);
+	const originalCwd = process.cwd();
+	process.chdir(FIXTURE_DIR);
+	try {
+		const kernel = new Kernel();
+		kernel.registerCollector(new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG }));
+		for (const rule of RULES) {
+			kernel.registerRule(rule);
+		}
+		({ findings } = await kernel.run());
+	} finally {
+		process.chdir(originalCwd);
 	}
-	({ findings } = await kernel.run());
 });
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

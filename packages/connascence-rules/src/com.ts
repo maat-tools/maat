@@ -64,7 +64,11 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 				continue;
 			}
 
-			const { value, kind } = occurrences[0]!;
+			const first = occurrences.at(0);
+			if (!first) {
+				continue;
+			}
+			const { value, kind } = first;
 
 			findings.push({
 				ruleId: this.id,

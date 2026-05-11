@@ -10,6 +10,10 @@ export type KernelResult = {
 	findings: Finding[];
 };
 
+export type KernelProgressEvent =
+	| { type: 'collector:start'; collectorId: string; index: number; total: number }
+	| { type: 'collector:done'; collectorId: string; index: number; total: number };
+
 export class Kernel {
 	private collectors: StoredCollector[] = [];
 	private rules: Rule[] = [];
@@ -48,8 +52,9 @@ export class Kernel {
 		return this.rules.find((r) => r.id === id);
 	}
 
-	public async run(): Promise<KernelResult> {
+	public async run(options?: { onProgress?: (event: KernelProgressEvent) => void }): Promise<KernelResult> {
 		const facts: Partial<FactRegistry> = {};
+		const onProgress = options?.onProgress;
 
 		if (this.collectors.length === 0) {
 			console.warn('No collectors registered. No facts will be collected.');
@@ -58,8 +63,10 @@ export class Kernel {
 			console.warn('No rules registered. No findings will be produced.');
 		}
 
-		for (const collector of this.collectors) {
+		for (const [i, collector] of this.collectors.entries()) {
+			onProgress?.({ type: 'collector:start', collectorId: collector.id, index: i, total: this.collectors.length });
 			const collected = await collector.collect();
+			onProgress?.({ type: 'collector:done', collectorId: collector.id, index: i, total: this.collectors.length });
 			for (const [key, value] of Object.entries(collected)) {
 				const existing = (facts as Record<string, unknown>)[key];
 				if (Array.isArray(existing) && Array.isArray(value)) {

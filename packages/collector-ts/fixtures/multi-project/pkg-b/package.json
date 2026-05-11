@@ -1,1 +1,4 @@
-{ "name": "@fixture/multi-b", "type": "module" }
+{
+	"name": "@fixture/multi-b",
+	"type": "module"
+}

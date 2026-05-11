@@ -44,7 +44,6 @@ function toProjectRelativePath(projectRoot: string, filePath: string): string {
 	return relative(projectRoot, filePath).replace(/\\/g, '/');
 }
 
-
 function resolvePackageName(filePath: string): string | null {
 	let dir = dirname(filePath);
 
@@ -155,7 +154,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 				results.push(resolve(pattern));
 			}
 		}
-		
+
 		return results;
 	}
 
@@ -177,11 +176,15 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 
 			for (const sourceFile of project.getSourceFiles()) {
 				const absoluteFile = sourceFile.getFilePath();
-				if (seenFiles.has(absoluteFile)) continue;
+				if (seenFiles.has(absoluteFile)) {
+					continue;
+				}
 				seenFiles.add(absoluteFile);
 
 				const file = toProjectRelativePath(projectRoot, absoluteFile);
-				if (micromatch.isMatch(file, excludePatterns)) continue;
+				if (micromatch.isMatch(file, excludePatterns)) {
+					continue;
+				}
 
 				const packageName = resolvePackageName(absoluteFile);
 				imports.push(...collectImports(sourceFile, file, packageName));
@@ -194,6 +197,10 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 }
 
 declare module '@maat-tools/contracts' {
+	interface FactRegistry {
+		imports: Import[];
+		constants: Constant[];
+	}
 	interface CollectorRegistry {
 		'@maat-tools/collector-ts': TSInput;
 	}

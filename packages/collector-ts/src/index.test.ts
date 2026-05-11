@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isAbsolute, resolve } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
 import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat-tools/vocabulary';
 import { TSCollector } from './index';
 
@@ -41,7 +41,9 @@ describe('TSCollector.collect() — imports fact', () => {
 
 		const files = [...imports.map((imp) => imp.file), ...constants.map((constant) => constant.location.file)];
 
-		expect(files).toContain('packages/collector-ts/fixtures/sample-project/src/index.ts');
+		expect(files).toContain(
+			relative(process.cwd(), resolve(import.meta.dir, '../fixtures/sample-project/src/index.ts')).replace(/\\/g, '/'),
+		);
 		for (const file of files) {
 			expect(isAbsolute(file)).toBe(false);
 			expect(file).not.toContain('\\');
@@ -105,8 +107,12 @@ describe('TSCollector — array of tsConfigFilePath', () => {
 		const collector = new TSCollector({ tsConfigFilePath: [MULTI_PKG_A_TSCONFIG, MULTI_PKG_B_TSCONFIG] });
 		const { constants } = await collector.collect();
 		const files = constants.map((c) => c.location.file);
-		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-a/src/index.ts');
-		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-b/src/index.ts');
+		expect(files).toContain(
+			relative(process.cwd(), resolve(MULTI_PROJECT_ROOT, 'pkg-a/src/index.ts')).replace(/\\/g, '/'),
+		);
+		expect(files).toContain(
+			relative(process.cwd(), resolve(MULTI_PROJECT_ROOT, 'pkg-b/src/index.ts')).replace(/\\/g, '/'),
+		);
 		for (const file of files) {
 			expect(isAbsolute(file)).toBe(false);
 		}
@@ -126,8 +132,12 @@ describe('TSCollector — glob in tsConfigFilePath', () => {
 		const collector = new TSCollector({ tsConfigFilePath: `${MULTI_PROJECT_ROOT}/*/tsconfig.json` });
 		const { constants } = await collector.collect();
 		const files = constants.map((c) => c.location.file);
-		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-a/src/index.ts');
-		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-b/src/index.ts');
+		expect(files).toContain(
+			relative(process.cwd(), resolve(MULTI_PROJECT_ROOT, 'pkg-a/src/index.ts')).replace(/\\/g, '/'),
+		);
+		expect(files).toContain(
+			relative(process.cwd(), resolve(MULTI_PROJECT_ROOT, 'pkg-b/src/index.ts')).replace(/\\/g, '/'),
+		);
 	});
 
 	test('glob deduplicates overlapping files', async () => {
@@ -162,7 +172,12 @@ describe('TSCollector.collect() — cross-package specifier normalization', () =
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
 		const { imports } = await collector.collect();
 		const imp = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
-		expect(imp?.file).toBe('packages/collector-ts/fixtures/cross-package/pkg-a/src/index.ts');
+		expect(imp?.file).toBe(
+			relative(process.cwd(), resolve(import.meta.dir, '../fixtures/cross-package/pkg-a/src/index.ts')).replace(
+				/\\/g,
+				'/',
+			),
+		);
 		expect(imp?.location.line).toBeGreaterThan(0);
 	});
 

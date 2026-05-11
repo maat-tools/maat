@@ -1,5 +1,7 @@
 import { type Finding, FindingStatus, type LedgerBackend, type LedgerSnapshot } from '@maat-tools/contracts';
+import type { KernelProgressEvent } from '@maat-tools/kernel';
 import type { Printer } from '../printer';
+import { createSpinner } from '../spinner';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
@@ -32,7 +34,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		const { findings: currentFindings } = await this.kernel.run();
+		const spinner = options.silent ? null : createSpinner();
+		const { findings: currentFindings } = await this.kernel.run({
+			onProgress: (event: KernelProgressEvent) => {
+				if (event.type === 'collector:start') {
+					spinner?.update(`Collecting ${event.collectorId} (${event.index + 1}/${event.total})`);
+				}
+			},
+		});
+		spinner?.stop();
 		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 
 		if (!this.isLedgerProvided()) {

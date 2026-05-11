@@ -18,16 +18,29 @@ export abstract class MaatCommandBase {
 		return this.ledger !== null;
 	}
 
-	protected runInsightsIfEnabled(visibleFindings: Finding[]): InsightResult[] {
+	protected async runInsightsIfEnabled(visibleFindings: Finding[]): Promise<InsightResult[]> {
 		if (this.insights.length === 0) {
 			return [];
 		}
 
-		const allResults: InsightResult[] = [];
-		for (const insight of this.insights) {
-			allResults.push(...insight.analyze(visibleFindings));
-		}
+		const resultsByInsight = await Promise.all(
+			this.insights.map((insight) => insight.analyze(this.findingsForInsight(visibleFindings, insight))),
+		);
 
-		return allResults;
+		return resultsByInsight.flat();
+	}
+
+	private findingsForInsight(findings: Finding[], insight: Insight): Finding[] {
+		return findings.filter((finding) =>
+			insight.needRules.some((ruleId) => this.findingMatchesNeededRule(finding.ruleId, ruleId)),
+		);
+	}
+
+	private findingMatchesNeededRule(findingRuleId: string, neededRuleId: string): boolean {
+		return (
+			findingRuleId === neededRuleId ||
+			findingRuleId.startsWith(`${neededRuleId}:`) ||
+			findingRuleId.startsWith(`${neededRuleId}@`)
+		);
 	}
 }

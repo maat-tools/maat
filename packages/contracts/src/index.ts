@@ -158,7 +158,7 @@ export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
 	readonly usesLedger: boolean;
-	analyze(findings: Finding[]): InsightResult[];
+	analyze(findings: Finding[]): InsightResult[] | Promise<InsightResult[]>;
 }
 
 export interface LedgerBackend {

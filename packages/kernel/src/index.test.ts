@@ -5,6 +5,7 @@ import { Kernel } from './index';
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		testFacts: string[];
+		otherFacts: string[];
 	}
 }
 
@@ -29,6 +30,21 @@ function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
 			})),
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	};
+}
+
+function deferred<T>() {
+	let resolve!: (value: T | PromiseLike<T>) => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<T>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+
+	return { promise, resolve, reject };
+}
+
+function timeout(ms: number): Promise<never> {
+	return new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms));
 }
 
 describe('Kernel.run', () => {
@@ -59,6 +75,61 @@ describe('Kernel.run', () => {
 
 		const { findings } = await kernel.run();
 		expect(findings).toHaveLength(2);
+	});
+
+	test('rule receives only declared facts', async () => {
+		const seenKeys: string[][] = [];
+		const otherCollector: Collector<'otherFacts'> = {
+			id: 'other-collector',
+			provideFacts: ['otherFacts'] as const,
+			collect: async () => ({ otherFacts: ['hidden'] }),
+		};
+		const inspectingRule: Rule<'testFacts'> = {
+			id: 'inspecting-rule@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: (facts) => {
+				seenKeys.push(Object.keys(facts).sort());
+				return [];
+			},
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['visible']))
+			.registerCollector(otherCollector)
+			.registerRule(inspectingRule);
+
+		await kernel.run();
+		expect(seenKeys).toEqual([['testFacts']]);
+	});
+
+	test('collectors run concurrently and merge facts in registration order', async () => {
+		const firstCollectorCanFinish = deferred<void>();
+		const secondCollectorStarted = deferred<void>();
+		const firstCollector: Collector<'testFacts'> = {
+			id: 'first-collector',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => {
+				await secondCollectorStarted.promise;
+				await firstCollectorCanFinish.promise;
+				return { testFacts: ['first'] };
+			},
+		};
+		const secondCollector: Collector<'testFacts'> = {
+			id: 'second-collector',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => {
+				secondCollectorStarted.resolve();
+				firstCollectorCanFinish.resolve();
+				return { testFacts: ['second'] };
+			},
+		};
+		const kernel = new Kernel()
+			.registerCollector(firstCollector)
+			.registerCollector(secondCollector)
+			.registerRule(makeRule());
+
+		const { findings } = await Promise.race([kernel.run(), timeout(100)]);
+		expect(findings.map((finding) => finding.message)).toEqual(['finding: first', 'finding: second']);
 	});
 
 	test('same input across two runs produces identical fingerprints', async () => {

@@ -62,7 +62,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 				out.axioms = allAxioms;
 			}
 			if (insights && this.insights.length > 0) {
-				out.insights = this.insights.flatMap((i) => i.analyze(allFindings.map(toFinding)));
+				out.insights = await this.runInsightsIfEnabled(allFindings.map(toFinding));
 			}
 			this.printer.json(out);
 			return;
@@ -93,7 +93,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (insights) {
-			const results = this.runInsightsIfEnabled(allFindings.map(toFinding));
+			const results = await this.runInsightsIfEnabled(allFindings.map(toFinding));
 			if (results.length > 0) {
 				hasOutput = true;
 				const heading = `INSIGHTS (${results.length})`;

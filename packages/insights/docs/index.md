@@ -12,7 +12,7 @@ During `maat check`, insights receive all current findings from that run, includ
 
 | Insight | Purpose |
 |---|---|
-| [`erosion`](./erosion.md) | Identify hot architectural debt: high-churn packages with boundary violations |
+| [`erosion`](./erosion.md) | Identify hot architectural debt: high-churn boundaries with boundary violations |
 
 ## Usage
 
@@ -34,8 +34,6 @@ import decayIntersection from '@maat-tools/insights/erosion';
 export default defineConfig({
 	collectors: [ /* ... */ ],
 	rules: [ /* ... */ ],
-	insights: [
-		['@maat-tools/insights/erosion', { packageDir: 'packages/', packagePrefix: '@acme/' }],
-	],
+	insights: ['@maat-tools/insights/erosion'],
 });
 ```

@@ -63,10 +63,17 @@ export class Kernel {
 			console.warn('No rules registered. No findings will be produced.');
 		}
 
-		for (const [i, collector] of this.collectors.entries()) {
-			onProgress?.({ type: 'collector:start', collectorId: collector.id, index: i, total: this.collectors.length });
-			const collected = await collector.collect();
-			onProgress?.({ type: 'collector:done', collectorId: collector.id, index: i, total: this.collectors.length });
+		const collectedResults = await Promise.all(
+			this.collectors.map(async (collector, i) => {
+				onProgress?.({ type: 'collector:start', collectorId: collector.id, index: i, total: this.collectors.length });
+				const collected = await collector.collect();
+				onProgress?.({ type: 'collector:done', collectorId: collector.id, index: i, total: this.collectors.length });
+
+				return collected;
+			}),
+		);
+
+		for (const collected of collectedResults) {
 			for (const [key, value] of Object.entries(collected)) {
 				const existing = (facts as Record<string, unknown>)[key];
 				if (Array.isArray(existing) && Array.isArray(value)) {
@@ -77,23 +84,24 @@ export class Kernel {
 			}
 		}
 
-		const findings: Finding[] = [];
+		const findingsByRule = await Promise.all(
+			this.rules.map(async (rule) => {
+				const hasFacts = rule.needFacts.every((key) => key in facts);
+				if (!hasFacts) {
+					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
+					return [];
+				}
+				await Promise.resolve();
+				const ruleFacts = Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]]));
+				const fromRule = rule.evaluate(ruleFacts as unknown as FactRegistry);
 
-		for (const rule of this.rules) {
-			const hasFacts = rule.needFacts.every((key) => key in facts);
-			if (!hasFacts) {
-				console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
-				continue;
-			}
-			const fromRule = rule.evaluate(facts as FactRegistry);
-			for (const { ruleIdentifier, ...rest } of fromRule) {
-				findings.push({
+				return fromRule.map(({ ruleIdentifier, ...rest }) => ({
 					...rest,
 					fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
-				});
-			}
-		}
+				}));
+			}),
+		);
 
-		return { findings };
+		return { findings: findingsByRule.flat() };
 	}
 }

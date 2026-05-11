@@ -49,6 +49,20 @@ const NEW_RULE_OUTPUT: FindingRuleOutput = {
 
 const NEW_FINGERPRINT = generateFingerprint(NEW_RULE_OUTPUT.ruleId, NEW_RULE_OUTPUT.ruleIdentifier);
 
+const OTHER_RULE_OUTPUT: FindingRuleOutput = {
+	ruleId: 'other@v1',
+	ruleIdentifier: { id: 'other' },
+	message: 'other finding',
+	artifacts: [],
+};
+
+const FAMILY_RULE_OUTPUT: FindingRuleOutput = {
+	ruleId: 'family:target@v1',
+	ruleIdentifier: { id: 'family-target' },
+	message: 'family finding',
+	artifacts: [],
+};
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function makeKernel(findings: FindingRuleOutput[] = []) {
@@ -74,6 +88,26 @@ function makeCheck(
 
 function makeVisualize(ledger: FilePathLedgerBackend | null, insights: Insight[] = [], silent = true) {
 	return new Visualize(new Command(), BASE_CONFIG, makeKernel(), insights, new Printer({ silent }), ledger);
+}
+
+function deferred<T>() {
+	let resolve!: (value: T | PromiseLike<T>) => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<T>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+
+	return { promise, resolve, reject };
+}
+
+function timeout(ms: number): Promise<never> {
+	return new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms));
+}
+
+const ANSI_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+function stripAnsi(str: string): string {
+	return str.replace(ANSI_RE, '');
 }
 
 // ── setup ────────────────────────────────────────────────────────────────────
@@ -110,12 +144,12 @@ describe('check without ledger', () => {
 
 		await makeCheck([], null, BASE_CONFIG, false).action({});
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('RUN CONTEXT');
 		expect(output).toContain('Rules run on current workspace facts collected during this check.');
 		expect(output).toContain('Ledger: not configured; no baseline, axiom, or regression filtering is applied.');
 		expect(output).toContain(
-			'Insights run on all current findings from this run, including findings hidden by baselines or active axiom exceptions.',
+			'Insights run on requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions.',
 		);
 	});
 
@@ -166,7 +200,7 @@ describe('check without ledger', () => {
 
 		await makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [mockInsight()]).action({ show: 'findings' });
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('FINDINGS (1)');
 		expect(output).not.toContain('RUN CONTEXT');
 		expect(output).not.toContain('[test-insight]');
@@ -178,11 +212,86 @@ describe('check without ledger', () => {
 
 		await makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [mockInsight()]).action({ show: 'insights' });
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('INSIGHTS (1)');
 		expect(output).toContain('[test-insight] test insight');
 		expect(output).not.toContain('FINDINGS (1)');
 		expect(output).not.toContain('RUN CONTEXT');
+	});
+
+	test('insight receives only findings matching needRules', async () => {
+		const analyzed: Finding[][] = [];
+		const insight: Insight = {
+			id: 'test-insight',
+			needRules: ['test@v1'],
+			usesLedger: false,
+			analyze: (findings) => {
+				analyzed.push(findings);
+				return [];
+			},
+		};
+
+		await makeCheck([RULE_OUTPUT, OTHER_RULE_OUTPUT], null, BASE_CONFIG, true, [insight]).action({});
+
+		expect(analyzed).toHaveLength(1);
+		expect(analyzed[0]?.map((finding) => finding.ruleId)).toEqual(['test@v1']);
+	});
+
+	test('insight needRules can match rule families', async () => {
+		const analyzed: Finding[][] = [];
+		const insight: Insight = {
+			id: 'family-insight',
+			needRules: ['family'],
+			usesLedger: false,
+			analyze: (findings) => {
+				analyzed.push(findings);
+				return [];
+			},
+		};
+
+		await makeCheck([FAMILY_RULE_OUTPUT, OTHER_RULE_OUTPUT], null, BASE_CONFIG, true, [insight]).action({});
+
+		expect(analyzed).toHaveLength(1);
+		expect(analyzed[0]?.map((finding) => finding.ruleId)).toEqual(['family:target@v1']);
+	});
+
+	test('insights run concurrently and results keep registration order', async () => {
+		const firstInsightCanFinish = deferred<void>();
+		const secondInsightStarted = deferred<void>();
+		const firstInsight: Insight = {
+			id: 'first-insight',
+			needRules: ['test@v1'],
+			usesLedger: false,
+			analyze: async () => {
+				await secondInsightStarted.promise;
+				await firstInsightCanFinish.promise;
+				return [{ insightId: 'first-insight', message: 'first insight', data: {} }];
+			},
+		};
+		const secondInsight: Insight = {
+			id: 'second-insight',
+			needRules: ['test@v1'],
+			usesLedger: false,
+			analyze: async () => {
+				secondInsightStarted.resolve();
+				firstInsightCanFinish.resolve();
+				return [{ insightId: 'second-insight', message: 'second insight', data: {} }];
+			},
+		};
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+
+		await Promise.race([
+			makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [firstInsight, secondInsight]).action({
+				show: 'insights',
+			}),
+			timeout(100),
+		]);
+
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
+		expect(output.indexOf('[first-insight] first insight')).toBeLessThan(
+			output.indexOf('[second-insight] second insight'),
+		);
 	});
 
 	test('invalid --show exits 1', async () => {
@@ -201,13 +310,13 @@ describe('check with ledger', () => {
 
 		await makeCheck([], ledger, BASE_CONFIG, false).action({});
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('Ledger: configured; this run reads state only.');
 		expect(output).toContain(
 			'Findings shown: active current findings; non-expired baselines and active axiom exceptions are hidden.',
 		);
 		expect(output).toContain(
-			'Insights run on all current findings from this run, including findings hidden by baselines or active axiom exceptions.',
+			'Insights run on requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions.',
 		);
 	});
 
@@ -218,7 +327,7 @@ describe('check with ledger', () => {
 
 		await makeCheck([], ledger, BASE_CONFIG, false).action({ ledger: true });
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('Ledger: configured; this run reads state and writes observed/resolved events.');
 	});
 
@@ -231,6 +340,7 @@ describe('check with ledger', () => {
 		const insight: Insight = {
 			id: 'test-insight',
 			needRules: ['test@v1'],
+			usesLedger: false,
 			analyze: (findings) => {
 				analyzed.push(findings);
 				return [];
@@ -251,7 +361,7 @@ describe('check with ledger', () => {
 
 		await makeCheck([RULE_OUTPUT], ledger, BASE_CONFIG, false, [mockInsight()]).action({ show: 'insights' });
 
-		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain('INSIGHTS (1)');
 		expect(output).not.toContain('FINDINGS (1)');
 		expect(output).not.toContain('finding(s) detected');
@@ -265,14 +375,15 @@ describe('check with ledger', () => {
 		const insight: Insight = {
 			id: 'test-insight',
 			needRules: ['test@v1'],
+			usesLedger: false,
 			analyze: () => [],
 		};
 
 		await makeCheck([], ledger, BASE_CONFIG, false, [insight]).action({});
 
-		const output = warnSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		const output = warnSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
 		expect(output).toContain(
-			'Insights analyze all current findings from this run, including findings hidden by baselines or active axiom exceptions.',
+			'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions.',
 		);
 	});
 
@@ -580,7 +691,9 @@ describe('visualize', () => {
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 		const analyzeSpy = mockInsight().analyze;
 
-		await makeVisualize(ledger, [{ id: 'test-insight', needRules: ['test@v1'], analyze: analyzeSpy }]).action({});
+		await makeVisualize(ledger, [
+			{ id: 'test-insight', needRules: ['test@v1'], usesLedger: false, analyze: analyzeSpy },
+		]).action({});
 
 		expect(analyzeSpy).not.toHaveBeenCalled();
 	});
@@ -599,12 +712,34 @@ describe('visualize', () => {
 			data: { findingCount: 1 },
 		});
 	});
+
+	test('json insights receive only findings matching needRules', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT, OTHER_RULE_OUTPUT], ledger).action({ ledger: true });
+		const insight = mockInsight();
+		const jsonSpy = spyOn(Printer.prototype, 'json');
+
+		await makeVisualize(ledger, [insight]).action({ insights: true, json: true });
+
+		expect(jsonSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				insights: [
+					{
+						insightId: 'test-insight',
+						message: 'test insight',
+						data: { findingCount: 1 },
+					},
+				],
+			}),
+		);
+	});
 });
 
 function mockInsight(): Insight {
 	return {
 		id: 'test-insight',
 		needRules: ['test@v1'],
+		usesLedger: false,
 		analyze: spyOn(
 			{
 				analyze: (findings: Finding[]) => [

@@ -59,7 +59,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				printer.findings(currentFindings, (id) => this.kernel.getRuleById(id));
 			}
 			if (displayMode === 'all' || displayMode === 'insights') {
-				this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
 			}
 			if (this.config.check?.strict && currentFindings.length > 0) {
 				process.exit(1);
@@ -89,7 +89,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
 		}
 		if (displayMode === 'all' || displayMode === 'insights') {
-			this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+			await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
 		}
 		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
 	}
@@ -219,18 +219,22 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			'Rules run on current workspace facts collected during this check.',
 			`Ledger: ${ledgerScope}.`,
 			`Findings shown: ${findingsScope}.`,
-			'Insights run on all current findings from this run, including findings hidden by baselines or active axiom exceptions.',
+			'Insights run on requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions.',
 		]);
 	}
 
-	private printInsights(findings: Finding[], printer: Printer, options: { warnAboutScope: boolean }): void {
+	private async printInsights(
+		findings: Finding[],
+		printer: Printer,
+		options: { warnAboutScope: boolean },
+	): Promise<void> {
 		if (options.warnAboutScope && this.insights.length > 0) {
 			printer.warn(
-				'Insights analyze all current findings from this run, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.',
+				'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.',
 			);
 		}
 
-		const results = this.runInsightsIfEnabled(findings);
+		const results = await this.runInsightsIfEnabled(findings);
 		if (results.length === 0) {
 			return;
 		}

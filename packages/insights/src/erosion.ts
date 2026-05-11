@@ -7,39 +7,42 @@ declare module '@maat-tools/contracts' {
 }
 
 export type ErosionOptions = {
-	packageDir?: string;
-	packagePrefix?: string;
+	readonly [key: string]: never;
 };
 
 type ChurnEntry = { path: string; count: number };
-type PackageChurn = { files: ChurnEntry[]; total: number };
-type ViolationEntry = { ruleId: string; fingerprint: string; message: string; file?: string; specifier?: string };
-type ErodingPackage = {
-	package: string;
-	churn: PackageChurn;
+type BoundaryChurn = { files: ChurnEntry[]; total: number };
+type ViolationEntry = {
+	ruleId: string;
+	fingerprint: string;
+	message: string;
+	file?: string;
+	packageName?: string;
+	specifier?: string;
+};
+type ViolatingBoundary = {
+	boundary: string;
+	violations: ViolationEntry[];
+};
+type ErodingBoundary = {
+	boundary: string;
+	churn: BoundaryChurn;
 	violations: ViolationEntry[];
 };
 
 export class ErosionInsight implements Insight {
 	public readonly id = 'erosion@v1';
 	public readonly needRules: readonly string[] = ['git/churn@v1', 'coupling/pure-imports', 'coupling/layer-imports'];
-
-	private readonly packageDir: string;
-	private readonly packagePrefix: string;
-
-	public constructor(options: ErosionOptions = {}) {
-		this.packageDir = options.packageDir ?? 'packages/';
-		this.packagePrefix = options.packagePrefix ?? '';
-	}
+	public readonly usesLedger = false;
 
 	public analyze(findings: Finding[]): InsightResult[] {
-		const churnByPackage = this.buildChurnMap(findings);
-		const violationsByPackage = this.collectViolatingPackages(findings);
+		const churnEntries = this.collectChurn(findings);
+		const violatingBoundaries = this.collectViolatingBoundaries(findings);
 
-		const eroding = [...churnByPackage.entries()]
-			.flatMap(([pkg, churn]): ErodingPackage[] => {
-				const violations = violationsByPackage.get(pkg);
-				return violations === undefined ? [] : [{ package: pkg, churn, violations }];
+		const eroding = [...violatingBoundaries.values()]
+			.flatMap(({ boundary, violations }): ErodingBoundary[] => {
+				const churn = this.churnForBoundary(boundary, violations, churnEntries);
+				return churn.total === 0 ? [] : [{ boundary, churn, violations }];
 			})
 			.sort((a, b) => b.churn.total - a.churn.total);
 
@@ -47,13 +50,14 @@ export class ErosionInsight implements Insight {
 			return [];
 		}
 
-		const summary = eroding.map((pkg) => this.formatErodingPackage(pkg)).join('; ');
+		const summary = eroding.map((boundary) => this.formatErodingBoundary(boundary)).join('; ');
+
 		return [
 			{
 				insightId: this.id,
-				message: `hot architectural debt in ${eroding.length} package(s): ${summary}`,
-				data: eroding.map(({ package: pkg, churn, violations }) => ({
-					package: pkg,
+				message: `hot architectural debt in ${eroding.length} boundary(s): ${summary}`,
+				data: eroding.map(({ boundary, churn, violations }) => ({
+					boundary,
 					churnTotal: churn.total,
 					files: churn.files,
 					violationCount: violations.length,
@@ -63,97 +67,148 @@ export class ErosionInsight implements Insight {
 		];
 	}
 
-	private buildChurnMap(findings: Finding[]): Map<string, PackageChurn> {
-		const churnByPackage = new Map<string, PackageChurn>();
+	private collectChurn(findings: Finding[]): ChurnEntry[] {
+		const entries: ChurnEntry[] = [];
 
 		for (const f of findings) {
 			if (f.ruleId !== 'git/churn@v1') {
 				continue;
 			}
+
 			for (const a of f.artifacts) {
 				if (a.kind !== 'git-churn') {
 					continue;
 				}
 				const d = a.data as ChurnEntry;
-				const pkg = this.fileToPackage(d.path);
-				if (!pkg) {
-					continue;
+				if (typeof d.path === 'string' && typeof d.count === 'number') {
+					entries.push(d);
 				}
-				const entry = churnByPackage.get(pkg) ?? { files: [], total: 0 };
-				entry.files.push(d);
-				entry.total += d.count;
-				churnByPackage.set(pkg, entry);
 			}
 		}
 
-		return churnByPackage;
+		return entries;
 	}
 
-	private collectViolatingPackages(findings: Finding[]): Map<string, ViolationEntry[]> {
+	private collectViolatingBoundaries(findings: Finding[]): Map<string, ViolatingBoundary> {
 		const violating = new Map<string, ViolationEntry[]>();
 		for (const f of findings) {
-			const pkg = ErosionInsight.packageFromCouplingRuleId(f.ruleId);
-			if (!pkg) {
+			const boundary = this.boundaryFromCouplingRuleId(f.ruleId);
+			if (!boundary) {
 				continue;
 			}
 
-			const entries = violating.get(pkg) ?? [];
+			const entries = violating.get(boundary) ?? [];
 			entries.push(this.violationFromFinding(f));
-			violating.set(pkg, entries);
+			violating.set(boundary, entries);
 		}
-		return violating;
+
+		return new Map([...violating].map(([boundary, violations]) => [boundary, { boundary, violations }]));
 	}
 
 	private violationFromFinding(finding: Finding): ViolationEntry {
 		const importArtifact = finding.artifacts.find((artifact) => artifact.kind === 'import');
-		const data = importArtifact?.data as { file?: unknown; specifier?: unknown } | undefined;
+		const data = importArtifact?.data as { file?: unknown; packageName?: unknown; specifier?: unknown } | undefined;
 
 		return {
 			ruleId: finding.ruleId,
 			fingerprint: finding.fingerprint,
 			message: finding.message,
 			file: typeof data?.file === 'string' ? data.file : undefined,
+			packageName: typeof data?.packageName === 'string' ? data.packageName : undefined,
 			specifier: typeof data?.specifier === 'string' ? data.specifier : undefined,
 		};
 	}
 
-	private formatErodingPackage({ package: pkg, churn, violations }: ErodingPackage): string {
+	private churnForBoundary(boundary: string, violations: ViolationEntry[], churnEntries: ChurnEntry[]): BoundaryChurn {
+		const files = churnEntries.filter((entry) => this.pathBelongsToBoundary(entry.path, boundary, violations));
+
+		return {
+			files,
+			total: files.reduce((total, entry) => total + entry.count, 0),
+		};
+	}
+
+	private pathBelongsToBoundary(path: string, boundary: string, violations: ViolationEntry[]): boolean {
+		if (boundary.startsWith('./')) {
+			return this.matchGlob(path, boundary);
+		}
+
+		if (path.split('/').includes(this.boundaryLeaf(boundary))) {
+			return true;
+		}
+
+		return this.inferredBoundaryRoots(boundary, violations).some(
+			(root) => path === root || path.startsWith(`${root}/`),
+		);
+	}
+
+	private formatErodingBoundary({ boundary, churn, violations }: ErodingBoundary): string {
 		const hottestFile = [...churn.files].sort((a, b) => b.count - a.count)[0];
 		const sampleViolation = violations.find((v) => v.specifier !== undefined) ?? violations[0];
 		const hotFileText = hottestFile === undefined ? '' : `; hottest ${hottestFile.path} (${hottestFile.count} changes)`;
 		const violationText = sampleViolation?.specifier === undefined ? '' : `; leaking ${sampleViolation.specifier}`;
 
-		return `${pkg} (${churn.total} changes across ${churn.files.length} ${ErosionInsight.plural(
+		return `${boundary} (${churn.total} changes across ${churn.files.length} ${this.plural(
 			churn.files.length,
 			'hot file',
 			'hot files',
-		)}, ${violations.length} ${ErosionInsight.plural(
+		)}, ${violations.length} ${this.plural(
 			violations.length,
 			'boundary violation',
 			'boundary violations',
 		)}${hotFileText}${violationText})`;
 	}
 
-	private fileToPackage(path: string): string | null {
-		if (!path.startsWith(this.packageDir)) {
-			return null;
+	private inferredBoundaryRoots(boundary: string, violations: ViolationEntry[]): string[] {
+		const roots = new Set<string>();
+		const leaf = this.boundaryLeaf(boundary);
+
+		for (const violation of violations) {
+			if (violation.file === undefined) {
+				continue;
+			}
+
+			const segments = violation.file.split('/');
+			const leafIndex = segments.indexOf(leaf);
+			if (leafIndex >= 0) {
+				roots.add(segments.slice(0, leafIndex + 1).join('/'));
+				continue;
+			}
+
+			const parent = segments.slice(0, -1).join('/');
+			if (parent) {
+				roots.add(parent);
+			}
 		}
-		const rest = path.slice(this.packageDir.length);
-		const segment = rest.split('/')[0];
-		if (!segment) {
-			return null;
-		}
-		return this.packagePrefix + segment;
+
+		return [...roots];
 	}
 
-	private static packageFromCouplingRuleId(ruleId: string): string | null {
+	private boundaryLeaf(boundary: string): string {
+		const segments = boundary.split('/');
+
+		return segments[segments.length - 1] ?? boundary;
+	}
+
+	private boundaryFromCouplingRuleId(ruleId: string): string | null {
 		const match = ruleId.match(/^coupling\/(?:pure-imports|layer-imports):(.+)@v\d+$/);
+
 		return match?.[1] ?? null;
 	}
 
-	private static plural(count: number, singular: string, plural: string): string {
+	private matchGlob(value: string, pattern: string): boolean {
+		const normalized = pattern.startsWith('./') ? pattern.slice(2) : pattern;
+		const regexStr = normalized
+			.split('**')
+			.map((part) => part.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]+'))
+			.join('.*');
+
+		return new RegExp(`^${regexStr}$`).test(value);
+	}
+
+	private plural(count: number, singular: string, plural: string): string {
 		return count === 1 ? singular : plural;
 	}
 }
 
-export default defineInsight((options?: ErosionOptions) => new ErosionInsight(options));
+export default defineInsight(() => new ErosionInsight());

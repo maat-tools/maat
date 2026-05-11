@@ -10,7 +10,7 @@ Built-in insights for maat. Insights are read-only analyses that run over the fi
 
 | Insight | Purpose |
 |---|---|
-| [`erosion`](./erosion.md) | Identify packages that are both high-churn and violating layer constraints |
+| [`erosion`](./erosion.md) | Identify hot architectural debt: high-churn packages with boundary violations |
 
 ## Usage
 

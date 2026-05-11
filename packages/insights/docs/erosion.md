@@ -4,7 +4,7 @@
 Findings from `git/churn@v1` — from [`@maat-tools/git-rules`](../git-rules/) — and any `coupling/pure-imports:*` or `coupling/layer-imports:*` rule — from [`@maat-tools/coupling-rules`](../coupling-rules/).
 :::
 
-`erosion` identifies packages that are simultaneously high-churn and violating layer constraints. Neither signal alone tells the full story: a churning package might be healthy, and a violation might be dormant. The combination — volatile code that is also architecturally out of bounds — is where active decay concentrates.
+`erosion` identifies hot architectural debt: packages that are simultaneously high-churn and violating layer constraints. Neither signal alone tells the full story: a churning package might be healthy, and a violation might be dormant. The combination — volatile code that is also architecturally out of bounds — is where active decay concentrates.
 
 ## What It Checks
 
@@ -13,6 +13,7 @@ For each run the insight:
 1. Groups churn findings by package, summing the change count of every churning file within the package.
 2. Collects the set of packages named in coupling violation rule IDs (e.g. `coupling/layer-imports:@acme/payments@v1` → `@acme/payments`).
 3. Intersects the two sets and ranks matching packages by total churn descending.
+4. Reports the hottest file and an example leaking import so the output points at the active pressure, not only the package name.
 
 If no package appears in both sets, the insight produces no output.
 
@@ -71,7 +72,7 @@ If `@acme/payments` has 3 churning files totalling 27 changes and also imports s
 ```txt
 INSIGHTS (1)
 ────────────
-  [erosion@v1] 1 package(s) are both high-churn and violating layer constraints — eroding: @acme/payments (27 changes)
+  [erosion@v1] hot architectural debt in 1 package(s): @acme/payments (27 changes across 3 hot files, 1 boundary violation; hottest packages/payments/src/processor.ts (12 changes); leaking @acme/legacy-db)
 ```
 
 ## When It Does Not Fire
@@ -84,4 +85,4 @@ The last case is the most common on a first run. It often means your most volati
 
 ## Relationship to Individual Rules
 
-The churn rule surfaces individual files. The coupling rules surface individual import violations. `erosion` asks a different question: *which packages* are under pressure from both sides at once? It is a triage tool, not a replacement for the underlying rules.
+The churn rule surfaces individual files. The coupling rules surface individual import violations. `erosion` asks a different question: *which packages* are under pressure from both sides at once, and where should a reviewer look first? It is a triage tool, not a replacement for the underlying rules.

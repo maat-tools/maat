@@ -42,24 +42,20 @@ describe('ErosionInsight.analyze()', () => {
 
 	test('churn and violations in different packages → no results', () => {
 		const insight = new ErosionInsight();
-		const findings = [
-			churnFinding('packages/cli/src/index.ts', 10),
-			couplingFinding('@maat-tools/kernel'),
-		];
+		const findings = [churnFinding('packages/cli/src/index.ts', 10), couplingFinding('@maat-tools/kernel')];
 		expect(insight.analyze(findings)).toHaveLength(0);
 	});
 
 	test('churn and violations in the same package → one result', () => {
 		const insight = new ErosionInsight({ packagePrefix: '@maat-tools/' });
-		const findings = [
-			churnFinding('packages/cli/src/index.ts', 10),
-			couplingFinding('@maat-tools/cli'),
-		];
+		const findings = [churnFinding('packages/cli/src/index.ts', 10), couplingFinding('@maat-tools/cli')];
 		const results = insight.analyze(findings);
 		expect(results).toHaveLength(1);
 		expect(results[0]?.insightId).toBe('erosion@v1');
+		expect(results[0]?.message).toContain('hot architectural debt');
 		expect(results[0]?.message).toContain('@maat-tools/cli');
 		expect(results[0]?.message).toContain('1 package(s)');
+		expect(results[0]?.message).toContain('1 boundary violation');
 	});
 
 	test('multiple churning files in same package sum their counts', () => {
@@ -100,10 +96,7 @@ describe('ErosionInsight.analyze()', () => {
 
 	test('custom packageDir is respected', () => {
 		const insight = new ErosionInsight({ packageDir: 'src/', packagePrefix: 'com.acme/' });
-		const findings = [
-			churnFinding('src/payments/handler.ts', 7),
-			couplingFinding('com.acme/payments'),
-		];
+		const findings = [churnFinding('src/payments/handler.ts', 7), couplingFinding('com.acme/payments')];
 		const results = insight.analyze(findings);
 		expect(results).toHaveLength(1);
 		expect(results[0]?.message).toContain('com.acme/payments');
@@ -111,13 +104,27 @@ describe('ErosionInsight.analyze()', () => {
 
 	test('result data contains file-level churn detail', () => {
 		const insight = new ErosionInsight({ packagePrefix: '@maat-tools/' });
-		const findings = [
-			churnFinding('packages/cli/src/index.ts', 9),
-			couplingFinding('@maat-tools/cli'),
-		];
+		const findings = [churnFinding('packages/cli/src/index.ts', 9), couplingFinding('@maat-tools/cli')];
 		const [result] = insight.analyze(findings);
-		const data = result?.data as Array<{ package: string; churnTotal: number; files: Array<{ path: string; count: number }> }>;
+		const data = result?.data as Array<{
+			package: string;
+			churnTotal: number;
+			files: Array<{ path: string; count: number }>;
+		}>;
 		expect(data[0]?.files).toEqual([{ path: 'packages/cli/src/index.ts', count: 9 }]);
+	});
+
+	test('result data contains boundary violation detail', () => {
+		const insight = new ErosionInsight({ packagePrefix: '@maat-tools/' });
+		const findings = [churnFinding('packages/cli/src/index.ts', 9), couplingFinding('@maat-tools/cli')];
+		const [result] = insight.analyze(findings);
+		const data = result?.data as Array<{
+			violationCount: number;
+			violations: Array<{ file?: string; specifier?: string }>;
+		}>;
+		expect(data[0]?.violationCount).toBe(1);
+		expect(data[0]?.violations[0]?.file).toBe('packages/contracts/dist/index.js');
+		expect(data[0]?.violations[0]?.specifier).toBe('node:crypto');
 	});
 
 	test('layer-imports coupling variant is also matched', () => {

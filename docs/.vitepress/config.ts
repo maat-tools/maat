@@ -1,4 +1,26 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig, type HeadConfig } from 'vitepress'
+
+const gaMeasurementId = process.env.GA_MEASUREMENT_ID
+
+const gaHead: HeadConfig[] = gaMeasurementId
+  ? [
+      [
+        'script',
+        {
+          async: '',
+          src: `https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`,
+        },
+      ],
+      [
+        'script',
+        {},
+        `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', ${JSON.stringify(gaMeasurementId)});`,
+      ],
+    ]
+  : []
 
 const guideAndPluginSidebar = [
   {
@@ -46,11 +68,11 @@ const guideAndPluginSidebar = [
         collapsed: false,
         items: [
           {
-            text: 'TypeScript collector',
+            text: 'TypeScript',
             link: '/plugins/collector-ts/',
           },
           {
-            text: 'Git collector',
+            text: 'Git',
             link: '/plugins/collector-git/',
           },
         ],
@@ -60,7 +82,7 @@ const guideAndPluginSidebar = [
         collapsed: false,
         items: [
           {
-            text: 'Coupling rules',
+            text: 'Coupling',
             link: '/plugins/coupling-rules/',
             collapsed: false,
             items: [
@@ -68,7 +90,7 @@ const guideAndPluginSidebar = [
             ],
           },
           {
-            text: 'Connascence rules',
+            text: 'Connascence',
             link: '/plugins/connascence-rules/',
             collapsed: false,
             items: [
@@ -76,7 +98,7 @@ const guideAndPluginSidebar = [
             ],
           },
           {
-            text: 'Git rules',
+            text: 'Git',
             link: '/plugins/git-rules/',
             collapsed: false,
             items: [
@@ -104,6 +126,7 @@ export default defineConfig({
 
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: '/maat/maat.png' }],
+    ...gaHead,
   ],
 
   themeConfig: {

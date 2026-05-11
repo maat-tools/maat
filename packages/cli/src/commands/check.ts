@@ -8,8 +8,13 @@ import { MaatCommandBase } from './base';
 type CheckOptions = {
 	ledger?: boolean;
 	showBaselined?: boolean;
+	show?: string;
 	silent?: boolean;
 };
+
+type CheckDisplayMode = 'all' | 'findings' | 'insights';
+
+const CHECK_DISPLAY_MODES = new Set<CheckDisplayMode>(['all', 'findings', 'insights']);
 
 type LedgerAnalysis = {
 	baselinedFingerprints: Set<string>;
@@ -21,6 +26,7 @@ type LedgerAnalysis = {
 export class Check extends MaatCommandBase implements MaatCommand {
 	public async action(options: CheckOptions = {}) {
 		const printer = options.silent ? this.printer.asSilent() : this.printer;
+		const displayMode = this.resolveDisplayMode(options.show, printer);
 
 		if (options.ledger === true && !this.isLedgerProvided()) {
 			printer.error(
@@ -46,9 +52,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 
 		if (!this.isLedgerProvided()) {
-			this.printRunContext(printer, { ledger: false });
-			printer.findings(currentFindings, (id) => this.kernel.getRuleById(id));
-			this.printInsights(currentFindings, printer);
+			if (displayMode === 'all') {
+				this.printRunContext(printer, { ledger: false });
+			}
+			if (displayMode === 'all' || displayMode === 'findings') {
+				printer.findings(currentFindings, (id) => this.kernel.getRuleById(id));
+			}
+			if (displayMode === 'all' || displayMode === 'insights') {
+				this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+			}
 			if (this.config.check?.strict && currentFindings.length > 0) {
 				process.exit(1);
 			}
@@ -66,14 +78,20 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			? currentFindings
 			: this.getActiveFindings(currentFindings, analysis.baselinedFingerprints, analysis.axiomExceptedFingerprints);
 
-		this.printRunContext(printer, {
-			ledger: true,
-			writesLedger: options.ledger === true,
-			showBaselined: options.showBaselined === true,
-		});
-		printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
-		this.printInsights(currentFindings, printer);
-		this.evaluateExitConditions(visibleFindings, analysis, printer);
+		if (displayMode === 'all') {
+			this.printRunContext(printer, {
+				ledger: true,
+				writesLedger: options.ledger === true,
+				showBaselined: options.showBaselined === true,
+			});
+		}
+		if (displayMode === 'all' || displayMode === 'findings') {
+			printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
+		}
+		if (displayMode === 'all' || displayMode === 'insights') {
+			this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+		}
+		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
 	}
 
 	public register(): void {
@@ -82,8 +100,19 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			.description('Scan the codebase for architectural findings')
 			.option('--ledger', 'Save findings to the ledger')
 			.option('--show-baselined', 'Include baselined findings in output and exit code evaluation')
+			.option('--show <mode>', 'Choose output sections to show: all, findings, insights', 'all')
 			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
 			.action((options: CheckOptions) => this.action(options));
+	}
+
+	private resolveDisplayMode(show: string | undefined, printer: Printer): CheckDisplayMode {
+		const mode = show ?? 'all';
+		if (CHECK_DISPLAY_MODES.has(mode as CheckDisplayMode)) {
+			return mode as CheckDisplayMode;
+		}
+
+		printer.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.`);
+		process.exit(1);
 	}
 
 	private analyzeLedgerState(snapshot: LedgerSnapshot, currentFingerprints: Set<string>): LedgerAnalysis {
@@ -194,8 +223,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		]);
 	}
 
-	private printInsights(findings: Finding[], printer: Printer): void {
-		if (this.insights.length > 0) {
+	private printInsights(findings: Finding[], printer: Printer, options: { warnAboutScope: boolean }): void {
+		if (options.warnAboutScope && this.insights.length > 0) {
 			printer.warn(
 				'Insights analyze all current findings from this run, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.',
 			);
@@ -211,7 +240,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 	}
 
-	private evaluateExitConditions(visibleFindings: Finding[], analysis: LedgerAnalysis, printer: Printer): void {
+	private evaluateExitConditions(
+		visibleFindings: Finding[],
+		analysis: LedgerAnalysis,
+		printer: Printer,
+		options: { printSummary: boolean },
+	): void {
 		const { hasRegressions, hasExpiredBaselines } = analysis;
 
 		if (hasRegressions || hasExpiredBaselines) {
@@ -233,6 +267,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				'One or more findings detected. Please address these issues to comply with the defined architecture.',
 			);
 			process.exit(1);
+		}
+
+		if (!options.printSummary) {
+			return;
 		}
 
 		if (visibleFindings.length === 0) {

@@ -96,7 +96,7 @@ A finding is the current output of a rule. Its fingerprint is the stable identit
 The ledger records decisions about those fingerprints:
 
 - `observed`: Maat saw the finding and saved it to the ledger. No human decision has been made yet.
-- `baselined`: the finding is temporarily accepted as existing debt. This is a suppression flag, not a full lifecycle state; unexpired baselines are hidden from normal `maat check` output unless you pass `--show-baselined`.
+- `baselined`: the finding is temporarily accepted as existing debt. This is a suppression flag, not a full lifecycle state; unexpired baselines are hidden from normal `maat check` output unless you pass `--show-baselined`. That flag only includes baselined findings that still appear in the current check; findings stored in the ledger but absent from the current run are visible through `maat visualize`.
 - `resolved`: this exact fingerprint was intentionally fixed. If the same fingerprint appears again later, `maat check` treats it as a regression.
 
 In short: baseline means "not now"; resolve means "this exact finding was fixed."

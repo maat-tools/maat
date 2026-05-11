@@ -5,6 +5,8 @@ Runs configured collectors and rules, prints current findings, and evaluates exi
 ```bash
 maat check
 maat check --ledger
+maat check --show insights
+maat check --show findings
 maat check --show-baselined
 maat check --silent
 ```
@@ -25,6 +27,8 @@ Insights run after that over all current findings from the same check, including
 
 When configured insights run, `maat check` prints a warning that they analyze all current findings, including findings hidden by baselines or active axiom exceptions.
 
+`--show-baselined` still only changes the current check output. It includes baselined findings that are present in this run; it does not print baselined findings that exist only in the ledger and no longer appear in the current repository state. Use `maat visualize` when you need to inspect ledger state.
+
 ## Recording findings
 
 `--ledger` appends new observed findings to the configured ledger.
@@ -40,7 +44,8 @@ Use this before `maat baseline` or `maat resolve`; both commands need the finger
 | Option | Purpose |
 |---|---|
 | `--ledger` | Save current findings to the configured ledger. |
-| `--show-baselined` | Include baselined findings in output and exit code evaluation. |
+| `--show <mode>` | Choose output sections: `all` (default), `findings`, or `insights`. This only controls printed sections; exit behavior and ledger writes are unchanged. |
+| `--show-baselined` | Include baselined findings from the current run in output and exit code evaluation. |
 | `--silent` | Suppress console output while preserving the command exit code. |
 
 ## Exit behavior

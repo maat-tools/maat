@@ -159,6 +159,36 @@ describe('check without ledger', () => {
 		);
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
+
+	test('--show findings prints findings without insight output', async () => {
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+
+		await makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [mockInsight()]).action({ show: 'findings' });
+
+		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		expect(output).toContain('FINDINGS (1)');
+		expect(output).not.toContain('RUN CONTEXT');
+		expect(output).not.toContain('[test-insight]');
+	});
+
+	test('--show insights prints insights without findings', async () => {
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+
+		await makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [mockInsight()]).action({ show: 'insights' });
+
+		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		expect(output).toContain('INSIGHTS (1)');
+		expect(output).toContain('[test-insight] test insight');
+		expect(output).not.toContain('FINDINGS (1)');
+		expect(output).not.toContain('RUN CONTEXT');
+	});
+
+	test('invalid --show exits 1', async () => {
+		await expect(makeCheck([], null).action({ show: 'everything' })).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
 });
 
 // ── check (with ledger) ──────────────────────────────────────────────────────
@@ -211,6 +241,20 @@ describe('check with ledger', () => {
 
 		expect(analyzed).toHaveLength(1);
 		expect(analyzed[0]?.map((finding) => finding.fingerprint)).toContain(FINGERPRINT);
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	test('--show insights with ledger hides finding output and summary', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+		logSpy.mockClear();
+
+		await makeCheck([RULE_OUTPUT], ledger, BASE_CONFIG, false, [mockInsight()]).action({ show: 'insights' });
+
+		const output = logSpy.mock.calls.map(([line]) => String(line)).join('\n');
+		expect(output).toContain('INSIGHTS (1)');
+		expect(output).not.toContain('FINDINGS (1)');
+		expect(output).not.toContain('finding(s) detected');
 		expect(exitSpy).not.toHaveBeenCalled();
 	});
 

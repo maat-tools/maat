@@ -33,6 +33,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build docs
+        env:
+          GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
         run: bun run docs:build
 
       - uses: actions/configure-pages@v4

@@ -151,7 +151,7 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 
 | Command | Purpose |
 |---|---|
-| `maat check` | Run configured collectors and rules. Use `--ledger` to sync findings with the ledger. |
+| `maat check` | Run configured collectors and rules. Use `--ledger` to sync findings with the ledger and `--show <mode>` to choose printed sections. |
 | `maat axiom declare` | Record a human-authored architectural claim in the ledger. |
 | `maat axiom supersede` | Mark an axiom as replaced by a newer decision. |
 | `maat axiom revoke` | Revoke an axiom that no longer applies. |

@@ -200,6 +200,8 @@ An insight analyzes findings after rules run.
 
 Unlike a rule, an insight does not evaluate raw facts and does not decide whether the check passes. It reads the findings that already exist and explains a larger pattern across them.
 
+During `maat check`, insights analyze all current findings from that run, including findings that are hidden from normal output because they are baselined or covered by an active axiom. Baselined findings are suppressed for enforcement, but they remain part of the current architecture. Resolved findings that are no longer present in the current scan are not included in this input.
+
 ```ts
 import { defineInsight, type Finding, type Insight, type InsightResult } from '@maat-tools/contracts'
 

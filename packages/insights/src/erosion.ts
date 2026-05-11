@@ -23,7 +23,6 @@ type ErodingPackage = {
 export class ErosionInsight implements Insight {
 	public readonly id = 'erosion@v1';
 	public readonly needRules: readonly string[] = ['git/churn@v1', 'coupling/pure-imports', 'coupling/layer-imports'];
-	public readonly usesLedger = false;
 
 	private readonly packageDir: string;
 	private readonly packagePrefix: string;

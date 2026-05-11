@@ -92,14 +92,16 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			}
 		}
 
-		const results = this.runInsightsIfEnabled(allFindings.map(toFinding));
-		if (results.length > 0) {
-			hasOutput = true;
-			const heading = `INSIGHTS (${results.length})`;
-			this.printer.section(heading);
+		if (insights) {
+			const results = this.runInsightsIfEnabled(allFindings.map(toFinding));
+			if (results.length > 0) {
+				hasOutput = true;
+				const heading = `INSIGHTS (${results.length})`;
+				this.printer.section(heading);
 
-			for (const result of results) {
-				this.printer.log(`  [${result.insightId}] ${result.message}`);
+				for (const result of results) {
+					this.printer.insight(result);
+				}
 			}
 		}
 

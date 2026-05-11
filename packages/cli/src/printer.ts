@@ -76,6 +76,16 @@ export class Printer {
 		}
 	}
 
+	public runContext(lines: readonly string[]): void {
+		if (this.silent) {
+			return;
+		}
+		this.section('RUN CONTEXT');
+		for (const line of lines) {
+			console.log(`  ${chalk.dim('-')} ${line}`);
+		}
+	}
+
 	public insight(result: InsightResult): void {
 		if (this.silent) {
 			return;

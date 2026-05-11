@@ -19,6 +19,12 @@ With a ledger configured, `maat check` compares current findings against recorde
 - active axioms can hide covered fingerprints;
 - resolved findings that reappear are treated as regressions.
 
+Rules always run against current repository facts. The ledger is applied after rules finish.
+
+Insights run after that over all current findings from the same check, including current findings that are hidden from normal output because they are baselined or covered by an active axiom. This is intentional: a baseline suppresses enforcement, but it is still architectural debt and can matter for summaries, prioritization, and erosion-style analysis. Insights are read-only and do not affect the check exit code.
+
+When configured insights run, `maat check` prints a warning that they analyze all current findings, including findings hidden by baselines or active axiom exceptions.
+
 ## Recording findings
 
 `--ledger` appends new observed findings to the configured ledger.

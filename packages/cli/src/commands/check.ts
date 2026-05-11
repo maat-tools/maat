@@ -46,6 +46,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 
 		if (!this.isLedgerProvided()) {
+			this.printRunContext(printer, { ledger: false });
 			printer.findings(currentFindings, (id) => this.kernel.getRuleById(id));
 			this.printInsights(currentFindings, printer);
 			if (this.config.check?.strict && currentFindings.length > 0) {
@@ -65,8 +66,13 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			? currentFindings
 			: this.getActiveFindings(currentFindings, analysis.baselinedFingerprints, analysis.axiomExceptedFingerprints);
 
+		this.printRunContext(printer, {
+			ledger: true,
+			writesLedger: options.ledger === true,
+			showBaselined: options.showBaselined === true,
+		});
 		printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
-		this.printInsights(visibleFindings, printer);
+		this.printInsights(currentFindings, printer);
 		this.evaluateExitConditions(visibleFindings, analysis, printer);
 	}
 
@@ -159,7 +165,42 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 	}
 
+	private printRunContext(
+		printer: Printer,
+		context:
+			| { ledger: false }
+			| {
+					ledger: true;
+					writesLedger: boolean;
+					showBaselined: boolean;
+			  },
+	): void {
+		const findingsScope =
+			context.ledger && !context.showBaselined
+				? 'active current findings; non-expired baselines and active axiom exceptions are hidden'
+				: 'all current findings from this run';
+		let ledgerScope = 'not configured; no baseline, axiom, or regression filtering is applied';
+		if (context.ledger) {
+			ledgerScope = context.writesLedger
+				? 'configured; this run reads state and writes observed/resolved events'
+				: 'configured; this run reads state only';
+		}
+
+		printer.runContext([
+			'Rules run on current workspace facts collected during this check.',
+			`Ledger: ${ledgerScope}.`,
+			`Findings shown: ${findingsScope}.`,
+			'Insights run on all current findings from this run, including findings hidden by baselines or active axiom exceptions.',
+		]);
+	}
+
 	private printInsights(findings: Finding[], printer: Printer): void {
+		if (this.insights.length > 0) {
+			printer.warn(
+				'Insights analyze all current findings from this run, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.',
+			);
+		}
+
 		const results = this.runInsightsIfEnabled(findings);
 		if (results.length === 0) {
 			return;

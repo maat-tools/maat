@@ -12,7 +12,7 @@ import * as micromatch from 'micromatch';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
-	tsConfigFilePath: string;
+	tsConfigFilePath: string | string[];
 	exclude?: string[];
 };
 
@@ -43,6 +43,7 @@ function inferContext(parentKind: string | undefined): ConstantContext {
 function toProjectRelativePath(projectRoot: string, filePath: string): string {
 	return relative(projectRoot, filePath).replace(/\\/g, '/');
 }
+
 
 function resolvePackageName(filePath: string): string | null {
 	let dir = dirname(filePath);
@@ -142,26 +143,50 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 
 	public constructor(private readonly config: TSInput) {}
 
-	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
-		const resolvedPath = resolve(this.config.tsConfigFilePath);
-		const projectRoot = dirname(resolvedPath);
-		const project = new Project({ tsConfigFilePath: resolvedPath });
-		const excludePatterns = this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
+	private async expandGlobs(patterns: string[], rootDir: string): Promise<string[]> {
+		const results: string[] = [];
+		for (const pattern of patterns) {
+			if (/[*?{[]/.test(pattern)) {
+				const glob = new Bun.Glob(pattern);
+				for await (const match of glob.scan({ cwd: rootDir, absolute: true })) {
+					results.push(match);
+				}
+			} else {
+				results.push(resolve(pattern));
+			}
+		}
+		
+		return results;
+	}
 
+	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
+		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
+			? this.config.tsConfigFilePath
+			: [this.config.tsConfigFilePath];
+
+		const projectRoot = process.cwd();
+		const tsConfigPaths = await this.expandGlobs(rawPatterns, projectRoot);
+
+		const excludePatterns = this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
+		const seenFiles = new Set<string>();
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
 
-		for (const sourceFile of project.getSourceFiles()) {
-			const absoluteFile = sourceFile.getFilePath();
-			const file = toProjectRelativePath(projectRoot, absoluteFile);
+		for (const tsConfigPath of tsConfigPaths) {
+			const project = new Project({ tsConfigFilePath: tsConfigPath });
 
-			if (micromatch.isMatch(file, excludePatterns)) {
-				continue;
+			for (const sourceFile of project.getSourceFiles()) {
+				const absoluteFile = sourceFile.getFilePath();
+				if (seenFiles.has(absoluteFile)) continue;
+				seenFiles.add(absoluteFile);
+
+				const file = toProjectRelativePath(projectRoot, absoluteFile);
+				if (micromatch.isMatch(file, excludePatterns)) continue;
+
+				const packageName = resolvePackageName(absoluteFile);
+				imports.push(...collectImports(sourceFile, file, packageName));
+				constants.push(...collectConstants(sourceFile, file));
 			}
-
-			const packageName = resolvePackageName(absoluteFile);
-			imports.push(...collectImports(sourceFile, file, packageName));
-			constants.push(...collectConstants(sourceFile, file));
 		}
 
 		return { constants, imports };

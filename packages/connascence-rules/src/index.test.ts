@@ -54,6 +54,32 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		expect(findings).toHaveLength(0);
 	});
 
+	test('all universal noise values are ignored by default', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		for (const noise of ['', ' ', 'true', 'false', 'null']) {
+			const findings = rule.evaluate({
+				constants: makeOccurrences(['/a.ts', '/b.ts'], noise),
+			});
+			expect(findings, `expected "${noise}" to be filtered`).toHaveLength(0);
+		}
+	});
+
+	test('language-specific values (e.g. undefined) are not filtered by default', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts'], 'undefined'),
+		});
+		expect(findings).toHaveLength(1);
+	});
+
+	test('default threshold is 2', () => {
+		const rule = new ConnascenceOfMeaningRule();
+		const belowDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts']) });
+		expect(belowDefault).toHaveLength(0);
+		const atDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
+		expect(atDefault).toHaveLength(1);
+	});
+
 	test('import context is ignored', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const constants = makeOccurrences(['/a.ts', '/b.ts', '/c.ts']).map((c) => ({
@@ -81,6 +107,28 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
 		});
 		expect(findings[0]?.message).toContain('3 files');
+	});
+
+	test('ruleIdentifier includes both value and kind', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts']),
+		});
+		expect(findings[0]?.ruleIdentifier).toEqual({ value: 'ADMIN', kind: 'string' });
+	});
+
+	test('same value with different kinds produces separate findings', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		const constants = [
+			makeConstant({ kind: 'string', value: '42', raw: '"42"', location: { file: '/a.ts', line: 1 } }),
+			makeConstant({ kind: 'string', value: '42', raw: '"42"', location: { file: '/b.ts', line: 1 } }),
+			makeConstant({ kind: 'number', value: '42', raw: '42', location: { file: '/a.ts', line: 2 } }),
+			makeConstant({ kind: 'number', value: '42', raw: '42', location: { file: '/b.ts', line: 2 } }),
+		];
+		const findings = rule.evaluate({ constants });
+		expect(findings).toHaveLength(2);
+		const kinds = findings.map((f) => (f.ruleIdentifier as { kind: string }).kind).sort();
+		expect(kinds).toEqual(['number', 'string']);
 	});
 
 	test('each occurrence produces one artifact', () => {

@@ -4,13 +4,13 @@
 `constants` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides constants
 :::
 
-Built-in rules for detecting connascence in source code.
+Built-in rules for detecting connascence in source code. The taxonomy and definitions used here follow [connascence.io](https://connascence.io).
 
 ## Rules
 
-| Rule | Purpose |
-|---|---|
-| [`com`](./com.md) | Detect repeated string and numeric literals across files |
+| Rule | Connascence Type | Purpose |
+|---|---|---|
+| [`com`](./com.md) | [Connascence of Meaning](https://connascence.io/meaning.html) | Detect repeated string and numeric literals across files |
 
 ## Usage
 

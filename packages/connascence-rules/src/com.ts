@@ -7,13 +7,16 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-// Values that are universally meaningless to track as coupling signals
-const NOISE_VALUES = new Set(['', ' ', 'true', 'false', 'null', 'undefined', '0', '1', '2', '-1']);
+// Values that are universally meaningless to track as coupling signals.
+// Language-specific keywords (e.g. 'undefined' in JS/TS, 'None' in Python) and common
+// numeric literals (e.g. '0', '1', '-1') should be passed via `ignoreValues` at the
+// rule configuration level, as their noisiness is domain-dependent.
+const UNIVERSAL_NOISE_VALUES = new Set(['', ' ', 'true', 'false', 'null']);
 
 export type CoMRuleOptions = {
 	// Minimum number of occurrences across distinct files to be a finding
 	threshold?: number;
-	// Additional values to ignore beyond the default noise list
+	// Language-specific or project-specific values to ignore (e.g. ['undefined'] for TS, ['None'] for Python)
 	ignoreValues?: string[];
 };
 
@@ -25,14 +28,16 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 	private readonly ignoreValues: Set<string>;
 
 	public constructor(options: CoMRuleOptions = {}) {
-		this.threshold = options.threshold ?? 3;
-		this.ignoreValues = new Set([...NOISE_VALUES, ...(options.ignoreValues ?? [])]);
+		this.threshold = options.threshold ?? 2;
+		this.ignoreValues = new Set([...UNIVERSAL_NOISE_VALUES, ...(options.ignoreValues ?? [])]);
 	}
 
 	public evaluate(facts: { constants: Constant[] }): FindingRuleOutput[] {
 		const constants = facts[CONSTANTS_CAPABILITY] ?? [];
 
-		// Group constants by value, excluding noise and non-coupling contexts
+		// Group constants by kind+value, excluding noise and non-coupling contexts.
+		// Kind is included in the key so that a string "42" and a number 42 are treated
+		// as separate coupling signals.
 		const byValue = new Map<string, Constant[]>();
 
 		for (const constant of constants) {
@@ -44,24 +49,27 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 				continue;
 			}
 
-			const group = byValue.get(constant.value) ?? [];
+			const key = `${constant.kind}:${constant.value}`;
+			const group = byValue.get(key) ?? [];
 			group.push(constant);
-			byValue.set(constant.value, group);
+			byValue.set(key, group);
 		}
 
 		const findings: FindingRuleOutput[] = [];
 
-		for (const [value, occurrences] of byValue) {
+		for (const [, occurrences] of byValue) {
 			// Count distinct files
 			const files = new Set(occurrences.map((o) => o.location.file));
 			if (files.size < this.threshold) {
 				continue;
 			}
 
+			const { value, kind } = occurrences[0]!;
+
 			findings.push({
 				ruleId: this.id,
-				ruleIdentifier: { value },
-				message: `"${value}" appears in ${files.size} files — possible Connascence of Meaning`,
+				ruleIdentifier: { value, kind },
+				message: `"${value}" (${kind}) appears in ${files.size} files — possible Connascence of Meaning`,
 				artifacts: occurrences.map((c) => ({
 					kind: 'source' as const,
 					data: c,
@@ -76,12 +84,14 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 		if (artifact.kind === 'source') {
 			const c = artifact.data as Constant;
 			const loc = `${c.location.file}:${c.location.line}${c.location.column !== undefined ? `:${c.location.column}` : ''}`;
+
 			return {
 				location: loc,
 				context: c.context,
 				value: c.raw,
 			};
 		}
+
 		return { value: String(artifact.data) };
 	}
 }

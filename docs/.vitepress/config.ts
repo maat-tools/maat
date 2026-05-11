@@ -42,31 +42,47 @@ const guideAndPluginSidebar = [
     items: [
       { text: 'All plugins', link: '/plugins/' },
       {
-        text: 'Coupling rules',
-        link: '/plugins/coupling-rules/',
+        text: 'Collectors',
         collapsed: false,
         items: [
-          { text: 'layer(target)', link: '/plugins/coupling-rules/layer' },
+          {
+            text: 'TypeScript collector',
+            link: '/plugins/collector-ts/',
+          },
+          {
+            text: 'Git collector',
+            link: '/plugins/collector-git/',
+          },
         ],
       },
       {
-        text: 'Connascence rules',
-        link: '/plugins/connascence-rules/',
+        text: 'Rules',
         collapsed: false,
         items: [
-          { text: 'com', link: '/plugins/connascence-rules/com' },
-        ],
-      },
-      {
-        text: 'Git collector',
-        link: '/plugins/collector-git/',
-      },
-      {
-        text: 'Git rules',
-        link: '/plugins/git-rules/',
-        collapsed: false,
-        items: [
-          { text: 'churn', link: '/plugins/git-rules/churn' },
+          {
+            text: 'Coupling rules',
+            link: '/plugins/coupling-rules/',
+            collapsed: false,
+            items: [
+              { text: 'layer(target)', link: '/plugins/coupling-rules/layer' },
+            ],
+          },
+          {
+            text: 'Connascence rules',
+            link: '/plugins/connascence-rules/',
+            collapsed: false,
+            items: [
+              { text: 'com', link: '/plugins/connascence-rules/com' },
+            ],
+          },
+          {
+            text: 'Git rules',
+            link: '/plugins/git-rules/',
+            collapsed: false,
+            items: [
+              { text: 'churn', link: '/plugins/git-rules/churn' },
+            ],
+          },
         ],
       },
     ],

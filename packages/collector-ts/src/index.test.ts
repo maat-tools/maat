@@ -35,13 +35,13 @@ describe('TSCollector.collect() — imports fact', () => {
 		}
 	});
 
-	test('emits source locations relative to the tsconfig directory', async () => {
+	test('emits source locations relative to process.cwd()', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { constants, imports } = await collector.collect();
 
 		const files = [...imports.map((imp) => imp.file), ...constants.map((constant) => constant.location.file)];
 
-		expect(files).toContain('src/index.ts');
+		expect(files).toContain('packages/collector-ts/fixtures/sample-project/src/index.ts');
 		for (const file of files) {
 			expect(isAbsolute(file)).toBe(false);
 			expect(file).not.toContain('\\');
@@ -79,6 +79,65 @@ describe('TSCollector.collect() — imports fact', () => {
 	});
 });
 
+const MULTI_PROJECT_ROOT = resolve(import.meta.dir, '../fixtures/multi-project');
+const MULTI_PKG_A_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-a/tsconfig.json');
+const MULTI_PKG_B_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-b/tsconfig.json');
+
+describe('TSCollector — array of tsConfigFilePath', () => {
+	test('collects constants from both packages', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: [MULTI_PKG_A_TSCONFIG, MULTI_PKG_B_TSCONFIG] });
+		const { constants } = await collector.collect();
+		const values = constants.map((c) => c.value);
+		expect(values).toContain('admin');
+		expect(values).toContain('active');
+	});
+
+	test('deduplicates files included in multiple tsconfigs', async () => {
+		// pkg-a tsconfig also includes pkg-b sources, so passing both must not double-count
+		const collector = new TSCollector({ tsConfigFilePath: [MULTI_PKG_A_TSCONFIG, MULTI_PKG_B_TSCONFIG] });
+		const { constants } = await collector.collect();
+		const pkgBConstants = constants.filter((c) => c.location.file.includes('pkg-b'));
+		const activeOccurrences = pkgBConstants.filter((c) => c.value === 'active');
+		expect(activeOccurrences).toHaveLength(1);
+	});
+
+	test('paths from all tsconfigs are relative to process.cwd()', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: [MULTI_PKG_A_TSCONFIG, MULTI_PKG_B_TSCONFIG] });
+		const { constants } = await collector.collect();
+		const files = constants.map((c) => c.location.file);
+		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-a/src/index.ts');
+		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-b/src/index.ts');
+		for (const file of files) {
+			expect(isAbsolute(file)).toBe(false);
+		}
+	});
+});
+
+describe('TSCollector — glob in tsConfigFilePath', () => {
+	test('glob expands to all matching tsconfigs', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: `${MULTI_PROJECT_ROOT}/*/tsconfig.json` });
+		const { constants } = await collector.collect();
+		const values = constants.map((c) => c.value);
+		expect(values).toContain('admin');
+		expect(values).toContain('active');
+	});
+
+	test('glob result paths are relative to process.cwd()', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: `${MULTI_PROJECT_ROOT}/*/tsconfig.json` });
+		const { constants } = await collector.collect();
+		const files = constants.map((c) => c.location.file);
+		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-a/src/index.ts');
+		expect(files).toContain('packages/collector-ts/fixtures/multi-project/pkg-b/src/index.ts');
+	});
+
+	test('glob deduplicates overlapping files', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: `${MULTI_PROJECT_ROOT}/*/tsconfig.json` });
+		const { constants } = await collector.collect();
+		const activeOccurrences = constants.filter((c) => c.value === 'active');
+		expect(activeOccurrences).toHaveLength(1);
+	});
+});
+
 const CROSS_PACKAGE_TSCONFIG = resolve(import.meta.dir, '../fixtures/cross-package/pkg-a/tsconfig.json');
 
 describe('TSCollector.collect() — cross-package specifier normalization', () => {
@@ -103,7 +162,7 @@ describe('TSCollector.collect() — cross-package specifier normalization', () =
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
 		const { imports } = await collector.collect();
 		const imp = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
-		expect(imp?.file).toBe('src/index.ts');
+		expect(imp?.file).toBe('packages/collector-ts/fixtures/cross-package/pkg-a/src/index.ts');
 		expect(imp?.location.line).toBeGreaterThan(0);
 	});
 

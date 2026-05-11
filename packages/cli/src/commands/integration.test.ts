@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type FindingRuleOutput, FindingStatus, generateFingerprint } from '@maat-tools/contracts';
@@ -148,6 +148,15 @@ describe('check with ledger', () => {
 
 		const state = await ledger.getState();
 		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.OBSERVED);
+	});
+
+	test('--ledger is idempotent for unchanged observed findings', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+
+		const lines = (await readFile(ledgerPath, 'utf-8')).trim().split('\n');
+		expect(lines).toHaveLength(1);
 	});
 
 	test('finding that disappeared is auto-resolved in ledger', async () => {

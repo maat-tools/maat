@@ -145,7 +145,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			analysis.baselinedFingerprints,
 			analysis.axiomExceptedFingerprints,
 		)) {
-			if (findingsSnapshot[finding.fingerprint]?.state === FindingStatus.RESOLVED) {
+			if (findingsSnapshot[finding.fingerprint] !== undefined) {
 				continue;
 			}
 			await ledger.append({
@@ -161,7 +161,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private printInsights(findings: Finding[], printer: Printer): void {
 		const results = this.runInsightsIfEnabled(findings);
-		if (results.length === 0) return;
+		if (results.length === 0) {
+			return;
+		}
 		printer.section(`INSIGHTS (${results.length})`);
 		for (const result of results) {
 			printer.insight(result);

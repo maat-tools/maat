@@ -42,7 +42,5 @@ export default defineConfig({
 			.allows('@maat-tools/contracts', '@maat-tools/vocabulary', '@maat-tools/core'),
 	],
 	ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
-	insights: [
-		['@maat-tools/insights/erosion', { packageDir: 'packages/', packagePrefix: '@maat-tools/' }],
-	],
+	insights: [['@maat-tools/insights/erosion', { packageDir: 'packages/', packagePrefix: '@maat-tools/' }]],
 });

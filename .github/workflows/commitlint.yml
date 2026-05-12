@@ -28,5 +28,7 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             bunx commitlint --from "$BASE_SHA" --to HEAD
           else
-            bunx commitlint --from HEAD~1 --to HEAD
+            if [ "$(git rev-list --count HEAD)" -gt 1 ]; then
+              bunx commitlint --from HEAD~1 --to HEAD
+            fi
           fi

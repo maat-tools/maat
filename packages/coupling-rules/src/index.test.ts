@@ -262,6 +262,36 @@ describe('PureLayerRule — transitive check', () => {
 		expect(findings[0]?.message).toContain('@maat-tools/contracts');
 	});
 
+	test('transitive dep importing bare "." (index) → no false positive', () => {
+		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate({
+			imports: [
+				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
+				makeImport({
+					packageName: '@maat-tools/contracts',
+					file: 'packages/contracts/src/definition/accessors/IAccessors.ts',
+					specifier: '.',
+				}),
+			],
+		});
+		expect(findings).toHaveLength(0);
+	});
+
+	test('transitive dep importing bare ".." (parent index) → no false positive', () => {
+		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate({
+			imports: [
+				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
+				makeImport({
+					packageName: '@maat-tools/contracts',
+					file: 'packages/contracts/src/blocks/deprecations.ts',
+					specifier: '..',
+				}),
+			],
+		});
+		expect(findings).toHaveLength(0);
+	});
+
 	test('transitive: false preserves direct-only behavior', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure, { transitive: false }).allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate({

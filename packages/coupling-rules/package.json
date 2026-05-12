@@ -7,14 +7,17 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"bun": "./src/index.ts",
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
 		"./layer": {
+			"bun": "./src/layer.ts",
 			"import": "./dist/layer.js",
 			"types": "./dist/layer.d.ts"
 		},
 		"./roles": {
+			"bun": "./src/roles.ts",
 			"import": "./dist/roles.js",
 			"types": "./dist/roles.d.ts"
 		}

@@ -1,16 +1,18 @@
 {
 	"name": "@maat-tools/insights",
 	"version": "0.1.0",
-	"description": "Built-in insights for maat — cross-cutting analysis over findings from multiple rule families",
+	"description": "Built-in insights for maat \u2014 cross-cutting analysis over findings from multiple rule families",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"bun": "./src/index.ts",
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
 		"./erosion": {
+			"bun": "./src/erosion.ts",
 			"import": "./dist/erosion.js",
 			"types": "./dist/erosion.d.ts"
 		}

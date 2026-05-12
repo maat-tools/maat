@@ -46,23 +46,29 @@ function toProjectRelativePath(projectRoot: string, filePath: string): string {
 
 function resolvePackageName(filePath: string): string | null {
 	let dir = dirname(filePath);
+	const visited: string[] = [];
 
 	while (true) {
 		if (packageNameCache.has(dir)) {
-			return packageNameCache.get(dir) ?? null;
+			const cached = packageNameCache.get(dir) ?? null;
+			for (const d of visited) {
+				packageNameCache.set(d, cached);
+			}
+
+			return cached;
 		}
+
+		visited.push(dir);
 
 		const pkgPath = resolve(dir, 'package.json');
 		if (existsSync(pkgPath)) {
 			try {
 				const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 				const name = typeof pkg.name === 'string' ? pkg.name : null;
-				packageNameCache.set(dir, name);
-
+				for (const d of visited) packageNameCache.set(d, name);
 				return name;
 			} catch {
-				packageNameCache.set(dir, null);
-
+				for (const d of visited) packageNameCache.set(d, null);
 				return null;
 			}
 		}
@@ -120,7 +126,7 @@ function collectConstants(sourceFile: SourceFile, file: string): Constant[] {
 			column: node.getStartLinePos(),
 		};
 
-		if (kind === 'StringLiteral') {
+		if (kind === 'StringLiteral' && context !== 'import') {
 			constants.push({
 				kind: 'string',
 				value: raw.slice(1, -1),
@@ -140,7 +146,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
 	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
 
-	public constructor(private readonly config: TSInput) {}
+	public constructor(private readonly config: TSInput) { }
 
 	private async expandGlobs(patterns: string[], rootDir: string): Promise<string[]> {
 		const results: string[] = [];

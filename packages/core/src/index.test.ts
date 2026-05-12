@@ -174,25 +174,3 @@ describe('LedgerBackendBase.applyEvent', () => {
 		expect(s.last_entry_id).toBe('sentinel');
 	});
 });
-
-describe('LedgerBackendBase.buildEntry', () => {
-	test('OBSERVED includes rule_id, message, artifacts, fingerprint', () => {
-		const event = ledger.buildEntry(baseFinding, FindingStatus.OBSERVED);
-		expect(event.type).toBe(FindingStatus.OBSERVED);
-		if (event.type === FindingStatus.OBSERVED) {
-			expect(event.rule_id).toBe(baseFinding.ruleId);
-			expect(event.message).toBe(baseFinding.message);
-			expect(event.artifacts).toEqual(baseFinding.artifacts);
-			expect(event.fingerprint).toBe(baseFinding.fingerprint);
-		}
-	});
-
-	test('BASELINED includes fingerprint and expires_at (no message or artifacts)', () => {
-		const event = ledger.buildEntry(baseFinding, FindingStatus.BASELINED);
-		expect(event.type).toBe(FindingStatus.BASELINED);
-		expect('message' in event).toBe(false);
-		expect('artifacts' in event).toBe(false);
-		expect(event.fingerprint).toBe(baseFinding.fingerprint);
-		expect('expires_at' in event).toBe(true);
-	});
-});

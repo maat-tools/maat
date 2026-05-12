@@ -111,11 +111,11 @@ export class GitCollector implements Collector<'git_commits' | 'git_file_changes
 	public readonly id = 'git';
 	public readonly provideFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
 
-	public constructor(private readonly config: GitInput) {}
+	public constructor(private readonly config: GitInput) { }
 
 	public async collect(): Promise<Pick<FactRegistry, 'git_commits' | 'git_file_changes'>> {
 		const cwd = this.config.repoPath ?? process.cwd();
-		const args = ['log', `--format=${FORMAT}`, '--name-status'];
+		const args = ['-c', 'core.quotepath=false', 'log', `--format=${FORMAT}`, '--name-status'];
 
 		if (this.config.sinceDays !== undefined) {
 			const since = new Date(Date.now() - this.config.sinceDays * 24 * 60 * 60 * 1000);
@@ -124,7 +124,6 @@ export class GitCollector implements Collector<'git_commits' | 'git_file_changes
 		if (this.config.maxCommits !== undefined) {
 			args.push(`--max-count=${this.config.maxCommits}`);
 		}
-
 		const { stdout } = await execFileAsync('git', args, {
 			cwd,
 			maxBuffer: 100 * 1024 * 1024,

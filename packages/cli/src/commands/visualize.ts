@@ -65,6 +65,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 				out.insights = await this.runInsightsIfEnabled(allFindings.map(toFinding));
 			}
 			this.printer.json(out);
+			
 			return;
 		}
 

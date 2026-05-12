@@ -77,34 +77,6 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 		return { entry_id: ulid(), run_id: this.runId, ...input } as LedgerEvent;
 	}
 
-	public buildEntry(
-		finding: Finding,
-		type: FindingEventStatus,
-		options?: { expiresInDays?: number },
-	): FindingEventInput {
-		const base = { timestamp: new Date().toISOString() };
-
-		switch (type) {
-			case FindingStatus.OBSERVED:
-				return {
-					...base,
-					type,
-					fingerprint: finding.fingerprint,
-					rule_id: finding.ruleId,
-					message: finding.message,
-					artifacts: finding.artifacts,
-				};
-			case FindingStatus.BASELINED: {
-				const days = options?.expiresInDays ?? 90;
-				const expires_at = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-
-				return { ...base, type, fingerprint: finding.fingerprint, expires_at };
-			}
-		}
-
-		throw new Error(`Unsupported finding event type: ${type}`);
-	}
-
 	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
 		const findings = { ...snapshot.findings };
 		const axioms = { ...snapshot.axioms };

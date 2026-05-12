@@ -33,7 +33,7 @@ The current state of any finding is derived by replaying events in order (the fo
 ## Consequences
 
 - The ledger file grows monotonically. It is never compacted or rewritten in V1.
-- The fold function (`readAll → fold`) must be efficient enough for the typical ledger size. For large codebases with long histories, a snapshot/checkpoint mechanism may be needed in a future version.
+- The fold function (`readAll → fold`) must be efficient enough for the typical ledger size. For large codebases with long histories, a checkpoint mechanism may be introduced in a future version if needed.
 - Ledger files should be committed to version control alongside the codebase. The ledger is source data, not build output.
 - Ledger events are not bound to actors by Maat. Event timestamps support ordering, while ownership comes from the version-control history of the ledger file.
 - Changing the schema of an existing event type is not allowed. New fields may be added (additive only). Breaking changes require a new event type.

@@ -84,15 +84,20 @@ export class Kernel {
 			}
 		}
 
+		const factsKeys = Object.keys(facts);
 		const findingsByRule = await Promise.all(
 			this.rules.map(async (rule) => {
-				const hasFacts = rule.needFacts.every((key) => key in facts);
+				const hasFacts = rule.needFacts.every((key) => factsKeys.includes(key));
 				if (!hasFacts) {
 					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
 					return [];
 				}
-				await Promise.resolve();
+				
 				const ruleFacts = Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]]));
+				if (!ruleFacts) {
+					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
+					return [];
+				}
 				const fromRule = rule.evaluate(ruleFacts as unknown as FactRegistry);
 
 				return fromRule.map(({ ruleIdentifier, ...rest }) => ({

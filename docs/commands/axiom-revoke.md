@@ -8,7 +8,7 @@ maat axiom revoke --id stable-boundary --reason "Boundary no longer exists"
 
 ## What revoking means
 
-Revoking keeps the original declaration in ledger history, but marks the axiom inactive in the current snapshot.
+Revoking keeps the original declaration in ledger history, but marks the axiom inactive in the current state.
 
 Use this when the claim should no longer be treated as true or useful.
 

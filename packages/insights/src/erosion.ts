@@ -33,7 +33,6 @@ type ErodingBoundary = {
 export class ErosionInsight implements Insight {
 	public readonly id = 'erosion@v1';
 	public readonly needRules: readonly string[] = ['git/churn@v1', 'coupling/pure-imports', 'coupling/layer-imports'];
-	public readonly usesLedger = false;
 
 	public analyze(findings: Finding[]): InsightResult[] {
 		const churnEntries = this.collectChurn(findings);
@@ -79,6 +78,7 @@ export class ErosionInsight implements Insight {
 				if (a.kind !== 'git-churn') {
 					continue;
 				}
+				
 				const d = a.data as ChurnEntry;
 				if (typeof d.path === 'string' && typeof d.count === 'number') {
 					entries.push(d);
@@ -120,7 +120,7 @@ export class ErosionInsight implements Insight {
 	}
 
 	private churnForBoundary(boundary: string, violations: ViolationEntry[], churnEntries: ChurnEntry[]): BoundaryChurn {
-		const files = churnEntries.filter((entry) => this.pathBelongsToBoundary(entry.path, boundary, violations));
+		const files = churnEntries.filter((entry) => this.fileChurnBelongsToBoundary(entry.path, boundary, violations));
 
 		return {
 			files,
@@ -128,17 +128,20 @@ export class ErosionInsight implements Insight {
 		};
 	}
 
-	private pathBelongsToBoundary(path: string, boundary: string, violations: ViolationEntry[]): boolean {
+	private fileChurnBelongsToBoundary(filePath: string, boundary: string, violations: ViolationEntry[]): boolean {
+		// Path-mode boundary (e.g. "./src/auth/**"): match directly by glob
 		if (boundary.startsWith('./')) {
-			return this.matchGlob(path, boundary);
+			return this.matchGlob(filePath, boundary);
 		}
 
-		if (path.split('/').includes(this.boundaryLeaf(boundary))) {
+		// Package-mode boundary (e.g. "kernel"): boundary name appears as a directory segment in the path
+		if (filePath.split('/').includes(this.lastSegment(boundary))) {
 			return true;
 		}
 
-		return this.inferredBoundaryRoots(boundary, violations).some(
-			(root) => path === root || path.startsWith(`${root}/`),
+		// Fallback: infer where the boundary lives on disk from files that had violations, then check if filePath falls inside
+		return this.rootsFromViolationFiles(boundary, violations).some(
+			(root) => filePath === root || filePath.startsWith(`${root}/`),
 		);
 	}
 
@@ -159,9 +162,9 @@ export class ErosionInsight implements Insight {
 		)}${hotFileText}${violationText})`;
 	}
 
-	private inferredBoundaryRoots(boundary: string, violations: ViolationEntry[]): string[] {
+	private rootsFromViolationFiles(boundary: string, violations: ViolationEntry[]): string[] {
 		const roots = new Set<string>();
-		const leaf = this.boundaryLeaf(boundary);
+		const leaf = this.lastSegment(boundary);
 
 		for (const violation of violations) {
 			if (violation.file === undefined) {
@@ -184,7 +187,7 @@ export class ErosionInsight implements Insight {
 		return [...roots];
 	}
 
-	private boundaryLeaf(boundary: string): string {
+	private lastSegment(boundary: string): string {
 		const segments = boundary.split('/');
 
 		return segments[segments.length - 1] ?? boundary;

@@ -44,10 +44,6 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 			if (this.ignoreValues.has(constant.value)) {
 				continue;
 			}
-			// Import paths are structural references, not magic values — skip them
-			if (constant.context === 'import') {
-				continue;
-			}
 
 			const key = `${constant.kind}:${constant.value}`;
 			const group = byValue.get(key) ?? [];

@@ -46,23 +46,27 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 	}
 
 	private resolveExpiresIn(raw: string | undefined): number | null {
-		if (raw === undefined) {
+		if (!raw) {
 			return BASELINE_DEFAULT_DAYS;
 		}
 
 		const days = Number(raw);
 		if (!Number.isInteger(days) || Number.isNaN(days)) {
 			this.printer.error(`--expires-in must be an integer number of days.`);
+
 			return null;
 		}
 		if (days < 1) {
 			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.`);
+			
 			return null;
 		}
 		if (days > BASELINE_MAX_DAYS) {
 			this.printer.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.`);
+
 			return null;
 		}
+
 		return days;
 	}
 

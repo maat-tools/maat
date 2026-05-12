@@ -1,6 +1,6 @@
 # `maat visualize`
 
-Prints the current ledger snapshot: findings, axioms, and optional insights.
+Prints the current ledger state: findings, axioms, and optional insights.
 
 ```bash
 maat visualize

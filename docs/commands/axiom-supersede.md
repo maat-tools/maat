@@ -8,7 +8,7 @@ maat axiom supersede --id stable-boundary --reason "Replaced by package-boundary
 
 ## What superseding means
 
-Superseding keeps the old axiom in ledger history, but marks it inactive in the current snapshot.
+Superseding keeps the old axiom in ledger history, but marks it inactive in the current state.
 
 Use this when the claim is not wrong, but a newer axiom or automated rule is now the source of truth.
 

@@ -1,16 +1,18 @@
 {
 	"name": "@maat-tools/git-rules",
 	"version": "0.1.0",
-	"description": "Rules derived from git history — hotspot detection and co-change analysis",
+	"description": "Rules derived from git history \u2014 hotspot detection and co-change analysis",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"bun": "./src/index.ts",
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
 		"./churn": {
+			"bun": "./src/churn.ts",
 			"import": "./dist/churn.js",
 			"types": "./dist/churn.d.ts"
 		}

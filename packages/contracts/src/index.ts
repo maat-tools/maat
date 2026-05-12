@@ -157,14 +157,12 @@ export interface RuleBuilder {
 export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
-	readonly usesLedger: boolean;
 	analyze(findings: Finding[]): InsightResult[] | Promise<InsightResult[]>;
 }
 
 export interface LedgerBackend {
 	append(event: LedgerEventInput): Promise<void>;
 	getState(): Promise<LedgerSnapshot>;
-	buildEntry(finding: Finding, type: FindingStatus, options?: { expiresInDays?: number }): FindingEventInput;
 }
 
 export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (

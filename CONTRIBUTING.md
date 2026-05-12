@@ -42,14 +42,13 @@ packages/
 
 Before adding a new package, it must clearly own a concern not already owned by an existing one.
 
-## Ledger and snapshot
+## Ledger
 
-Two files travel with the repository and must be committed:
+One file travels with the repository and must be committed:
 
 - **`maat-ledger.ndjson`** — the append-only event log. Every finding lifecycle event, axiom declaration, and architectural decision is recorded here. Never edit or delete lines.
-- **`maat-ledger.snapshot.json`** — a pre-computed projection of the ledger, used as a read cache so the CLI does not have to replay all events on every run. It is generated automatically by maat when the ledger is written. Commit it alongside the ledger so that CI and other contributors start from the current state rather than replaying the full history.
 
-If you run any `maat` command that mutates the ledger, both files will be updated. Stage both in the same commit.
+If you run any `maat` command that mutates the ledger, this file will be updated. Stage it in your commit.
 
 ## Architectural constraints
 

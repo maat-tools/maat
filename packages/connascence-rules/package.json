@@ -1,16 +1,18 @@
 {
 	"name": "@maat-tools/connascence-rules",
 	"version": "0.1.0",
-	"description": "Built-in rules for detecting connascence of meaning — shared string and numeric literals across package boundaries",
+	"description": "Built-in rules for detecting connascence of meaning \u2014 shared string and numeric literals across package boundaries",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"bun": "./src/index.ts",
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
 		"./com": {
+			"bun": "./src/com.ts",
 			"import": "./dist/com.js",
 			"types": "./dist/com.d.ts"
 		}

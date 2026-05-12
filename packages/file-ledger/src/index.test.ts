@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, rm, unlink } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FindingStatus } from '@maat-tools/contracts';
@@ -7,14 +7,12 @@ import { FilePathLedgerBackend } from './index';
 
 let dir: string;
 let ledgerPath: string;
-let snapshotPath: string;
 let ledger: FilePathLedgerBackend;
 
 beforeEach(async () => {
 	dir = join(tmpdir(), `maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 	await mkdir(dir, { recursive: true });
 	ledgerPath = join(dir, 'test.ndjson');
-	snapshotPath = join(dir, 'test.snapshot.json');
 	ledger = new FilePathLedgerBackend({ path: ledgerPath });
 });
 
@@ -37,7 +35,7 @@ describe('FilePathLedgerBackend', () => {
 		expect(() => new FilePathLedgerBackend({ path: '/tmp/ledger' })).toThrow('path must end with ".ndjson"');
 	});
 
-	test('getState with no file returns empty snapshot', async () => {
+	test('getState with no file returns empty state', async () => {
 		const state = await ledger.getState();
 		expect(state.last_entry_id).toBeNull();
 		expect(state.findings).toEqual({});
@@ -61,7 +59,7 @@ describe('FilePathLedgerBackend', () => {
 		expect(state.last_entry_id).toBe(event.entry_id);
 	});
 
-	test('multiple appends accumulate correctly in snapshot', async () => {
+	test('multiple appends accumulate correctly', async () => {
 		await ledger.append(observedEvent);
 		await ledger.append({
 			type: FindingStatus.BASELINED,
@@ -83,16 +81,13 @@ describe('FilePathLedgerBackend', () => {
 		expect(state.findings.fp2?.state).toBe(FindingStatus.OBSERVED);
 	});
 
-	test('getState rebuilds from NDJSON when snapshot is missing', async () => {
+	test('new instance reads state from existing NDJSON', async () => {
 		await ledger.append(observedEvent);
 		await ledger.append({
 			type: FindingStatus.RESOLVED,
 			timestamp: new Date().toISOString(),
 			fingerprint: 'fp1',
 		});
-
-		// Remove snapshot to force rebuild
-		await unlink(snapshotPath);
 
 		const fresh = new FilePathLedgerBackend({ path: ledgerPath });
 		const state = await fresh.getState();

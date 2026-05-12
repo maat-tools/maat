@@ -189,7 +189,7 @@ class PureLayerRule implements Rule<'imports'> {
 			const imports = importsByPackage.get(currentPackage) ?? [];
 
 			for (const imp of imports) {
-				if (imp.specifier.startsWith('./') || imp.specifier.startsWith('../')) {
+				if (imp.specifier === '.' || imp.specifier === '..' || imp.specifier.startsWith('./') || imp.specifier.startsWith('../')) {
 					continue;
 				}
 

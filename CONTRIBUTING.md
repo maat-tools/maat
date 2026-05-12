@@ -28,18 +28,6 @@ bun run test        # Unit tests
 
 maat is a monorepo. Each package owns a single bounded concern — see [ADR-001](docs/adr/001-monorepo-bounded-packages.md) for the full rationale.
 
-```
-packages/
-  contracts/       # Shared interfaces and branded factories — the only universal import
-  vocabulary/      # Canonical IR types and capability keys
-  kernel/          # Orchestration — pure, no I/O
-  core/            # Config schema
-  collector-ts/    # TypeScript AST walker
-  coupling-rules/  # Rule pack
-  file-ledger/     # NDJSON ledger backend
-  cli/             # Entry point
-```
-
 Before adding a new package, it must clearly own a concern not already owned by an existing one.
 
 ## Ledger

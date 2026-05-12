@@ -156,13 +156,13 @@ Maat records decision state, not user identity. For decisions such as baselining
 
 | Package | Purpose |
 |---|---|
-| `@maat-tools/collector-ts` | Collects TypeScript imports and constants from a project |
-| `@maat-tools/collector-git` | Collects commit history and file change facts from a Git repository |
-| `@maat-tools/coupling-rules` | Enforces import boundaries between packages and architectural layers |
-| `@maat-tools/connascence-rules` | Detects Connascence of Meaning signals across package boundaries |
-| `@maat-tools/git-rules` | Detects high-churn files that change too frequently within a time window |
-| `@maat-tools/insights` | Cross-rule analysis insights, including erosion detection for boundaries with both violations and churn |
-| `@maat-tools/file-ledger` | Stores finding and axiom history in append-only NDJSON |
+| `@maat-tools/collector-ts` | Collects facts from TypeScript projects |
+| `@maat-tools/collector-git` | Collects facts from Git history |
+| `@maat-tools/coupling-rules` | Rules for structural and import boundaries |
+| `@maat-tools/connascence-rules` | Rules for semantic coupling and connascence |
+| `@maat-tools/git-rules` | Rules for churn and temporal patterns |
+| `@maat-tools/insights` | Cross-rule analysis and pattern detection |
+| `@maat-tools/file-ledger` | Append-only ledger backend for version control |
 
 Maat also exposes public interfaces for third-party collectors, rules, insights, and ledger backends. Third-party packages are outside the official determinism guarantee, so teams should review them before using them in CI.
 

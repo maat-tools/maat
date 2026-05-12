@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      production-deps:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@biomejs/*"
+          - "@commitlint/*"
+          - "typescript"
+          - "@types/*"
+          - "vitepress"
+      dev-deps:
+        patterns:
+          - "@biomejs/*"
+          - "@commitlint/*"
+          - "typescript"
+          - "@types/*"
+          - "vitepress"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

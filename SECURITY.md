@@ -20,9 +20,10 @@ You can expect an acknowledgement within 72 hours and a resolution timeline with
 
 ## Scope
 
-maat is a static analysis CLI that reads source files and writes to a local ledger file. It does not run a server, handle network requests, or store credentials. The primary attack surface is:
+maat is a local CLI that collects facts from configured sources, evaluates deterministic rules, and writes to a ledger file. It does not run a server, handle network requests during the check path, or store credentials. The primary attack surface is:
 
 - Malicious `maat.config.ts` files (arbitrary code execution via the config loader)
-- Malicious source files crafted to exploit the TypeScript AST parser
+- Malicious input to collectors (crafted source files, git history, or other data sources designed to exploit parsers)
+- Ledger file manipulation (tampering with the append-only event log)
 
 Out of scope: issues in third-party dependencies that are not exploitable through maat's public interfaces.

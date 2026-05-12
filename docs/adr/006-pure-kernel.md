@@ -5,7 +5,7 @@
 
 ## Context
 
-The kernel is the component that orchestrates fact collection, rule evaluation, and insight analysis. If the kernel or the rules it runs have side effects — file I/O, network calls, random values, LLM calls — then:
+The kernel is the component that orchestrates fact collection and rule evaluation. If the kernel or the rules it runs have side effects — file I/O, network calls, random values, LLM calls — then:
 
 - Determinism is broken: two runs on the same inputs can produce different outputs.
 - Testing requires mocking infrastructure.

@@ -37,3 +37,5 @@ maat axiom declare \
 ## When to use it
 
 Use an axiom for architecture knowledge that should be recorded, reviewed, and versioned, but is not automated by a collector and rule yet.
+
+See [ADRs vs axioms](/guide/adrs-vs-axioms) for how axioms relate to architecture decision records.

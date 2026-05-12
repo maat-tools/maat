@@ -29,11 +29,11 @@ export default defineConfig({
 You can also import a single insight directly:
 
 ```ts
-import decayIntersection from '@maat-tools/insights/erosion';
+import erosion from '@maat-tools/insights/erosion';
 
 export default defineConfig({
 	collectors: [ /* ... */ ],
 	rules: [ /* ... */ ],
-	insights: ['@maat-tools/insights/erosion'],
+	insights: [erosion()],
 });
 ```

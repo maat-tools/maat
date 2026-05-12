@@ -45,7 +45,6 @@ An axiom may optionally reference finding fingerprints via `fingerprints`, allow
 
 - `axiom.declared` creates or updates the axiom record with `active: true`
 - `axiom.superseded` and `axiom.revoked` set `active: false` on the matching axiom
-- Axioms are stored separately from findings in the ledger snapshot
 
 ## Consequences
 

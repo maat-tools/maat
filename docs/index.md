@@ -44,6 +44,20 @@ import { withBase } from 'vitepress'
   </p>
 </section>
 
+## The invisible coupling
+
+<section class="maat-panel">
+  <p>
+    The hardest coupling isn't in import graphs. It's in semantic patterns: multiple code paths executing the same domain operation with different invariants, shared data structures carrying incompatible assumptions across bounded contexts, configuration surfaces that govern the same action from disconnected panels.
+  </p>
+  <p>
+    These patterns are invisible to linters, type checkers, SAST, and unit tests. Each function works correctly in isolation. Types compile. Tests pass. The damage accumulates silently — orphaned data, broken audit trails, compliance gaps that surface months later.
+  </p>
+  <p>
+    Maat was born to make these patterns detectable. The direction is clear: specialized collectors (including LLM-assisted ones) gather semantic facts from code, comments, and commit history. Deterministic rules check those facts against policies the team chooses to encode. LLMs for gathering judgment. Rules for guarantees.
+  </p>
+</section>
+
 ## New and existing codebases
 
 <div class="maat-adoption">
@@ -94,10 +108,11 @@ import { withBase } from 'vitepress'
   <p>
     Official rules from the <code>maat-tools/maat</code> repository are deterministic by guarantee. Third-party plugins are supported through public interfaces, but their behavior is the responsibility of the package author and the team that installs them.
   </p>
-  <p>
-    Read more about <a :href="withBase('/guide/determinism.html')">the determinism guarantee</a> and <a :href="withBase('/guide/plugins.html')">the plugin system</a>.
-  </p>
 </section>
+
+<p class="maat-adoption-more">
+  Read more about <a :href="withBase('/guide/determinism.html')">the determinism guarantee</a> and <a :href="withBase('/guide/plugins.html')">the plugin system</a>.
+</p>
 
 ## What happens when it runs
 

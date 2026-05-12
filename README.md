@@ -20,6 +20,14 @@ Large codebases collect rules that are hard to see from one file: which modules 
 
 Those rules often live in review comments, ADRs, debugging sessions, and the memory of people who know the codebase well. Maat gives teams a path to make that knowledge explicit — write collectors for the facts your codebase needs, write rules for the policies you care about, and keep accepted exceptions in version control.
 
+## The invisible coupling
+
+The hardest coupling isn't in import graphs. It's in semantic patterns: multiple code paths executing the same domain operation with different invariants, shared data structures carrying incompatible assumptions across bounded contexts, configuration surfaces that govern the same action from disconnected panels.
+
+These patterns are invisible to linters, type checkers, SAST, and unit tests. Each function works correctly in isolation. Types compile. Tests pass. The damage accumulates silently — orphaned data, broken audit trails, compliance gaps that surface months later.
+
+Maat was born to make these patterns detectable. The direction is clear: specialized collectors (including LLM-assisted ones) gather semantic facts from code, comments, and commit history. Deterministic rules check those facts against policies the team chooses to encode. LLMs for gathering judgment. Rules for guarantees.
+
 ## How it works
 
 1. **Collect facts**: collectors turn repository structure, metadata, or team-specific signals into facts.

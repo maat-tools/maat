@@ -29,50 +29,31 @@ Maat's architecture maps directly to the fitness function pattern:
 
 The flow is deterministic: the same collected facts and rule version always produce the same findings. There is no randomness, hidden state, or LLM judgment in the check path.
 
-## Types of fitness functions in Maat
+## Dimensions of fitness functions
 
-Maat ships with several categories of rules that serve as fitness functions for different architectural concerns.
+Maat rules can express checks across multiple dimensions of your codebase. Each dimension captures a different kind of architectural concern:
 
-### Structural fitness functions
+### Structure
 
-These check the shape and boundaries of your codebase:
+Checks that verify the shape of your codebase — which parts may talk to which others, and whether boundaries are respected.
 
-- **Package boundaries**: which modules may import from which others
-- **Layer purity**: whether a layer depends only on allowed layers
-- **Dependency direction**: whether the dependency graph flows in the intended direction
+Examples: package boundaries, layer purity, dependency direction, circular dependency prevention.
 
-```ts
-import { layer } from '@maat-tools/coupling-rules'
-import { Pure } from '@maat-tools/coupling-rules/roles'
+### Time
 
-layer('@myapp/domain').is(Pure).allows('@myapp/contracts')
-layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts')
-```
+Checks that verify how your codebase changes over time — whether frequently modified code is properly isolated, whether boundaries are eroding.
 
-### Churn fitness functions
+Examples: high-churn detection, erosion signals, temporal coupling between modules.
 
-These check whether frequently changing code is properly isolated:
+### Meaning
 
-- **High-churn detection**: files that change too often within a time window
-- **Erosion detection**: boundaries that have both violations and high churn
+Checks that verify semantic coupling — whether modules are connected by shared meaning rather than explicit imports.
 
-```ts
-// via @maat-tools/git-rules and @maat-tools/insights
-```
+Examples: connascence of meaning, duplicated policies across boundaries, implicit contracts that must stay synchronized.
 
-### Semantic fitness functions
+### Intent
 
-These check meaning-level coupling across boundaries:
-
-- **Connascence of Meaning**: duplicated logic that must change together across packages
-
-```ts
-// via @maat-tools/connascence-rules
-```
-
-### Manual fitness functions (axioms)
-
-Some architectural claims are not yet automated. Use axioms to record them in the ledger so the team can revisit them later and potentially turn them into automated rules:
+Claims the team asserts about the architecture but hasn't automated yet. Axioms record these in the ledger so they can be revisited and eventually turned into structural, temporal, or semantic checks.
 
 ```bash
 maat axiom declare \
@@ -81,6 +62,8 @@ maat axiom declare \
   --claim "The domain layer has no infrastructure dependencies." \
   --note "Keeps the domain testable without spinning up real I/O."
 ```
+
+Each dimension answers a different question: **structure** asks "can these parts talk?", **time** asks "are these parts changing together?", **meaning** asks "do these parts understand each other the same way?", and **intent** asks "what do we believe about this system that isn't checked yet?"
 
 ## Guiding evolution with fitness functions
 

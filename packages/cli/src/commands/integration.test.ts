@@ -224,7 +224,6 @@ describe('check without ledger', () => {
 		const insight: Insight = {
 			id: 'test-insight',
 			needRules: ['test@v1'],
-			usesLedger: false,
 			analyze: (findings) => {
 				analyzed.push(findings);
 				return [];
@@ -242,7 +241,6 @@ describe('check without ledger', () => {
 		const insight: Insight = {
 			id: 'family-insight',
 			needRules: ['family'],
-			usesLedger: false,
 			analyze: (findings) => {
 				analyzed.push(findings);
 				return [];
@@ -261,7 +259,6 @@ describe('check without ledger', () => {
 		const firstInsight: Insight = {
 			id: 'first-insight',
 			needRules: ['test@v1'],
-			usesLedger: false,
 			analyze: async () => {
 				await secondInsightStarted.promise;
 				await firstInsightCanFinish.promise;
@@ -271,7 +268,6 @@ describe('check without ledger', () => {
 		const secondInsight: Insight = {
 			id: 'second-insight',
 			needRules: ['test@v1'],
-			usesLedger: false,
 			analyze: async () => {
 				secondInsightStarted.resolve();
 				firstInsightCanFinish.resolve();
@@ -340,7 +336,6 @@ describe('check with ledger', () => {
 		const insight: Insight = {
 			id: 'test-insight',
 			needRules: ['test@v1'],
-			usesLedger: false,
 			analyze: (findings) => {
 				analyzed.push(findings);
 				return [];
@@ -375,7 +370,6 @@ describe('check with ledger', () => {
 		const insight: Insight = {
 			id: 'test-insight',
 			needRules: ['test@v1'],
-			usesLedger: false,
 			analyze: () => [],
 		};
 
@@ -691,9 +685,7 @@ describe('visualize', () => {
 		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
 		const analyzeSpy = mockInsight().analyze;
 
-		await makeVisualize(ledger, [
-			{ id: 'test-insight', needRules: ['test@v1'], usesLedger: false, analyze: analyzeSpy },
-		]).action({});
+		await makeVisualize(ledger, [{ id: 'test-insight', needRules: ['test@v1'], analyze: analyzeSpy }]).action({});
 
 		expect(analyzeSpy).not.toHaveBeenCalled();
 	});
@@ -739,7 +731,6 @@ function mockInsight(): Insight {
 	return {
 		id: 'test-insight',
 		needRules: ['test@v1'],
-		usesLedger: false,
 		analyze: spyOn(
 			{
 				analyze: (findings: Finding[]) => [

@@ -21,13 +21,6 @@ function emptySnapshot(): LedgerSnapshot {
 
 const ledger = new TestLedger();
 
-const baseFinding = {
-	fingerprint: 'fp1',
-	ruleId: 'rule@v1',
-	message: 'msg',
-	artifacts: [],
-};
-
 describe('LedgerBackendBase.applyEvent', () => {
 	test('OBSERVED on new fingerprint creates record with OBSERVED state', () => {
 		const next = ledger.apply(emptySnapshot(), {

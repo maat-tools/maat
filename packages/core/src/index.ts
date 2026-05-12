@@ -1,8 +1,6 @@
 import {
 	type AxiomRecord,
 	type CollectorRegistry,
-	type Finding,
-	type FindingEventInput,
 	type FindingRecord,
 	FindingStatus,
 	generateFingerprint,
@@ -58,14 +56,6 @@ export abstract class RuleBase {
 		return generateFingerprint(ruleId, ruleIdentifier);
 	}
 }
-
-type FindingEventStatus = Exclude<
-	FindingStatus,
-	| typeof FindingStatus.AXIOM_DECLARED
-	| typeof FindingStatus.AXIOM_SUPERSEDED
-	| typeof FindingStatus.AXIOM_REVOKED
-	| typeof FindingStatus.RESOLVED
->;
 
 export abstract class LedgerBackendBase implements LedgerBackend {
 	private readonly runId = ulid();

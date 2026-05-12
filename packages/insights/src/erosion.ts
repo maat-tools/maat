@@ -78,7 +78,7 @@ export class ErosionInsight implements Insight {
 				if (a.kind !== 'git-churn') {
 					continue;
 				}
-				
+
 				const d = a.data as ChurnEntry;
 				if (typeof d.path === 'string' && typeof d.count === 'number') {
 					entries.push(d);

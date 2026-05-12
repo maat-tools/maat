@@ -80,14 +80,14 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		expect(atDefault).toHaveLength(1);
 	});
 
-	test('import context is ignored', () => {
+	test('import context is not ignored', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const constants = makeOccurrences(['/a.ts', '/b.ts', '/c.ts']).map((c) => ({
 			...c,
 			context: 'import' as const,
 		}));
 		const findings = rule.evaluate({ constants });
-		expect(findings).toHaveLength(0);
+		expect(findings).toHaveLength(1);
 	});
 
 	test('custom ignoreValues excludes the value', () => {

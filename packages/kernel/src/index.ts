@@ -92,7 +92,7 @@ export class Kernel {
 					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
 					return [];
 				}
-				
+
 				const ruleFacts = Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]]));
 				if (!ruleFacts) {
 					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);

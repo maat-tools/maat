@@ -111,7 +111,7 @@ export class GitCollector implements Collector<'git_commits' | 'git_file_changes
 	public readonly id = 'git';
 	public readonly provideFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
 
-	public constructor(private readonly config: GitInput) { }
+	public constructor(private readonly config: GitInput) {}
 
 	public async collect(): Promise<Pick<FactRegistry, 'git_commits' | 'git_file_changes'>> {
 		const cwd = this.config.repoPath ?? process.cwd();

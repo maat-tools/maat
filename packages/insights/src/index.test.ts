@@ -153,12 +153,12 @@ describe('ErosionInsight.analyze()', () => {
 	test('layer-imports coupling variant is also matched', () => {
 		const insight = new ErosionInsight();
 		const findings = [
-			churnFinding('packages/ui-kit/src/index.ts', 8),
-			couplingFinding('@rocket.chat/ui-kit', 'layer-imports'),
+			churnFinding('packages/payments/src/index.ts', 8),
+			couplingFinding('@acme/payments', 'layer-imports'),
 		];
 		const results = insight.analyze(findings);
 		expect(results).toHaveLength(1);
-		expect(results[0]?.message).toContain('@rocket.chat/ui-kit');
+		expect(results[0]?.message).toContain('@acme/payments');
 	});
 
 	test('coupling rule with non-matching pattern is ignored', () => {

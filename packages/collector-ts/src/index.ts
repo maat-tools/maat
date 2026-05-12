@@ -65,10 +65,14 @@ function resolvePackageName(filePath: string): string | null {
 			try {
 				const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 				const name = typeof pkg.name === 'string' ? pkg.name : null;
-				for (const d of visited) packageNameCache.set(d, name);
+				for (const d of visited) {
+					packageNameCache.set(d, name);
+				}
 				return name;
 			} catch {
-				for (const d of visited) packageNameCache.set(d, null);
+				for (const d of visited) {
+					packageNameCache.set(d, null);
+				}
 				return null;
 			}
 		}
@@ -146,7 +150,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 	public readonly id = 'ts';
 	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
 
-	public constructor(private readonly config: TSInput) { }
+	public constructor(private readonly config: TSInput) {}
 
 	private async expandGlobs(patterns: string[], rootDir: string): Promise<string[]> {
 		const results: string[] = [];

@@ -23,7 +23,7 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 
 		if (record.state === FindingStatus.RESOLVED) {
 			this.printer.warn(`Finding "${fingerprint}" is already resolved. Nothing to do.`);
-			
+
 			return;
 		}
 

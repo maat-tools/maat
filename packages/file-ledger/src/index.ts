@@ -1,10 +1,5 @@
-import { readFile, appendFile, access } from 'node:fs/promises';
-import {
-	type LedgerBackend,
-	type LedgerEvent,
-	type LedgerEventInput,
-	type LedgerSnapshot,
-} from '@maat-tools/contracts';
+import { access, appendFile, readFile } from 'node:fs/promises';
+import type { LedgerBackend, LedgerEvent, LedgerEventInput, LedgerSnapshot } from '@maat-tools/contracts';
 import { LedgerBackendBase } from '@maat-tools/core';
 
 export type {
@@ -44,10 +39,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 
 	public async getState(): Promise<LedgerSnapshot> {
 		const events = await this.readLog();
-		return events.reduce(
-			(snapshot, event) => this.applyEvent(snapshot, event),
-			EMPTY_SNAPSHOT as LedgerSnapshot,
-		);
+		return events.reduce((snapshot, event) => this.applyEvent(snapshot, event), EMPTY_SNAPSHOT as LedgerSnapshot);
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
@@ -55,7 +47,9 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			.then(() => true)
 			.catch(() => false);
 
-		if (!exists) return [];
+		if (!exists) {
+			return [];
+		}
 
 		const text = await readFile(this.options.path, 'utf-8');
 		return text.trim().length === 0

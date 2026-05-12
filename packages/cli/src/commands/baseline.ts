@@ -58,7 +58,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		}
 		if (days < 1) {
 			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.`);
-			
+
 			return null;
 		}
 		if (days > BASELINE_MAX_DAYS) {

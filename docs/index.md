@@ -149,6 +149,21 @@ maat axiom declare \
   --note "Keeps the domain testable without spinning up real I/O."
 ```
 
+## Fitness functions
+
+<section class="maat-panel">
+  <p>
+    Maat rules implement the fitness function concept from <a href="https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/"><em>Building Evolutionary Architectures</em></a> (Ford, Parsons, Kua, Sadalage): automated checks that measure how well a system adheres to its intended architectural characteristics.
+  </p>
+  <p>
+    Each rule evaluates collected facts against a policy the team chose to encode. When a rule fails, the finding signals that the codebase is drifting from the shape the team wants to preserve. Over time, adding and refining rules guides the architecture's evolution in a deliberate direction.
+  </p>
+</section>
+
+<p class="maat-adoption-more">
+  <a :href="withBase('/guide/fitness-functions.html')">Read more about how Maat implements fitness functions</a>
+</p>
+
 ## FAQ
 
 <div class="maat-faq">
@@ -163,6 +178,10 @@ maat axiom declare \
   <section>
     <h3>How is it different from architecture unit tests?</h3>
     <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings and mark fixed fingerprints as resolved so exact regressions are caught later.</p>
+  </section>
+  <section>
+    <h3>Are Maat rules fitness functions?</h3>
+    <p>Yes. In the vocabulary of <a href="https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/"><em>Building Evolutionary Architectures</em></a> (Ford, Parsons, Kua, Sadalage), Maat rules are fitness functions: automated, objective checks that verify architectural characteristics. Collectors gather the facts, rules evaluate them, and findings report deviations from the desired shape.</p>
   </section>
   <section>
     <h3>Can we write our own checks?</h3>

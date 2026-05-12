@@ -27,6 +27,7 @@ const guideAndPluginSidebar = [
     text: 'Guide',
     items: [
       { text: 'Getting started', link: '/guide/getting-started' },
+      { text: 'Fitness functions', link: '/guide/fitness-functions' },
       { text: 'Greenfield and brownfield', link: '/guide/adoption' },
       { text: 'Determinism', link: '/guide/determinism' },
       { text: 'ADRs vs Axioms', link: '/guide/adrs-vs-axioms' },

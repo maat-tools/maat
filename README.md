@@ -12,6 +12,8 @@ Maat helps teams capture the coupling, boundaries, and codebase rules that usual
 
 Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of explicit decisions about findings.
 
+In the vocabulary of [*Building Evolutionary Architectures*](https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/) (Neal Ford, Rebecca Parsons, Patrick Kua, Pramod Sadalage), Maat rules are **fitness functions**: automated checks that verify whether your codebase preserves the structural characteristics the team decided to protect.
+
 ## Why Maat exists
 
 Large codebases collect rules that are hard to see from one file: which modules may talk to each other, which data shapes are public, which duplicated policies must stay consistent, and which shortcuts have become dangerous.
@@ -171,6 +173,7 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 ## Documentation
 
 - [Getting started](docs/guide/getting-started.md)
+- [Fitness functions](docs/guide/fitness-functions.md)
 - [Commands](docs/commands/)
 - [Determinism](docs/guide/determinism.md)
 - [Plugin system](docs/guide/plugins.md)

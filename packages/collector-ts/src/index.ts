@@ -8,8 +8,8 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 } from '@maat-tools/vocabulary';
+import { glob } from 'fast-glob';
 import * as micromatch from 'micromatch';
-import * as fg from 'fast-glob';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
@@ -157,7 +157,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		const results: string[] = [];
 		for (const pattern of patterns) {
 			if (/[*?{[]/.test(pattern)) {
-				const matches = await fg(pattern, { cwd: rootDir, absolute: true });
+				const matches = await glob(pattern, { cwd: rootDir, absolute: true });
 				results.push(...matches);
 			} else {
 				results.push(resolve(pattern));

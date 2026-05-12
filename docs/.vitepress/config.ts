@@ -29,6 +29,7 @@ const guideAndPluginSidebar = [
       { text: 'Getting started', link: '/guide/getting-started' },
       { text: 'Greenfield and brownfield', link: '/guide/adoption' },
       { text: 'Determinism', link: '/guide/determinism' },
+      { text: 'ADRs vs Axioms', link: '/guide/adrs-vs-axioms' },
       { text: 'Plugin system', link: '/guide/plugins' },
     ],
   },

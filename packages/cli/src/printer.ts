@@ -96,4 +96,18 @@ export class Printer {
 	public json(data: unknown): void {
 		console.log(JSON.stringify(data, null, 2));
 	}
+
+	public success(message: string): void {
+		if (this.silent) {
+			return;
+		}
+		console.log(chalk.green(message));
+	}
+
+	public detail(label: string, value: string): void {
+		if (this.silent) {
+			return;
+		}
+		console.log(`  ${chalk.bold(label)} ${value}`);
+	}
 }

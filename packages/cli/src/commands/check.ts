@@ -19,6 +19,7 @@ const CHECK_DISPLAY_MODES = new Set<CheckDisplayMode>(['all', 'findings', 'insig
 type LedgerAnalysis = {
 	baselinedFingerprints: Set<string>;
 	axiomExceptedFingerprints: Set<string>;
+	activeAxiomCount: number;
 	hasRegressions: boolean;
 	hasExpiredBaselines: boolean;
 };
@@ -120,12 +121,16 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const axiomExceptedFingerprints = new Set<string>();
 		let hasRegressions = false;
 		let hasExpiredBaselines = false;
+		let activeAxiomCount = 0;
 		const now = Date.now();
 
 		for (const axiom of Object.values(snapshot.axioms)) {
-			if (axiom.active && axiom.fingerprints) {
-				for (const fp of axiom.fingerprints) {
-					axiomExceptedFingerprints.add(fp);
+			if (axiom.active) {
+				activeAxiomCount++;
+				if (axiom.fingerprints) {
+					for (const fp of axiom.fingerprints) {
+						axiomExceptedFingerprints.add(fp);
+					}
 				}
 			}
 		}
@@ -148,6 +153,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		return {
 			baselinedFingerprints,
 			axiomExceptedFingerprints,
+			activeAxiomCount,
 			hasRegressions,
 			hasExpiredBaselines,
 		};
@@ -250,7 +256,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		printer: Printer,
 		options: { printSummary: boolean },
 	): void {
-		const { hasRegressions, hasExpiredBaselines } = analysis;
+		const { hasRegressions, hasExpiredBaselines, activeAxiomCount } = analysis;
 
 		if (hasRegressions || hasExpiredBaselines) {
 			if (hasRegressions) {
@@ -278,9 +284,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (visibleFindings.length === 0) {
-			printer.log('No findings detected. Great job!');
+			const summary = activeAxiomCount > 0
+				? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!`
+				: 'No findings detected. Great job!';
+			printer.log(summary);
 		} else {
-			printer.log(`${visibleFindings.length} finding(s) detected. Please review the output above for details.`);
+			const summary = activeAxiomCount > 0
+				? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.`
+				: `${visibleFindings.length} finding(s) detected. Please review the output above for details.`;
+			printer.log(summary);
 		}
 	}
 

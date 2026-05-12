@@ -26,5 +26,5 @@ export default defineConfig({
 			'@maat-tools/core',
 		),
 	],
-	ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
+	ledger: ['@maat-tools/file-ledger', { path: './.maat/maat-ledger.ndjson' }],
 });

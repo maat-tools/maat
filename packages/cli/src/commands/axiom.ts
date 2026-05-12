@@ -96,7 +96,15 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(fingerprints === undefined ? {} : { fingerprints }),
 		});
 
-		this.printer.log(`Axiom "${options.id}" declared.`);
+		this.printer.success(`Axiom "${options.id}" declared.`);
+		this.printer.detail('scope:', options.scope);
+		this.printer.detail('claim:', options.claim);
+		if (options.note) {
+			this.printer.detail('note:', options.note);
+		}
+		if (fingerprints && fingerprints.length > 0) {
+			this.printer.detail('fingerprints:', fingerprints.join(', '));
+		}
 	}
 
 	private async lifecycle(type: AxiomLifecycleStatus, options: LifecycleOptions): Promise<void> {
@@ -125,6 +133,9 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 
-		this.printer.log(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
+		this.printer.warn(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
+		if (options.reason) {
+			this.printer.detail('reason:', options.reason);
+		}
 	}
 }

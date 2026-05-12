@@ -8,9 +8,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
+      permissions:
       contents: write
-      pull-requests: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,11 +75,15 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit version bumps and CHANGELOG
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create release PR
+        uses: peter-evans/create-pull-request@v7
         with:
-          commit_message: "chore(release): ${{ github.ref_name }}"
-          file_pattern: "CHANGELOG.md packages/*/package.json package.json"
+          commit-message: "chore(release): ${{ github.ref_name }}"
+          branch: "release/${{ github.ref_name }}"
+          title: "chore(release): ${{ github.ref_name }}"
+          body-path: RELEASE_NOTES.md
+          base: main
+          labels: release
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -9,6 +9,7 @@ import {
 	type Import,
 } from '@maat-tools/vocabulary';
 import * as micromatch from 'micromatch';
+import * as fg from 'fast-glob';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {
@@ -156,10 +157,8 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		const results: string[] = [];
 		for (const pattern of patterns) {
 			if (/[*?{[]/.test(pattern)) {
-				const glob = new Bun.Glob(pattern);
-				for await (const match of glob.scan({ cwd: rootDir, absolute: true })) {
-					results.push(match);
-				}
+				const matches = await fg(pattern, { cwd: rootDir, absolute: true });
+				results.push(...matches);
 			} else {
 				results.push(resolve(pattern));
 			}

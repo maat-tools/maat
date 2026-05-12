@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import {
 	type Insight,
 	isCollector,
@@ -24,6 +25,9 @@ import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
 import { Printer } from './printer';
 
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json') as { version: string };
+
 type PluginEntry = string | [string, Record<string, unknown>];
 
 function resolveEntry(entry: PluginEntry): [string, Record<string, unknown>] {
@@ -45,7 +49,7 @@ class MaatCLI {
 		this.program
 			.name('maat')
 			.description('maat cli')
-			.version('0.1.0')
+			.version(version)
 			.option('-c, --config <path>', 'Path to a maat config file');
 	}
 

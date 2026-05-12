@@ -46,4 +46,4 @@ The ledger records decisions about findings. If a finding is not reproducible, t
 
 Use official rules when you need the project-level determinism guarantee. Use third-party packages when you accept responsibility for their behavior.
 
-See [ADR-010: Plugin determinism contract](/adr/010-plugin-determinism-contract) for the architectural decision behind this policy.
+See [ADR-007: Plugin determinism contract](/adr/007-plugin-determinism-contract) for the architectural decision behind this policy.

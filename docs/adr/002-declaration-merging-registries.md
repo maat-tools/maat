@@ -1,7 +1,7 @@
 # ADR-002: Declaration-merging registries for type-safe extensibility
 
 **Status:** Accepted  
-**Date:** 2026-04-17
+**Date:** 2026-05-12
 
 ## Context
 
@@ -32,7 +32,7 @@ declare module '@maat-tools/contracts' {
 }
 ```
 
-The `defineCollector`, `defineRule`, `defineRuleSet`, `defineInsight`, `defineInsightSet`, and `defineLedgerBackend` helpers in `@maat-tools/contracts` return branded factories or sets. The branded factory helpers preserve the config and option types that augmenting packages register. The config types in `@maat-tools/core` use mapped types over the collector, rule, and ledger backend registries to produce precise option types; `FactRegistry` types the fact exchange between collectors and rules, and `InsightRegistry` is the corresponding declaration-merging extension point for insight options.
+The `defineCollector`, `defineRule`, `defineRuleSet`, `defineRuleBuilder`, `defineInsight`, `defineInsightSet`, and `defineLedgerBackend` helpers in `@maat-tools/contracts` return branded factories or sets. The branded factory helpers preserve the config and option types that augmenting packages register. The config types in `@maat-tools/core` use mapped types over the collector, rule, and ledger backend registries to produce precise option types; `FactRegistry` types the fact exchange between collectors and rules, and `InsightRegistry` is the corresponding declaration-merging extension point for insight options.
 
 ## Consequences
 

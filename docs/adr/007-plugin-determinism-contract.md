@@ -1,7 +1,7 @@
-# ADR-010: Determinism is a contract, not a guarantee, for third-party plugins
+# ADR-007: Determinism is a contract, not a guarantee, for third-party plugins
 
 **Status:** Accepted  
-**Date:** 2026-05-05
+**Date:** 2026-05-12
 
 ## Context
 
@@ -25,15 +25,15 @@ Any package implementing `Rule`, `Collector`, or `Insight` for use with maat mus
 
 ### Enforcement path (progressive)
 
-| Phase | Mechanism |
-|---|---|
-| Now | Documented contract in plugin authoring guide. Violations are not detected by the kernel. |
-| V1+ | `@maat-tools/rule-tester` ships a determinism assertion: runs `evaluate()` twice with identical inputs and asserts deep equality of output. Plugin CI is expected to include this check. |
-| Future | Worker-based plugin isolation with restricted permissions (no network, no FS writes). Bun and Deno both support permission-scoped subprocesses. This is the hard enforcement boundary — post-V1. |
+| Phase | Mechanism | Status |
+|---|---|---|
+| Now | Documented contract in plugin authoring guide and determinism page | Done |
+| V1+ | `@maat-tools/rule-tester` ships a determinism assertion: runs `evaluate()` twice with identical inputs and asserts deep equality of output. Plugin CI is expected to include this check. | Planned |
+| Future | Worker-based plugin isolation with restricted permissions (no network, no FS writes). Bun and Deno both support permission-scoped subprocesses. This is the hard enforcement boundary — post-V1. | Planned |
 
 ## Consequences
 
-- maat's README and plugin authoring documentation must state explicitly: *"maat's kernel is deterministic. Third-party plugins are outside that guarantee and must honor the purity contract."*
+- maat's README and plugin authoring documentation state explicitly: *"maat's kernel is deterministic. Third-party plugins are outside that guarantee and must honor the purity contract."*
 - The `@maat-tools/rule-tester` package is a planned V1+ deliverable, not optional.
 - A plugin that violates the contract can make ledger entries non-reproducible. maat cannot detect this at runtime in V1. This is an accepted risk at the current scale.
 - The LLM-inside-collector pattern (caching + deterministic output) is the only sanctioned path for AI-assisted fact collection. LLMs inside `evaluate()` or `analyze()` are a hard violation regardless of caching.

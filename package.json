@@ -2,7 +2,7 @@
 	"name": "maat",
 	"version": "0.1.1",
 	"private": true,
-	"description": "Architectural governance tool for TypeScript — deterministic detection, attributed decisions, permanent ledger, opt-in enforcement.",
+	"description": "Turn implicit architecture knowledge into deterministic checks — captures coupling, boundaries, and codebase rules that usually live in developers' heads.",
 	"keywords": [
 		"architecture",
 		"governance",

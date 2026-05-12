@@ -5,25 +5,23 @@
 </p>
 
 <p align="center">
-  <strong>Fact-based architecture analysis for codebases.</strong>
+  <strong>Turn implicit architecture knowledge into deterministic checks.</strong>
 </p>
 
-Maat checks architecture rules against facts collected from your repository. It collects structural and semantic facts, runs deterministic rules, reports findings with stable fingerprints, and keeps accepted exceptions in version control.
+Maat helps teams capture the coupling, boundaries, and codebase rules that usually live in a few developers' heads. It collects structural and semantic facts from your repository, runs deterministic rules against them, reports findings with stable fingerprints, and keeps accepted exceptions in version control.
 
-Maat is not a linter, an AI reviewer, or a diagram generator. It is a collector-based analysis tool: collectors extract facts from a repository, rules evaluate those facts, and the ledger records what was accepted.
+Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of explicit decisions about findings.
 
 ## Why Maat exists
 
-Architecture rules often live where the compiler cannot see them: planning docs, ADRs, review comments, diagrams, and conversations.
+Large codebases collect rules that are hard to see from one file: which modules may talk to each other, which data shapes are public, which duplicated policies must stay consistent, and which shortcuts have become dangerous.
 
-Maat moves part of that intent into executable rules. Today it ships with a TypeScript collector for source structure. The same model can support other collectors, including semantic ones, without changing the kernel.
-
-It does not decide whether the architecture is good. It reports rule violations and lets your team decide what to baseline or resolve.
+Those rules often live in review comments, ADRs, debugging sessions, and the memory of people who know the codebase well. Maat gives teams a path to make that knowledge explicit — write collectors for the facts your codebase needs, write rules for the policies you care about, and keep accepted exceptions in version control.
 
 ## How it works
 
-1. **Collect facts**: collectors turn repository structure, metadata, or other inputs into facts.
-2. **Check rules**: rules compare collected facts with the configured boundaries.
+1. **Collect facts**: collectors turn repository structure, metadata, or team-specific signals into facts.
+2. **Check rules**: rules compare those facts with the policies the team chose to encode.
 3. **Report findings**: violations are shown with stable fingerprints.
 4. **Update the ledger**: accepted findings and decisions are stored with the repository.
 
@@ -70,9 +68,15 @@ maat --config ./path/to/maat.config.ts check
 MAAT_CONFIG=./maat.config.ts maat check
 ```
 
-## New codebases
+## New codebases (greenfield)
 
-Use `check.strict: true` when new violations should fail the command. Add `maat check` to CI and review architecture rules as code.
+Write the rules before the shortcuts settle in. Keep `check.strict: true` and add `maat check` to CI. Any visible finding exits non-zero.
+
+Start with rules that are easy to explain in code review: package boundaries, layer boundaries, and dependency direction. Add more specific rules when the team has a real pattern it wants to preserve.
+
+- Prevent accidental dependencies before they become precedent.
+- Keep domain code independent from infrastructure and framework details.
+- Review architecture rules as code.
 
 ```ts
 export default defineConfig({
@@ -95,9 +99,13 @@ maat axiom declare \
   --note "Keeps the domain testable without spinning up real I/O."
 ```
 
-## Existing codebases
+## Existing codebases (brownfield)
 
-Use the ledger when the current codebase already has violations you do not want to fail immediately.
+Start from what the codebase already taught you. Existing systems can turn repeated review notes and manual architecture analysis into checks, baseline existing findings in dedicated ledger PRs, and keep fixed fingerprints from quietly regressing.
+
+- Separate new violations from existing debt.
+- Track accepted exceptions in the same repository history as the code.
+- Turn repeated review comments into checks.
 
 ```ts
 import { defineConfig } from '@maat-tools/core'

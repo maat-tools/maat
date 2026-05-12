@@ -1,7 +1,7 @@
 # ADR-005: Finding lifecycle plus axiom
 
 **Status:** Accepted  
-**Date:** 2026-04-17
+**Date:** 2026-05-12
 
 ## Context
 
@@ -23,20 +23,30 @@ observed → resolved
 
 Additionally, a finding can be **baselined** (a flag, not a state): it was present on the first run and accepted as the starting point. Baselined observations are suppressed in `maat check` output unless explicitly requested.
 
-**Axioms** are manual claims with no corresponding detector. They are persisted in the same ledger via `axiom.declared` events but are never in the `FindingState` state machine.
+When a finding disappears from the codebase between runs, it is **auto-resolved**. If a previously resolved finding reappears with the same fingerprint, it transitions back to `observed`.
+
+**Axioms** are manual claims with no corresponding detector. They are persisted in the same ledger via axiom events but are never in the `FindingStatus` state machine.
 
 | State/Flag | Type | Source |
 |---|---|---|
-| `observed` | FindingState | Detector output, not yet reviewed |
-| `observed` + `baselined: true` | FindingState + flag | First-run baseline acceptance |
-| `resolved` | FindingState | Exact fingerprint was fixed |
+| `observed` | FindingStatus | Detector output, not yet reviewed |
+| `observed` + `baselined: true` | FindingStatus + flag | First-run baseline acceptance |
+| `resolved` | FindingStatus | Exact fingerprint was fixed, or auto-resolved when finding disappeared |
 | `axiom` | Separate entity | Manual claim, not tool-verifiable |
+
+Axiom events:
+
+| Event | Meaning |
+|---|---|
+| `axiom.declared` | User added a manual claim |
+| `axiom.superseded` | Axiom was replaced by a newer version |
+| `axiom.revoked` | Axiom was withdrawn entirely |
 
 Resolution is fingerprint-specific. If another finding from the same rule appears with a different fingerprint, it is a new finding, not a regression of the resolved one.
 
 ## Consequences
 
-- The finding state union is `finding.observed | finding.resolved`. Baseline is a flag on the finding record.
+- The finding status union is `finding.observed | finding.resolved`. Baseline is a flag on the finding record.
 - CLI exit codes map to checks: `0` = clean, `1` = visible finding under strict mode, exact resolved fingerprint regression, or expired baseline, `2` = tool error.
 - The ledger fold function reconstructs the current state of each finding from events. A finding with only `finding.observed` is in state `observed`.
 - Axioms are folded separately from findings. The `FindingRecord` type does not represent axioms.

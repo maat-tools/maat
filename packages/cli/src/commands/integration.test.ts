@@ -90,21 +90,6 @@ function makeVisualize(ledger: FilePathLedgerBackend | null, insights: Insight[]
 	return new Visualize(new Command(), BASE_CONFIG, makeKernel(), insights, new Printer({ silent }), ledger);
 }
 
-function deferred<T>() {
-	let resolve!: (value: T | PromiseLike<T>) => void;
-	let reject!: (reason?: unknown) => void;
-	const promise = new Promise<T>((res, rej) => {
-		resolve = res;
-		reject = rej;
-	});
-
-	return { promise, resolve, reject };
-}
-
-function timeout(ms: number): Promise<never> {
-	return new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms));
-}
-
 const ANSI_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 function stripAnsi(str: string): string {
 	return str.replace(ANSI_RE, '');
@@ -251,43 +236,6 @@ describe('check without ledger', () => {
 
 		expect(analyzed).toHaveLength(1);
 		expect(analyzed[0]?.map((finding) => finding.ruleId)).toEqual(['family:target@v1']);
-	});
-
-	test('insights run concurrently and results keep registration order', async () => {
-		const firstInsightCanFinish = deferred<void>();
-		const secondInsightStarted = deferred<void>();
-		const firstInsight: Insight = {
-			id: 'first-insight',
-			needRules: ['test@v1'],
-			analyze: async () => {
-				await secondInsightStarted.promise;
-				await firstInsightCanFinish.promise;
-				return [{ insightId: 'first-insight', message: 'first insight', data: {} }];
-			},
-		};
-		const secondInsight: Insight = {
-			id: 'second-insight',
-			needRules: ['test@v1'],
-			analyze: async () => {
-				secondInsightStarted.resolve();
-				firstInsightCanFinish.resolve();
-				return [{ insightId: 'second-insight', message: 'second insight', data: {} }];
-			},
-		};
-		const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-		logSpy.mockClear();
-
-		await Promise.race([
-			makeCheck([RULE_OUTPUT], null, BASE_CONFIG, false, [firstInsight, secondInsight]).action({
-				show: 'insights',
-			}),
-			timeout(100),
-		]);
-
-		const output = logSpy.mock.calls.map(([line]) => stripAnsi(String(line))).join('\n');
-		expect(output.indexOf('[first-insight] first insight')).toBeLessThan(
-			output.indexOf('[second-insight] second insight'),
-		);
 	});
 
 	test('invalid --show exits 1', async () => {

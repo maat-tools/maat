@@ -157,7 +157,7 @@ export interface RuleBuilder {
 export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
-	analyze(findings: Finding[]): InsightResult[] | Promise<InsightResult[]>;
+	analyze(findings: Finding[]): InsightResult[];
 }
 
 export interface LedgerBackend {

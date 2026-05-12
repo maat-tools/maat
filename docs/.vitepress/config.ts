@@ -117,6 +117,22 @@ const guideAndPluginSidebar = [
       },
     ],
   },
+  {
+    text: 'For Contributors',
+    collapsed: false,
+    items: [
+      { text: '001 — Monorepo bounded packages', link: '/adr/001-monorepo-bounded-packages' },
+      { text: '002 — Declaration merging registries', link: '/adr/002-declaration-merging-registries' },
+      { text: '003 — Event-sourced NDJSON ledger', link: '/adr/003-event-sourced-ndjson-ledger' },
+      { text: '004 — ULID ledger entry IDs', link: '/adr/004-ulid-ledger-entry-ids' },
+      { text: '005 — Four-state finding lifecycle', link: '/adr/005-four-state-finding-lifecycle' },
+      { text: '006 — Pure kernel', link: '/adr/006-pure-kernel' },
+      { text: '007 — Plugin determinism contract', link: '/adr/007-plugin-determinism-contract' },
+      { text: '008 — Fingerprint-based finding identity', link: '/adr/008-fingerprint-based-finding-identity' },
+      { text: '009 — Axiom lifecycle', link: '/adr/009-axiom-lifecycle' },
+      { text: '010 — Rule builder fluent DSL', link: '/adr/010-rule-builder-fluent-dsl' },
+    ],
+  },
 ]
 
 export default defineConfig({
@@ -137,7 +153,6 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Commands', link: '/commands/' },
       { text: 'Plugins', link: '/plugins/' },
-      { text: 'ADRs', link: '/adr/001-monorepo-bounded-packages' },
     ],
 
     sidebar: {
@@ -146,7 +161,8 @@ export default defineConfig({
       '/plugins/': guideAndPluginSidebar,
       '/adr/': [
         {
-          text: 'Architecture decisions',
+          text: 'For Contributors',
+          collapsed: false,
           items: [
             { text: '001 — Monorepo bounded packages', link: '/adr/001-monorepo-bounded-packages' },
             { text: '002 — Declaration merging registries', link: '/adr/002-declaration-merging-registries' },
@@ -154,9 +170,10 @@ export default defineConfig({
             { text: '004 — ULID ledger entry IDs', link: '/adr/004-ulid-ledger-entry-ids' },
             { text: '005 — Four-state finding lifecycle', link: '/adr/005-four-state-finding-lifecycle' },
             { text: '006 — Pure kernel', link: '/adr/006-pure-kernel' },
-            { text: '007 — IR structural boundary', link: '/adr/007-ir-structural-boundary' },
-            { text: '008 — Bundled TypeScript parser', link: '/adr/008-bundled-typescript-parser' },
-            { text: '010 — Plugin determinism contract', link: '/adr/010-plugin-determinism-contract' },
+            { text: '007 — Plugin determinism contract', link: '/adr/007-plugin-determinism-contract' },
+            { text: '008 — Fingerprint-based finding identity', link: '/adr/008-fingerprint-based-finding-identity' },
+            { text: '009 — Axiom lifecycle', link: '/adr/009-axiom-lifecycle' },
+            { text: '010 — Rule builder fluent DSL', link: '/adr/010-rule-builder-fluent-dsl' },
           ],
         },
       ],

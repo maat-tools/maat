@@ -23,8 +23,8 @@ export abstract class MaatCommandBase {
 			return [];
 		}
 
-		const resultsByInsight = await Promise.all(
-			this.insights.map((insight) => insight.analyze(this.findingsForInsight(visibleFindings, insight))),
+		const resultsByInsight = this.insights.map((insight) =>
+			insight.analyze(this.findingsForInsight(visibleFindings, insight)),
 		);
 
 		return resultsByInsight.flat();

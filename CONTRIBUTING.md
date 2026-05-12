@@ -56,23 +56,23 @@ These are non-negotiable. PRs that violate them will not be merged regardless of
 
 ### 1. `Rule.evaluate()` must be pure and synchronous
 
-`evaluate(facts)` is a pure function: same inputs, same outputs, every time. No I/O, no network calls, no randomness, no LLM calls. See [ADR-006](docs/adr/006-pure-kernel.md) and [ADR-010](docs/adr/010-plugin-determinism-contract.md).
+`evaluate(facts)` is a pure function: same inputs, same outputs, every time. No I/O, no network calls, no randomness, no LLM calls. See [ADR-006](docs/adr/006-pure-kernel.md) and [ADR-007](docs/adr/007-plugin-determinism-contract.md).
 
 ### 2. The kernel never touches an LLM
 
 LLMs may produce facts inside a `Collector` (with a committable cache keyed by content hash × model version × prompt version). The kernel and rules never call an LLM. This boundary is inviolable.
 
-### 3. The IR describes structure, not problems
-
-Fields on IR types in `@maat-tools/vocabulary` must answer "what is this thing and where does it sit?" — not "is this a problem?" Coupling judgments belong in rules. See [ADR-007](docs/adr/007-ir-structural-boundary.md).
-
-### 4. Ledger events are immutable and additive
+### 3. Ledger events are immutable and additive
 
 Never modify or delete a ledger event type's existing fields. New optional fields may be added. Breaking schema changes require a new event type. See [ADR-003](docs/adr/003-event-sourced-ndjson-ledger.md).
 
-### 5. `@maat-tools/contracts` is the only universal import
+### 4. `@maat-tools/contracts` is the only universal import
 
-Packages may import from `@maat-tools/contracts` freely. All other cross-package imports must follow the dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`. Circular dependencies are a build error.
+Packages may import from `@maat-tools/contracts` freely. All other cross-package imports must follow the dependency direction: `cli → kernel → contracts`, `rules → vocabulary → contracts`.
+
+### 5. Finding fingerprints must be stable
+
+The `ruleIdentifier` passed to `generateFingerprint()` must contain only durable facts about the architectural finding. Line numbers, columns, timestamps, and formatted messages are not allowed. See [ADR-008](docs/adr/008-fingerprint-based-finding-identity.md).
 
 ## Contributing a rule or collector
 

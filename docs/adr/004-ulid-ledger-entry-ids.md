@@ -1,7 +1,7 @@
 # ADR-004: ULID for ledger entry identifiers
 
 **Status:** Accepted  
-**Date:** 2026-04-17
+**Date:** 2026-05-12
 
 ## Context
 
@@ -20,7 +20,7 @@ Ledger entries use ULID (Universally Unique Lexicographically Sortable Identifie
 entry_id: "01HZ4QK7BRXF3S2EGVN1V4PXWZ"
 ```
 
-ULIDs are generated at write time in the `FilePathLedgerBackend.append()` method. The caller supplies the event payload without `entry_id`; the backend assigns it.
+ULIDs are generated at write time in `LedgerBackendBase.stampEvent()` (in `@maat-tools/core`). The caller supplies the event payload without `entry_id`; the base class assigns it, so all ledger backends share the same ID generation logic.
 
 **Why not UUID v4:** UUIDs are not sortable. Ledger entries should be queryable in insertion order without a separate sequence column or sort key.
 

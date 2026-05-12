@@ -1,7 +1,7 @@
 # ADR-003: Event-sourced append-only ledger in NDJSON
 
 **Status:** Accepted  
-**Date:** 2026-04-17
+**Date:** 2026-05-12
 
 ## Context
 

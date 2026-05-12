@@ -188,7 +188,7 @@ Avoid values that change when the underlying architectural fact did not change: 
 
 Maat does not track file renames as a separate ledger operation. If a fingerprint includes `file`, renaming the file produces a new fingerprint and the old finding can later be resolved. If a rename should not create a new finding, keep the file path in `artifacts` for display and use a more durable identifier, such as package, symbol, route path, dependency specifier, or architectural scope.
 
-The kernel generates each fingerprint with `generateFingerprint(ruleId, ruleIdentifier)`, which uses a stable stringify before hashing. Object property order does not matter: `{ file, path }` and `{ path, file }` hash the same way.
+The kernel generates each fingerprint with `generateFingerprint(ruleId, ruleIdentifier)`, which uses a stable stringify before hashing. Object property order does not matter: `{ file, path }` and `{ path, file }` hash the same way. See [ADR-008](/adr/008-fingerprint-based-finding-identity) for the full design.
 
 Array order still matters because arrays represent ordered data. If a collector reads files or facts in nondeterministic order, sort them before returning facts or before including them in `ruleIdentifier`.
 

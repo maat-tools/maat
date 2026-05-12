@@ -8,7 +8,7 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 } from '@maat-tools/vocabulary';
-import * as micromatch from 'micromatch';
+import micromatch from 'micromatch';
 import { glob } from 'tinyglobby';
 import { Project, type SourceFile } from 'ts-morph';
 

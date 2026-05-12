@@ -5,7 +5,7 @@ import {
 	type GitFileChange,
 } from '@maat-tools/collector-git';
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
-import * as micromatch from 'micromatch';
+import micromatch from 'micromatch';
 
 declare module '@maat-tools/contracts' {
 	interface RuleRegistry {

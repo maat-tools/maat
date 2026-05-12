@@ -1,42 +1,42 @@
 {
-	"name": "maat",
-	"version": "0.1.1",
-	"private": true,
-	"description": "Turn implicit architecture knowledge into deterministic checks — captures coupling, boundaries, and codebase rules that usually live in developers' heads.",
-	"keywords": [
-		"architecture",
-		"governance",
-		"coupling",
-		"connascence",
-		"typescript",
-		"static-analysis",
-		"ledger"
-	],
-	"license": "Apache-2.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/maat-tools/maat"
-	},
-	"workspaces": [
-		"packages/*"
-	],
-	"scripts": {
-		"build": "for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
-		"docs:dev": "vitepress dev docs",
-		"docs:build": "vitepress build docs",
-		"docs:preview": "vitepress preview docs",
-		"lint": "biome check .",
-		"test": "bun test",
-		"typecheck": "tsc --noEmit",
-		"maat": "bun run packages/cli/src/index.ts",
-		"commitlint": "commitlint --from HEAD~1 --to HEAD"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.4.14",
-		"@commitlint/cli": "^21.0.0",
-		"@commitlint/config-conventional": "^21.0.0",
-		"@types/bun": "1.3.13",
-		"typescript": "5.9.3",
-		"vitepress": "^1.6.4"
-	}
+  "name": "maat",
+  "version": "0.1.3",
+  "private": true,
+  "description": "Turn implicit architecture knowledge into deterministic checks — captures coupling, boundaries, and codebase rules that usually live in developers' heads.",
+  "keywords": [
+    "architecture",
+    "governance",
+    "coupling",
+    "connascence",
+    "typescript",
+    "static-analysis",
+    "ledger"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maat-tools/maat"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "lint": "biome check .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "maat": "bun run packages/cli/src/index.ts",
+    "commitlint": "commitlint --from HEAD~1 --to HEAD"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.14",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@types/bun": "1.3.13",
+    "typescript": "5.9.3",
+    "vitepress": "^1.6.4"
+  }
 }

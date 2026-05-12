@@ -37,7 +37,7 @@ jobs:
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
         run: bun run docs:build
 
-      - uses: actions/configure-pages@v4
+      - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v3
         with:

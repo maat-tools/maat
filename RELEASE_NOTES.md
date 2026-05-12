@@ -1,6 +1,6 @@
-## [0.1.6] — 2026-05-12
+## [0.1.7] — 2026-05-12
 
 ### Fixed
 
-- Replace Bun.Glob with tinyglobby for Node.js ESM compatibility
+- Resolve micromatch CJS/ESM interop and exclude package.json from lint
 

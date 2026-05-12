@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/connascence-rules",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Built-in rules for detecting connascence of meaning — shared string and numeric literals across package boundaries",
   "type": "module",
   "main": "./dist/index.js",

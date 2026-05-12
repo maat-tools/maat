@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/cli",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Command-line interface for maat — loads plugins, runs analysis and manages the finding lifecycle",
   "type": "module",
   "bin": {

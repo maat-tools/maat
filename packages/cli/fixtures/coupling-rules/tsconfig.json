@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"noEmit": true
+	},
+	"include": ["pkg-contracts/src/**/*.ts", "pkg-kernel/src/**/*.ts", "pkg-shared/src/**/*.ts", "monolith/src/**/*.ts"]
+}

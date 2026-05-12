@@ -1,0 +1,58 @@
+# dependencies (bun install)
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+*.d.ts.map
+*.d.ts
+
+# IntelliJ based IDEs
+.idea
+
+# VS Code Local History extension
+.history
+
+# Finder (MacOS) folder config
+.DS_Store
+
+# MOM (generated at runtime)
+.mom/
+.mcp.json
+.claude/
+CLAUDE.md
+AGENTS.md
+.codex/
+
+*/.vitepress/*
+!docs/.vitepress/
+!docs/.vitepress/config.ts
+!docs/.vitepress/theme/
+docs/.vitepress/theme/*
+!docs/.vitepress/theme/index.ts
+!docs/.vitepress/theme/style.css
+docs/.vitepress/.temp/
+docs/.vitepress/cache/
+docs/.vitepress/dist/

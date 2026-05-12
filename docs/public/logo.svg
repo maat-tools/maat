@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="200" height="200" fill="none" role="img" aria-labelledby="maatIconTitle maatIconDesc">
+  <title id="maatIconTitle">maat balance icon</title>
+  <desc id="maatIconDesc">A balanced scale with a feather on one pan and a code module on the other.</desc>
+
+  <g stroke="#C8922A" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Balanced scale -->
+    <path d="M48 64h160" stroke-width="6"/>
+    <path d="M128 42v144" stroke-width="6"/>
+    <circle cx="128" cy="42" r="8" fill="#C8922A" stroke="none"/>
+    <path d="M92 202h72" stroke-width="6"/>
+    <path d="M78 218h100" stroke-width="6"/>
+    <path d="M103 202 78 218M153 202l25 16" stroke-width="5"/>
+
+    <!-- Left pan -->
+    <path d="M62 64v60" stroke-width="4"/>
+    <path d="M40 146 62 124l22 22" stroke-width="4"/>
+    <path d="M36 146c13 10 39 10 52 0" stroke-width="5"/>
+
+    <!-- Right pan -->
+    <path d="M194 64v60" stroke-width="4"/>
+    <path d="M172 146l22-22 22 22" stroke-width="4"/>
+    <path d="M168 146c13 10 39 10 52 0" stroke-width="5"/>
+  </g>
+
+  <g stroke="#D6A84F" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Feather: the rule -->
+    <path d="M61 136c-14-20-4-49 25-64 2 31-8 56-25 64Z" stroke-width="4.5"/>
+    <path d="M62 135c8-21 17-43 24-63" stroke-width="3.5"/>
+    <path d="M70 108c-10-5-18-4-25 2" stroke-width="3"/>
+    <path d="M73 119c-9-2-17 1-22 7" stroke-width="3"/>
+    <path d="M75 101c8-3 14-1 19 5" stroke-width="3"/>
+    <path d="M72 113c8-2 14 0 19 6" stroke-width="3"/>
+
+    <!-- Code module: the codebase under evaluation -->
+    <rect x="167" y="89" width="54" height="40" rx="7" stroke-width="4.5"/>
+    <path d="M184 101 174 109l10 8" stroke-width="4"/>
+    <path d="M204 101l10 8-10 8" stroke-width="4"/>
+    <path d="M197 99l-6 22" stroke-width="4"/>
+  </g>
+</svg>

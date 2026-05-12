@@ -1,41 +1,41 @@
 {
-	"name": "@maat-tools/vocabulary",
-	"version": "0.1.3",
-	"description": "Shared fact type definitions (imports and constants) used by collectors and rules",
-	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": {
-			"bun": "./src/index.ts",
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
-		}
-	},
-	"files": [
-		"dist",
-		"LICENSE"
-	],
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
-		"lint": "biome check .",
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"@types/bun": "1.3.13",
-		"@biomejs/biome": "2.4.14"
-	},
-	"dependencies": {
-		"@maat-tools/contracts": "workspace:*"
-	},
-	"author": "Marcos Defendi (https://github.com/maat-tools)",
-	"homepage": "https://maat-tools.github.io/maat/",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/maat-tools/maat",
-		"directory": "packages/vocabulary"
-	}
+  "name": "@maat-tools/vocabulary",
+  "version": "0.1.6",
+  "description": "Shared fact type definitions (imports and constants) used by collectors and rules",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.13",
+    "@biomejs/biome": "2.4.14"
+  },
+  "dependencies": {
+    "@maat-tools/contracts": "0.1.6"
+  },
+  "author": "Marcos Defendi (https://github.com/maat-tools)",
+  "homepage": "https://maat-tools.github.io/maat/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maat-tools/maat",
+    "directory": "packages/vocabulary"
+  }
 }

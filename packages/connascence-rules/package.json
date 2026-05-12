@@ -1,50 +1,50 @@
 {
-	"name": "@maat-tools/connascence-rules",
-	"version": "0.1.3",
-	"description": "Built-in rules for detecting connascence of meaning — shared string and numeric literals across package boundaries",
-	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": {
-			"bun": "./src/index.ts",
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
-		},
-		"./com": {
-			"bun": "./src/com.ts",
-			"import": "./dist/com.js",
-			"types": "./dist/com.d.ts"
-		}
-	},
-	"files": [
-		"dist",
-		"LICENSE"
-	],
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "bun build src/index.ts src/com.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
-		"dev": "bun run src/index.ts",
-		"lint": "biome check .",
-		"test": "bun test",
-		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"@types/bun": "1.3.13",
-		"@biomejs/biome": "2.4.14"
-	},
-	"dependencies": {
-		"@maat-tools/contracts": "workspace:*",
-		"@maat-tools/core": "workspace:*",
-		"@maat-tools/vocabulary": "workspace:*"
-	},
-	"author": "Marcos Defendi (https://github.com/maat-tools)",
-	"homepage": "https://maat-tools.github.io/maat/",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/maat-tools/maat",
-		"directory": "packages/connascence-rules"
-	}
+  "name": "@maat-tools/connascence-rules",
+  "version": "0.1.6",
+  "description": "Built-in rules for detecting connascence of meaning — shared string and numeric literals across package boundaries",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./com": {
+      "bun": "./src/com.ts",
+      "import": "./dist/com.js",
+      "types": "./dist/com.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/com.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
+    "dev": "bun run src/index.ts",
+    "lint": "biome check .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.13",
+    "@biomejs/biome": "2.4.14"
+  },
+  "dependencies": {
+    "@maat-tools/contracts": "0.1.6",
+    "@maat-tools/core": "0.1.6",
+    "@maat-tools/vocabulary": "0.1.6"
+  },
+  "author": "Marcos Defendi (https://github.com/maat-tools)",
+  "homepage": "https://maat-tools.github.io/maat/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maat-tools/maat",
+    "directory": "packages/connascence-rules"
+  }
 }

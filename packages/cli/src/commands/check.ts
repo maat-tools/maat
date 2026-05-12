@@ -284,14 +284,16 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (visibleFindings.length === 0) {
-			const summary = activeAxiomCount > 0
-				? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!`
-				: 'No findings detected. Great job!';
+			const summary =
+				activeAxiomCount > 0
+					? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!`
+					: 'No findings detected. Great job!';
 			printer.log(summary);
 		} else {
-			const summary = activeAxiomCount > 0
-				? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.`
-				: `${visibleFindings.length} finding(s) detected. Please review the output above for details.`;
+			const summary =
+				activeAxiomCount > 0
+					? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.`
+					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.`;
 			printer.log(summary);
 		}
 	}

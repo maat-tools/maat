@@ -128,7 +128,7 @@ maat baseline --expires-in 30
 maat resolve --fingerprint <fingerprint>
 ```
 
-Baselines are time-limited: after the expiry window (1–90 days, default 90), `maat check` exits with failure for those findings and requires the team to revisit. Permanent baselines are intentionally not supported.
+Baselines are time-limited: after the expiry window (1–90 days, default 30), `maat check` exits with failure for those findings and requires the team to revisit. Permanent baselines are intentionally not supported.
 
 The ledger keeps append-only history for findings, axioms, and lifecycle events. Commit it with the codebase so decisions travel with the architecture they describe.
 
@@ -139,8 +139,11 @@ Maat records decision state, not user identity. For decisions such as baselining
 | Package | Purpose |
 |---|---|
 | `@maat-tools/collector-ts` | Collects TypeScript imports and constants from a project |
+| `@maat-tools/collector-git` | Collects commit history and file change facts from a Git repository |
 | `@maat-tools/coupling-rules` | Enforces import boundaries between packages and architectural layers |
 | `@maat-tools/connascence-rules` | Detects Connascence of Meaning signals across package boundaries |
+| `@maat-tools/git-rules` | Detects high-churn files that change too frequently within a time window |
+| `@maat-tools/insights` | Cross-rule analysis insights, including erosion detection for boundaries with both violations and churn |
 | `@maat-tools/file-ledger` | Stores finding and axiom history in append-only NDJSON |
 
 Maat also exposes public interfaces for third-party collectors, rules, insights, and ledger backends. Third-party packages are outside the official determinism guarantee, so teams should review them before using them in CI.
@@ -156,20 +159,6 @@ Maat also exposes public interfaces for third-party collectors, rules, insights,
 | `maat baseline` | Baseline currently observed findings. Expires in 1–90 days, forcing periodic review. |
 | `maat resolve` | Mark one exact finding fingerprint as intentionally fixed. |
 | `maat visualize` | Print current ledger state: findings, axioms, and optional insights. |
-
-## Packages
-
-| Package | Role |
-|---|---|
-| `@maat-tools/contracts` | Shared interfaces, factories, and declaration-merging registries |
-| `@maat-tools/vocabulary` | Shared fact type definitions |
-| `@maat-tools/kernel` | Pure analysis engine that runs collectors and rules |
-| `@maat-tools/core` | Config schema, entry resolution, and base ledger behavior |
-| `@maat-tools/collector-ts` | TypeScript source collector |
-| `@maat-tools/coupling-rules` | Built-in layer and package boundary rules |
-| `@maat-tools/connascence-rules` | Built-in Connascence of Meaning rules |
-| `@maat-tools/file-ledger` | File-based ledger backend |
-| `@maat-tools/cli` | Command-line interface |
 
 ## Documentation
 

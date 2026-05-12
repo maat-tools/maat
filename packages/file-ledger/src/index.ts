@@ -1,5 +1,11 @@
 import { access, appendFile, readFile } from 'node:fs/promises';
-import type { LedgerBackend, LedgerEvent, LedgerEventInput, LedgerSnapshot } from '@maat-tools/contracts';
+import {
+	defineLedgerBackend,
+	type LedgerBackend,
+	type LedgerEvent,
+	type LedgerEventInput,
+	type LedgerSnapshot,
+} from '@maat-tools/contracts';
 import { LedgerBackendBase } from '@maat-tools/core';
 
 export type {
@@ -11,8 +17,6 @@ export type {
 	LedgerEvent,
 	LedgerSnapshot,
 } from '@maat-tools/contracts';
-
-export { defineLedgerBackend } from '@maat-tools/contracts';
 
 type FilePathLedgerOptions = {
 	path: string;
@@ -66,3 +70,5 @@ declare module '@maat-tools/contracts' {
 		'@maat-tools/ledger': FilePathLedgerOptions;
 	}
 }
+
+export default defineLedgerBackend((config: FilePathLedgerOptions) => new FilePathLedgerBackend(config));

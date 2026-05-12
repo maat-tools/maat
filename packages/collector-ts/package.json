@@ -34,8 +34,8 @@
 		"@maat-tools/contracts": "workspace:*",
 		"@maat-tools/vocabulary": "workspace:*",
 		"@types/micromatch": "^4.0.10",
-		"fast-glob": "^3.3.3",
 		"micromatch": "^4.0.8",
+		"tinyglobby": "^0.2.16",
 		"ts-morph": "28.0.0"
 	},
 	"author": "Marcos Defendi (https://github.com/maat-tools)",

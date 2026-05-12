@@ -8,8 +8,8 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 } from '@maat-tools/vocabulary';
-import { glob } from 'fast-glob';
 import * as micromatch from 'micromatch';
+import { glob } from 'tinyglobby';
 import { Project, type SourceFile } from 'ts-morph';
 
 export type TSInput = {

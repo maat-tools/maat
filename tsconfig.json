@@ -10,6 +10,7 @@
 
 		// Bundler mode
 		"moduleResolution": "bundler",
+		"baseUrl": ".",
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": true,
 		"noEmit": true,
@@ -24,7 +25,27 @@
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
-		"noPropertyAccessFromIndexSignature": false
+		"noPropertyAccessFromIndexSignature": false,
+
+		// Workspace package resolution
+		"paths": {
+			"@maat-tools/contracts": ["packages/contracts/src/index.ts"],
+			"@maat-tools/vocabulary": ["packages/vocabulary/src/index.ts"],
+			"@maat-tools/core": ["packages/core/src/index.ts"],
+			"@maat-tools/kernel": ["packages/kernel/src/index.ts"],
+			"@maat-tools/collector-ts": ["packages/collector-ts/src/index.ts"],
+			"@maat-tools/collector-git": ["packages/collector-git/src/index.ts"],
+			"@maat-tools/coupling-rules": ["packages/coupling-rules/src/index.ts"],
+			"@maat-tools/coupling-rules/layer": ["packages/coupling-rules/src/layer.ts"],
+			"@maat-tools/coupling-rules/roles": ["packages/coupling-rules/src/roles.ts"],
+			"@maat-tools/connascence-rules": ["packages/connascence-rules/src/index.ts"],
+			"@maat-tools/git-rules": ["packages/git-rules/src/index.ts"],
+			"@maat-tools/git-rules/churn": ["packages/git-rules/src/churn.ts"],
+			"@maat-tools/insights": ["packages/insights/src/index.ts"],
+			"@maat-tools/insights/erosion": ["packages/insights/src/erosion.ts"],
+			"@maat-tools/file-ledger": ["packages/file-ledger/src/index.ts"],
+			"@maat-tools/cli": ["packages/cli/src/index.ts"]
+		}
 	},
 	"exclude": ["packages/cli/fixtures"]
 }

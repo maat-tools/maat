@@ -14,6 +14,11 @@ export const CONFIG_FILENAMES = [
 	'maat.config.cjs',
 ] as const;
 
+const JS_EXTENSIONS = new Set(['.js', '.mjs', '.cjs']);
+const TS_EXTENSIONS = new Set(
+	CONFIG_FILENAMES.map((f) => f.slice(f.lastIndexOf('.'))).filter((ext) => !JS_EXTENSIONS.has(ext)),
+);
+
 export type ConfigSource = 'cli' | 'env' | 'auto';
 
 export type LoadedMaatConfig = {
@@ -123,8 +128,16 @@ async function assertConfigExists(filePath: string): Promise<void> {
 
 async function importMaatConfig(filePath: string): Promise<MaatConfig> {
 	let mod: { default?: unknown };
+	const isTsFile = TS_EXTENSIONS.has(filePath.slice(filePath.lastIndexOf('.')));
+	const isRunningUnderBun = typeof (process.versions as Record<string, string | undefined>).bun !== 'undefined';
 	try {
-		mod = await import(pathToFileURL(filePath).href);
+		if (isTsFile && !isRunningUnderBun) {
+			const { createJiti } = await import('jiti');
+			const jiti = createJiti(import.meta.url);
+			mod = (await jiti.import(filePath)) as { default?: unknown };
+		} else {
+			mod = await import(pathToFileURL(filePath).href);
+		}
 	} catch (error) {
 		throw new Error(`Failed to load Maat config at ${filePath}: ${formatError(error)}`);
 	}

@@ -6,32 +6,26 @@
       "name": "maat",
       "devDependencies": {
         "@biomejs/biome": "2.4.14",
-        "@commitlint/cli": "^21.0.0",
-        "@commitlint/config-conventional": "^21.0.0",
+        "@commitlint/cli": "21.0.0",
+        "@commitlint/config-conventional": "21.0.0",
         "@types/bun": "1.3.13",
         "typescript": "5.9.3",
-        "vitepress": "^1.6.4",
+        "vitepress": "1.6.4",
       },
     },
     "packages/cli": {
       "name": "@maat-tools/cli",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "bin": {
         "maat": "./dist/index.js",
       },
       "dependencies": {
-        "@maat-tools/collector-git": "workspace:*",
-        "@maat-tools/collector-ts": "workspace:*",
-        "@maat-tools/connascence-rules": "workspace:*",
         "@maat-tools/contracts": "workspace:*",
         "@maat-tools/core": "workspace:*",
-        "@maat-tools/coupling-rules": "workspace:*",
-        "@maat-tools/file-ledger": "workspace:*",
-        "@maat-tools/git-rules": "workspace:*",
-        "@maat-tools/insights": "workspace:*",
         "@maat-tools/kernel": "workspace:*",
-        "chalk": "^5.6.2",
+        "chalk": "5.6.2",
         "commander": "14.0.3",
+        "jiti": "^2.7.0",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.14",
@@ -40,7 +34,7 @@
     },
     "packages/collector-git": {
       "name": "@maat-tools/collector-git",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
       },
@@ -51,13 +45,13 @@
     },
     "packages/collector-ts": {
       "name": "@maat-tools/collector-ts",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
         "@maat-tools/vocabulary": "workspace:*",
-        "@types/micromatch": "^4.0.10",
-        "micromatch": "^4.0.8",
-        "tinyglobby": "^0.2.16",
+        "@types/micromatch": "4.0.10",
+        "micromatch": "4.0.8",
+        "tinyglobby": "0.2.16",
         "ts-morph": "28.0.0",
       },
       "devDependencies": {
@@ -67,7 +61,7 @@
     },
     "packages/connascence-rules": {
       "name": "@maat-tools/connascence-rules",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
         "@maat-tools/core": "workspace:*",
@@ -80,7 +74,7 @@
     },
     "packages/contracts": {
       "name": "@maat-tools/contracts",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "devDependencies": {
         "@biomejs/biome": "2.4.14",
         "@types/bun": "1.3.13",
@@ -88,7 +82,7 @@
     },
     "packages/core": {
       "name": "@maat-tools/core",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
         "ulid": "3.0.2",
@@ -100,7 +94,7 @@
     },
     "packages/coupling-rules": {
       "name": "@maat-tools/coupling-rules",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
         "@maat-tools/core": "workspace:*",
@@ -113,7 +107,7 @@
     },
     "packages/file-ledger": {
       "name": "@maat-tools/file-ledger",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
         "@maat-tools/core": "workspace:*",
@@ -125,12 +119,12 @@
     },
     "packages/git-rules": {
       "name": "@maat-tools/git-rules",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/collector-git": "workspace:*",
         "@maat-tools/contracts": "workspace:*",
-        "@types/micromatch": "^4.0.10",
-        "micromatch": "^4.0.8",
+        "@types/micromatch": "4.0.10",
+        "micromatch": "4.0.8",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.14",
@@ -139,7 +133,7 @@
     },
     "packages/insights": {
       "name": "@maat-tools/insights",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
       },
@@ -150,7 +144,7 @@
     },
     "packages/kernel": {
       "name": "@maat-tools/kernel",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
       },
@@ -161,7 +155,7 @@
     },
     "packages/vocabulary": {
       "name": "@maat-tools/vocabulary",
-      "version": "0.1.3",
+      "version": "0.1.8",
       "dependencies": {
         "@maat-tools/contracts": "workspace:*",
       },
@@ -608,7 +602,7 @@
 
     "is-what": ["is-what@5.5.0", "", {}, "sha512-oG7cgbmg5kLYae2N5IVd3jm2s+vldjxJzK1pcu9LfpGuQ93MQSzo0okvRna+7y5ifrD+20FE8FvjusyGaz14fw=="],
 
-    "jiti": ["jiti@2.6.1", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
+    "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
@@ -749,6 +743,8 @@
     "yargs-parser": ["yargs-parser@22.0.0", "", {}, "sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw=="],
 
     "zwitch": ["zwitch@2.0.4", "", {}, "sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A=="],
+
+    "cosmiconfig-typescript-loader/jiti": ["jiti@2.6.1", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ=="],
 
     "fdir/picomatch": ["picomatch@4.0.4", "", {}, "sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A=="],
 

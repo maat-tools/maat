@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/vocabulary",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Shared fact type definitions (imports and constants) used by collectors and rules",
   "type": "module",
   "main": "./dist/index.js",

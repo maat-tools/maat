@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/collector-git",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Git history collector that extracts commits and file changes for use in maat rules",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/contracts",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Core type contracts and declaration-merging registries for collectors, rules, ledger backends, and insights",
   "type": "module",
   "main": "./dist/index.js",

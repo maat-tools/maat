@@ -87,6 +87,10 @@ import { withBase } from 'vitepress'
   <a :href="withBase('/guide/adoption.html')">Read more about greenfield and brownfield workflows</a>
 </p>
 
+## Who benefits most
+
+Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
+
 ## Design choices
 
 <div class="maat-grid">
@@ -138,6 +142,12 @@ import { withBase } from 'vitepress'
 ## Configuration example
 
 Maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors and rules for codebase-specific problems.
+
+The CLI is just the runner — collectors, rules, insights, and ledger backends are separate packages you install per project based on what you need:
+
+```bash
+npm install -D @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
 
 ```ts
 import { defineConfig } from '@maat-tools/core'

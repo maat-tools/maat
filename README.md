@@ -37,17 +37,30 @@ Maat was born to make these patterns detectable. The direction is clear: special
 
 The official Maat rules are deterministic by guarantee: same collected facts, same rule version, same findings. There is no hidden state, randomness, network access, or LLM judgment inside the check path.
 
+## Who benefits most
+
+Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
+
 ## Getting started
 
-Install the CLI:
+Install the CLI in your project:
 
 ```bash
-npm install -g @maat-tools/cli
+npm install -D @maat-tools/cli
 # or
-bun add -g @maat-tools/cli
+bun add -d @maat-tools/cli
+# or run without installing
+npx maat check
+bunx maat check
 ```
 
-Add `maat.config.ts` to your project root:
+The CLI is just the runner — collectors, rules, insights, and ledger backends are separate packages you install per project based on what you need. See [Official plugins](#official-plugins) below.
+
+Add `maat.config.ts` to your project root. You'll also need to install any collector and rule packages your config references — they are not bundled with the CLI:
+
+```bash
+npm install -D @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -89,6 +102,7 @@ Start with rules that are easy to explain in code review: package boundaries, la
 - Review architecture rules as code.
 
 ```ts
+// install @maat-tools/core, @maat-tools/collector-ts, @maat-tools/coupling-rules first
 export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
@@ -118,6 +132,7 @@ Start from what the codebase already taught you. Existing systems can turn repea
 - Turn repeated review comments into checks.
 
 ```ts
+// install @maat-tools/core, @maat-tools/collector-ts, @maat-tools/file-ledger first
 import { defineConfig } from '@maat-tools/core'
 
 export default defineConfig({

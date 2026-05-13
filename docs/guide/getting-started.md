@@ -6,15 +6,38 @@ The first run should answer a small question: "can this codebase collect facts a
 
 ## Installation
 
+Install the CLI as a dev dependency in your project:
+
 ```bash
-npm install -g @maat-tools/cli
+npm install -D @maat-tools/cli
 # or
-bun add -g @maat-tools/cli
+bun add -d @maat-tools/cli
 ```
+
+You can also run without installing locally:
+
+```bash
+npx maat check
+bunx maat check
+```
+
+The CLI is just the runner. Collectors, rules, insights, and ledger backends are separate packages you install per project based on what you need. For example, a config that uses the TypeScript collector and coupling rules requires:
+
+```bash
+npm install -D @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
+
+## Who benefits most
+
+Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
 
 ## Add a config
 
-Add `maat.config.ts` to your project root:
+Add `maat.config.ts` to your project root. You'll also need to install any collector and rule packages your config references — they are not bundled with the CLI:
+
+```bash
+npm install -D @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
 
 ```ts
 import { defineConfig } from '@maat-tools/core'

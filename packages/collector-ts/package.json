@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/collector-ts",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "TypeScript source collector that extracts imports and constants from a project via ts-morph",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/core",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Orchestration layer providing MaatConfig, collector and rule entry resolution, and the base ledger backend",
   "type": "module",
   "main": "./dist/index.js",

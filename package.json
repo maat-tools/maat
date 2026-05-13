@@ -1,6 +1,6 @@
 {
 	"name": "maat",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"private": true,
 	"description": "Turn implicit architecture knowledge into deterministic checks — captures coupling, boundaries, and codebase rules that usually live in developers' heads.",
 	"keywords": [

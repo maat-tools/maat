@@ -1,7 +1,7 @@
 {
   "name": "@maat-tools/insights",
   "version": "0.1.7",
-  "description": "Built-in insights for maat — cross-cutting analysis over findings from multiple rule families",
+  "description": "Built-in insights for maat \u2014 cross-cutting analysis over findings from multiple rule families",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,12 +9,14 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./erosion": {
       "bun": "./src/erosion.ts",
       "import": "./dist/erosion.js",
-      "types": "./dist/erosion.d.ts"
+      "types": "./dist/erosion.d.ts",
+      "default": "./dist/erosion.js"
     }
   },
   "files": [
@@ -36,7 +38,7 @@
     "@biomejs/biome": "2.4.14"
   },
   "dependencies": {
-    "@maat-tools/contracts": "0.1.6"
+    "@maat-tools/contracts": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

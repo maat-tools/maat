@@ -1,7 +1,7 @@
 {
   "name": "@maat-tools/connascence-rules",
   "version": "0.1.7",
-  "description": "Built-in rules for detecting connascence of meaning — shared string and numeric literals across package boundaries",
+  "description": "Built-in rules for detecting connascence of meaning \u2014 shared string and numeric literals across package boundaries",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,12 +9,14 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./com": {
       "bun": "./src/com.ts",
       "import": "./dist/com.js",
-      "types": "./dist/com.d.ts"
+      "types": "./dist/com.d.ts",
+      "default": "./dist/com.js"
     }
   },
   "files": [
@@ -36,9 +38,9 @@
     "@biomejs/biome": "2.4.14"
   },
   "dependencies": {
-    "@maat-tools/contracts": "0.1.6",
-    "@maat-tools/core": "0.1.6",
-    "@maat-tools/vocabulary": "0.1.6"
+    "@maat-tools/contracts": "workspace:*",
+    "@maat-tools/core": "workspace:*",
+    "@maat-tools/vocabulary": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

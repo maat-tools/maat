@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+
 import {
 	type Insight,
 	isCollector,
@@ -44,6 +46,7 @@ class MaatCLI {
 	private ledger: LedgerBackend | null = null;
 	private insights: Insight[] = [];
 	private printer: Printer = new Printer();
+	private configFilePath = '';
 
 	public constructor() {
 		this.program
@@ -65,6 +68,7 @@ class MaatCLI {
 			cwd: process.cwd(),
 			env: process.env,
 		});
+		this.configFilePath = loadedConfig.filePath;
 		process.chdir(loadedConfig.rootDir);
 
 		await this.registerCollectors(loadedConfig.config);
@@ -95,10 +99,15 @@ class MaatCLI {
 		}
 	}
 
+	private resolvePlugin(id: string): string {
+		const resolved = createRequire(this.configFilePath).resolve(id);
+		return pathToFileURL(resolved).href;
+	}
+
 	private async registerCollectors(maatConfig: MaatConfig) {
 		for (const entry of maatConfig.collectors) {
 			const [collectorId, options] = resolveEntry(entry as PluginEntry);
-			const factory = (await import(collectorId)).default;
+			const factory = (await import(this.resolvePlugin(collectorId))).default;
 
 			if (!isCollectorFactory(factory)) {
 				throw new Error(
@@ -133,7 +142,7 @@ class MaatCLI {
 			}
 
 			const [ruleId, options] = resolveEntry(ruleEntry as PluginEntry);
-			const exported = (await import(ruleId)).default;
+			const exported = (await import(this.resolvePlugin(ruleId))).default;
 
 			if (isRuleSet(exported)) {
 				for (const factory of exported.factories) {
@@ -165,7 +174,7 @@ class MaatCLI {
 			}
 
 			const [insightId, options] = resolveEntry(entry as PluginEntry);
-			const exported = (await import(insightId)).default;
+			const exported = (await import(this.resolvePlugin(insightId))).default;
 
 			if (isInsightSet(exported)) {
 				for (const factory of exported.factories) {
@@ -197,7 +206,7 @@ class MaatCLI {
 		}
 
 		const [backendId, options] = resolveEntry(maatConfig.ledger as PluginEntry);
-		const factory = (await import(backendId)).default;
+		const factory = (await import(this.resolvePlugin(backendId))).default;
 
 		if (!isLedgerBackendFactory(factory)) {
 			throw new Error(

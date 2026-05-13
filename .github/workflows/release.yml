@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,25 +31,24 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Bump versions in all packages
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          for pkg in packages/*/package.json; do
-            jq --arg v "$VERSION" '
-              .version = $v |
-              if .dependencies then .dependencies = (.dependencies | map_values(if test("^workspace:") then $v else . end)) else . end |
-              if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if test("^workspace:") then $v else . end)) else . end
-            ' "$pkg" > tmp.json && mv tmp.json "$pkg"
-          done
-
       - name: Build
         run: bun run build
 
       - name: Publish to npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          VERSION=${{ steps.version.outputs.version }}
           for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules file-ledger insights git-rules cli; do
-            (cd packages/$pkg && npm publish --access public)
+            dir="packages/$pkg"
+            jq --arg v "$VERSION" '
+              .version = $v |
+              if .dependencies then .dependencies = (.dependencies | map_values(if test("^workspace:") then $v else . end)) else . end |
+              if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if test("^workspace:") then $v else . end)) else . end
+            ' "$dir/package.json" > "$dir/package.publish.json"
+            mv "$dir/package.json" "$dir/package.json.orig"
+            mv "$dir/package.publish.json" "$dir/package.json"
+            (cd "$dir" && npm publish --access public)
+            mv "$dir/package.json.orig" "$dir/package.json"
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -64,16 +62,6 @@ jobs:
           OUTPUT: RELEASE_NOTES.md
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create release PR
-        uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "chore(release): ${{ github.ref_name }}"
-          branch: "release/${{ github.ref_name }}"
-          title: "chore(release): ${{ github.ref_name }}"
-          body-path: RELEASE_NOTES.md
-          base: main
-          labels: release
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -175,13 +175,13 @@ export type InsightFactory<TOptions = Record<string, never>> = (options?: TOptio
 
 export type LedgerBackendFactory<TConfig = Record<string, never>> = (config: TConfig) => LedgerBackend;
 
-export const COLLECTOR_FACTORY_BRAND = Symbol('maat.CollectorFactory');
-export const RULE_FACTORY_BRAND = Symbol('maat.RuleFactory');
-export const RULE_SET_BRAND = Symbol('maat.RuleSet');
-export const RULE_BUILDER_BRAND = Symbol('maat.RuleBuilder');
-export const LEDGER_BACKEND_FACTORY_BRAND = Symbol('maat.LedgerBackendFactory');
-export const INSIGHT_FACTORY_BRAND = Symbol('maat.InsightFactory');
-export const INSIGHT_SET_BRAND = Symbol('maat.InsightSet');
+export const COLLECTOR_FACTORY_BRAND = Symbol.for('maat.CollectorFactory');
+export const RULE_FACTORY_BRAND = Symbol.for('maat.RuleFactory');
+export const RULE_SET_BRAND = Symbol.for('maat.RuleSet');
+export const RULE_BUILDER_BRAND = Symbol.for('maat.RuleBuilder');
+export const LEDGER_BACKEND_FACTORY_BRAND = Symbol.for('maat.LedgerBackendFactory');
+export const INSIGHT_FACTORY_BRAND = Symbol.for('maat.InsightFactory');
+export const INSIGHT_SET_BRAND = Symbol.for('maat.InsightSet');
 
 export type BrandedCollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = CollectorFactory<
 	TConfig,

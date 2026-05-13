@@ -29,7 +29,7 @@
     "@biomejs/biome": "2.4.14"
   },
   "dependencies": {
-    "@maat-tools/contracts": "0.1.6"
+    "@maat-tools/contracts": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

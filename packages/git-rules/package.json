@@ -1,7 +1,7 @@
 {
   "name": "@maat-tools/git-rules",
   "version": "0.1.7",
-  "description": "Rules derived from git history — hotspot detection and co-change analysis",
+  "description": "Rules derived from git history \u2014 hotspot detection and co-change analysis",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,12 +9,14 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./churn": {
       "bun": "./src/churn.ts",
       "import": "./dist/churn.js",
-      "types": "./dist/churn.d.ts"
+      "types": "./dist/churn.d.ts",
+      "default": "./dist/churn.js"
     }
   },
   "files": [
@@ -36,8 +38,8 @@
     "@biomejs/biome": "2.4.14"
   },
   "dependencies": {
-    "@maat-tools/contracts": "0.1.6",
-    "@maat-tools/collector-git": "0.1.6",
+    "@maat-tools/contracts": "workspace:*",
+    "@maat-tools/collector-git": "workspace:*",
     "@types/micromatch": "^4.0.10",
     "micromatch": "^4.0.8"
   },

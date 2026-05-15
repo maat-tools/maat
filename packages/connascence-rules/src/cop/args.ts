@@ -1,30 +1,27 @@
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
 import { FUNCTION_SIGNATURES_CAPABILITY, type FunctionSignature } from '@maat-tools/vocabulary';
 
-export type CoPRuleOptions = {
-	// Flag any function with at least one boolean param
+export type CoPArgsRuleOptions = {
 	flagBoolean?: boolean;
-	// Flag any function exceeding N arguments
 	maxArgumentsAllowed?: number;
-	// Only flag exported/public functions (default: true)
 	onlyExported?: boolean;
 };
 
 declare module '@maat-tools/contracts' {
 	interface RuleRegistry {
-		'@maat-tools/connascence-rules/cop': CoPRuleOptions;
+		'@maat-tools/connascence-rules/cop-args': CoPArgsRuleOptions;
 	}
 }
 
-export class ConnascenceOfPositionRule implements Rule<'functionSignatures'> {
-	public readonly id = 'cop@v1';
+export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'> {
+	public readonly id = 'cop-args@v1';
 	public readonly needFacts = [FUNCTION_SIGNATURES_CAPABILITY] as const;
 
 	private readonly flagBoolean: boolean;
 	private readonly maxArgumentsAllowed: number;
 	private readonly onlyExported: boolean;
 
-	public constructor(options: CoPRuleOptions = {}) {
+	public constructor(options: CoPArgsRuleOptions = {}) {
 		this.flagBoolean = options.flagBoolean ?? true;
 		this.maxArgumentsAllowed = options.maxArgumentsAllowed ?? 3;
 		this.onlyExported = options.onlyExported ?? true;
@@ -88,4 +85,4 @@ export class ConnascenceOfPositionRule implements Rule<'functionSignatures'> {
 	}
 }
 
-export default defineRule((options?: CoPRuleOptions) => new ConnascenceOfPositionRule(options));
+export default defineRule((options?: CoPArgsRuleOptions) => new ConnascenceOfPositionArgsRule(options));

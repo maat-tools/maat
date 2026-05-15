@@ -390,3 +390,30 @@ export default defineConfig({
 ```
 
 The import activates TypeScript declaration merging, so `defineConfig()` can validate the plugin options.
+
+## `rule()` helper
+
+The `rule()` helper from `@maat-tools/core` gives scoped autocomplete and enforces required config at the type level:
+
+```ts
+import { defineConfig, rule } from '@maat-tools/core'
+
+export default defineConfig({
+  rules: [
+    rule('@acme/maat-rule-python-boundaries', {
+      forbiddenImports: [
+        { sourceLayer: 'billing.domain', forbiddenLayer: 'payments.infrastructure' },
+      ],
+    }),
+  ],
+})
+```
+
+The difference from the raw tuple syntax:
+
+- **Scoped autocomplete** — IntelliSense inside `{ }` shows only the options for that specific rule, not the union of all registered rules.
+- **Required config enforcement** — if a rule declares that config is required (no default can cover the project-specific threshold), TypeScript raises an error if you omit it. Rules with fully optional config can still be referenced as a bare string or with the tuple form.
+
+When a rule's options type has at least one required field, `rule()` requires the second argument. When all fields are optional, the second argument is optional.
+
+The raw tuple syntax `['@acme/maat-rule-python-boundaries', { ... }]` is still valid and type-checked, but the second element's type is resolved as a union across all registered rules, which reduces IntelliSense precision. Prefer `rule()` when configuring registered rules.

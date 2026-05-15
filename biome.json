@@ -31,6 +31,6 @@
 		}
 	},
 	"files": {
-		"includes": ["**", "!**/node_modules", "!**/dist", "!docs/.vitepress", "!**/package.json"]
+		"includes": ["**", "!**/node_modules", "!**/dist", "!docs/.vitepress", "!**/package.json", "!**/fixtures"]
 	}
 }

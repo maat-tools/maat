@@ -2,6 +2,9 @@ import '@maat-tools/contracts';
 
 export const CONSTANTS_CAPABILITY = 'constants' as const;
 export const IMPORTS_CAPABILITY = 'imports' as const;
+export const FUNCTION_SIGNATURES_CAPABILITY = 'functionSignatures' as const;
+export const POSITIONAL_SOURCES_CAPABILITY = 'positionalSources' as const;
+export const POSITIONAL_ACCESSES_CAPABILITY = 'positionalAccesses' as const;
 
 export type ConstantContext = 'argument' | 'assignment' | 'return' | 'condition' | 'import' | 'decorator' | 'other';
 
@@ -26,9 +29,44 @@ export type Import = {
 	location: SourceLocation;
 };
 
+export type Parameter = {
+	name: string;
+	type: string;
+	position: number;
+};
+
+export type FunctionSignature = {
+	file: string;
+	functionName: string;
+	parameters: Parameter[];
+	heterogeneousTypes: boolean;
+	location: SourceLocation;
+	isExported: boolean;
+};
+
+export type PositionalSource = {
+	file: string;
+	variableName: string;
+	positions: { index: number; type: string }[];
+	isHeterogeneous: boolean;
+	location: SourceLocation;
+	callSites: { file: string; variableName: string; location: SourceLocation }[];
+};
+
+export type PositionalAccess = {
+	file: string;
+	variableName: string;
+	accessedIndex: number | string;
+	accessKind: 'index' | 'destructuring';
+	location: SourceLocation;
+};
+
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		constants: Constant[];
 		imports: Import[];
+		functionSignatures: FunctionSignature[];
+		positionalSources: PositionalSource[];
+		positionalAccesses: PositionalAccess[];
 	}
 }

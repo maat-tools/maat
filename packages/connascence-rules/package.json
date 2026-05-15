@@ -1,7 +1,7 @@
 {
   "name": "@maat-tools/connascence-rules",
   "version": "0.1.9",
-  "description": "Built-in rules for detecting connascence of meaning \u2014 shared string and numeric literals across package boundaries",
+  "description": "Built-in rules for detecting connascence — meaning (shared literals) and position (heterogeneous returns)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,6 +17,24 @@
       "import": "./dist/com.js",
       "types": "./dist/com.d.ts",
       "default": "./dist/com.js"
+    },
+    "./cop": {
+      "bun": "./src/cop/index.ts",
+      "import": "./dist/cop/index.js",
+      "types": "./dist/cop/index.d.ts",
+      "default": "./dist/cop/index.js"
+    },
+    "./cop-args": {
+      "bun": "./src/cop/args.ts",
+      "import": "./dist/cop/args.js",
+      "types": "./dist/cop/args.d.ts",
+      "default": "./dist/cop/args.js"
+    },
+    "./cop-struct": {
+      "bun": "./src/cop/struct.ts",
+      "import": "./dist/cop/struct.js",
+      "types": "./dist/cop/struct.d.ts",
+      "default": "./dist/cop/struct.js"
     }
   },
   "files": [
@@ -27,7 +45,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/com.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/com.ts src/cop/index.ts src/cop/args.ts src/cop/struct.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
     "dev": "bun run src/index.ts",
     "lint": "biome check .",
     "test": "bun test",

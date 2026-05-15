@@ -1,12 +1,6 @@
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
 import { CONSTANTS_CAPABILITY, type Constant } from '@maat-tools/vocabulary';
 
-declare module '@maat-tools/contracts' {
-	interface RuleRegistry {
-		'@maat-tools/connascence-rules/com': CoMRuleOptions;
-	}
-}
-
 // Values that are universally meaningless to track as coupling signals.
 // Language-specific keywords (e.g. 'undefined' in JS/TS, 'None' in Python) and common
 // numeric literals (e.g. '0', '1', '-1') should be passed via `ignoreValues` at the
@@ -19,6 +13,12 @@ export type CoMRuleOptions = {
 	// Language-specific or project-specific values to ignore (e.g. ['undefined'] for TS, ['None'] for Python)
 	ignoreValues?: string[];
 };
+
+declare module '@maat-tools/contracts' {
+	interface RuleRegistry {
+		'@maat-tools/connascence-rules/com': CoMRuleOptions;
+	}
+}
 
 export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 	public readonly id = 'com@v1';

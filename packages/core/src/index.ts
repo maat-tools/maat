@@ -18,7 +18,10 @@ import { ulid } from 'ulid';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 
-type OptionalConfigTuple<R, K extends keyof R> = {} extends R[K] ? [K] | [K, R[K]] : [K, R[K]];
+type OptionalConfigTuple<
+	R,
+	K extends keyof R,
+> = /* biome-ignore lint/complexity/noBannedTypes: empty object check */ {} extends R[K] ? [K] | [K, R[K]] : [K, R[K]];
 type RuleConfigTuples<R> = { [K in keyof R]: OptionalConfigTuple<R, K> }[keyof R];
 
 export type CollectorEntry =
@@ -56,7 +59,9 @@ export function defineConfig(config: MaatConfig): MaatConfig {
 
 export function rule<K extends keyof RuleRegistry>(
 	id: K,
-	...options: {} extends RuleRegistry[K] ? [options?: RuleRegistry[K]] : [options: RuleRegistry[K]]
+	...options: /* biome-ignore lint/complexity/noBannedTypes: empty object check */ {} extends RuleRegistry[K]
+		? [options?: RuleRegistry[K]]
+		: [options: RuleRegistry[K]]
 ): RuleEntry {
 	return (options.length > 0 ? [id, options[0]] : id) as unknown as RuleEntry;
 }

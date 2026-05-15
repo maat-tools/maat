@@ -100,6 +100,7 @@ tsConfigFilePath: [
 
 ## Notes
 
+- **TypeScript only.** This collector is designed for `.ts` and `.tsx` files. It relies on TypeScript type annotations and AST constructs (e.g. `private`/`protected` modifiers, explicit return types) to detect coupling signals. It should not be used for plain `.js` files.
 - All file paths in emitted facts are relative to `process.cwd()`, which the CLI sets to the config file's directory before collectors run.
 - Cross-package relative imports (e.g. `../../pkg-b/src/index`) are rewritten to the destination package name (e.g. `@scope/pkg-b`) so coupling rules see package-level boundaries, not filesystem paths.
 - Files included in multiple tsconfigs are processed once. Deduplication is by absolute file path.

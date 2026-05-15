@@ -5,8 +5,11 @@ import {
 	CONSTANTS_CAPABILITY,
 	type Constant,
 	type ConstantContext,
+	FUNCTION_SIGNATURES_CAPABILITY,
+	type FunctionSignature,
 	IMPORTS_CAPABILITY,
 	type Import,
+	type Parameter,
 } from '@maat-tools/vocabulary';
 import micromatch from 'micromatch';
 
@@ -150,9 +153,90 @@ function collectConstants(sourceFile: SourceFile, file: string): Constant[] {
 	return constants;
 }
 
-export class TSCollector implements Collector<'constants' | 'imports'> {
+function collectFunctionSignatures(sourceFile: SourceFile, file: string): FunctionSignature[] {
+	const signatures: FunctionSignature[] = [];
+
+	for (const func of sourceFile.getFunctions()) {
+		const params = func.getParameters();
+		const parameters: Parameter[] = [];
+		const typeSet = new Set<string>();
+
+		for (let i = 0; i < params.length; i++) {
+			const param = params[i];
+			if (!param) {
+				continue;
+			}
+
+			const typeNode = param.getTypeNode();
+			const type = typeNode ? typeNode.getText() : 'unknown';
+			typeSet.add(type);
+			parameters.push({
+				name: param.getName(),
+				type,
+				position: i,
+			});
+		}
+
+		signatures.push({
+			file,
+			functionName: func.getName() ?? 'anonymous',
+			parameters,
+			heterogeneousTypes: typeSet.size > 1,
+			location: {
+				file,
+				line: func.getStartLineNumber(),
+				column: func.getStartLinePos(),
+			},
+			isExported: func.isExported(),
+		});
+	}
+
+	for (const classDecl of sourceFile.getClasses()) {
+		for (const method of classDecl.getMethods()) {
+			const params = method.getParameters();
+			const parameters: Parameter[] = [];
+			const typeSet = new Set<string>();
+
+			for (let i = 0; i < params.length; i++) {
+				const param = params[i];
+				if (!param) {
+					continue;
+				}
+
+				const typeNode = param.getTypeNode();
+				const type = typeNode ? typeNode.getText() : 'unknown';
+				typeSet.add(type);
+				parameters.push({
+					name: param.getName(),
+					type,
+					position: i,
+				});
+			}
+
+			const modifiers = method.getModifiers().map((m) => m.getText());
+			const isMethodExported = !modifiers.includes('private');
+
+			signatures.push({
+				file,
+				functionName: `${classDecl.getName()}.${method.getName()}`,
+				parameters,
+				heterogeneousTypes: typeSet.size > 1,
+				location: {
+					file,
+					line: method.getStartLineNumber(),
+					column: method.getStartLinePos(),
+				},
+				isExported: isMethodExported,
+			});
+		}
+	}
+
+	return signatures;
+}
+
+export class TSCollector implements Collector<'constants' | 'imports' | 'functionSignatures'> {
 	public readonly id = 'ts';
-	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY] as const;
+	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY, FUNCTION_SIGNATURES_CAPABILITY] as const;
 
 	public constructor(private readonly config: TSInput) {}
 
@@ -170,7 +254,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		return results;
 	}
 
-	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports'>> {
+	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports' | 'functionSignatures'>> {
 		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
 			? this.config.tsConfigFilePath
 			: [this.config.tsConfigFilePath];
@@ -182,6 +266,7 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 		const seenFiles = new Set<string>();
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
+		const functionSignatures: FunctionSignature[] = [];
 
 		for (const tsConfigPath of tsConfigPaths) {
 			const project = new Project({ tsConfigFilePath: tsConfigPath });
@@ -201,10 +286,11 @@ export class TSCollector implements Collector<'constants' | 'imports'> {
 				const packageName = resolvePackageName(absoluteFile);
 				imports.push(...collectImports(sourceFile, file, packageName));
 				constants.push(...collectConstants(sourceFile, file));
+				functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
 			}
 		}
 
-		return { constants, imports };
+		return { constants, imports, functionSignatures };
 	}
 }
 

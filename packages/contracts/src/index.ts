@@ -203,7 +203,8 @@ export type BrandedLedgerBackendFactory<TConfig = Record<string, never>> = Ledge
 };
 
 export type RuleSet = {
-	readonly factories: readonly BrandedRuleFactory<unknown>[];
+	// biome-ignore lint/suspicious/noExplicitAny: factories have heterogeneous option types
+	readonly factories: readonly BrandedRuleFactory<any>[];
 };
 
 export type InsightSet = {
@@ -234,9 +235,10 @@ export function defineRule<TOptions = Record<string, never>>(
 	return Object.assign(factory, { [RULE_FACTORY_BRAND]: true as const });
 }
 
-export function defineRuleSet<T>(factories: BrandedRuleFactory<T>[]): BrandedRuleSet {
+// biome-ignore lint/suspicious/noExplicitAny: rule factories have heterogeneous option types
+export function defineRuleSet(factories: BrandedRuleFactory<any>[]): BrandedRuleSet {
 	return {
-		factories: factories as unknown as BrandedRuleFactory<unknown>[],
+		factories,
 		[RULE_SET_BRAND]: true as const,
 	};
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { isAbsolute, relative, resolve } from 'node:path';
-import { CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY } from '@maat-tools/vocabulary';
+import { CONSTANTS_CAPABILITY, FUNCTION_SIGNATURES_CAPABILITY, IMPORTS_CAPABILITY } from '@maat-tools/vocabulary';
 import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/sample-project/tsconfig.json');
@@ -187,5 +187,59 @@ describe('TSCollector.collect() — cross-package specifier normalization', () =
 		// pkg-b/src/index.ts has no imports at all
 		const pkgBImports = imports.filter((i) => i.packageName === '@fixture/pkg-b');
 		expect(pkgBImports).toHaveLength(0);
+	});
+});
+
+describe('TSCollector.collect() — functionSignatures fact', () => {
+	test('provides functionSignatures in provideFacts', () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		expect(collector.provideFacts).toContain(FUNCTION_SIGNATURES_CAPABILITY);
+	});
+
+	test('detects functions with 5 params', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.functionName === 'sendEmail');
+		expect(fn).toBeDefined();
+		expect(fn?.parameters).toHaveLength(5);
+		expect(fn?.parameters[0]).toEqual({ name: 'firstName', type: 'string', position: 0 });
+		expect(fn?.parameters[1]).toEqual({ name: 'lastName', type: 'string', position: 1 });
+		expect(fn?.parameters[2]).toEqual({ name: 'email', type: 'string', position: 2 });
+		expect(fn?.parameters[3]).toEqual({ name: 'subject', type: 'string', position: 3 });
+		expect(fn?.parameters[4]).toEqual({ name: 'body', type: 'string', position: 4 });
+	});
+
+	test('flags homogeneous types (all same type)', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.functionName === 'sendEmail');
+		expect(fn?.heterogeneousTypes).toBe(false);
+	});
+
+	test('flags heterogeneous types (mixed types)', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.functionName === 'createUser');
+		expect(fn).toBeDefined();
+		expect(fn?.heterogeneousTypes).toBe(true);
+	});
+
+	test('collects functions with fewer than 3 params', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const shortFn = functionSignatures.find((f) => f.functionName === 'greet');
+		expect(shortFn).toBeDefined();
+	});
+
+	test('each finding has file, function name, parameters, and location', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		for (const fn of functionSignatures) {
+			expect(typeof fn.file).toBe('string');
+			expect(isAbsolute(fn.file)).toBe(false);
+			expect(typeof fn.functionName).toBe('string');
+			expect(fn.location.line).toBeGreaterThan(0);
+			expect(typeof fn.isExported).toBe('boolean');
+		}
 	});
 });

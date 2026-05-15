@@ -25,6 +25,38 @@ This rule tracks positional data from its origin to every point where it is cons
 
 The rule links sources to their accesses across files using call-site tracking, so a tuple returned in one file and consumed in another is fully traced.
 
+::: details What this rule detects
+
+Code that accesses data by position — either through a numeric index or destructuring — on a source that holds heterogeneous elements. The rule traces from definition to every consumption point, even across files.
+
+```ts
+// src/user.ts — source: function with explicit tuple return type
+export function getUserDetails(): [string, string, number, boolean] {
+  return ["Alice", "alice@example.com", 25, true]
+}
+
+// src/admin.ts — accesses: numeric index on a value returned from another file
+import { getUserDetails } from './user'
+const user = getUserDetails()
+const age = user[2]     // caller must know: position 2 = age
+const active = user[3]  // caller must know: position 3 = active flag
+
+// inline: array literal with mixed types + index access in the same file
+const config = ["postgres", 5432, true]
+const port = config[1]  // position 1 = port number
+```
+
+Findings:
+
+```txt
+"getUserDetails" in src/user.ts — positional access at src/admin.ts[2], src/admin.ts[3]
+        ↳ location: src/user.ts:2:10  variable: getUserDetails  role: Definition (source)  positions: [0]: string, [1]: string, [2]: number, [3]: boolean
+        ↳ location: src/admin.ts:4:17  variable: user  role: Usage (access)  index: 2  kind: index
+        ↳ location: src/admin.ts:5:17  variable: user  role: Usage (access)  index: 3  kind: index
+```
+
+:::
+
 ## Known Limitations
 
 - **Literal type widening**: String/number/boolean literals are widened to their base types for the `isHeterogeneous` check. `['foo', 'bar']` is considered homogeneous (`string[]`). This is intentional to focus on structural risk, but means value-level positional dependencies in homogeneous arrays are only caught when `onlyHeterogeneous: false`.
@@ -45,7 +77,7 @@ type CoPStructRuleOptions = {
 |---|---:|---|
 | `onlyHeterogeneous` | `true` | Only flag positional sources with mixed types (e.g., `[string, number]`). Set to `false` to also flag homogeneous arrays where position carries semantic meaning. |
 
-## Example
+## Configuration
 
 ```ts
 import { defineConfig, rule } from '@maat-tools/core';

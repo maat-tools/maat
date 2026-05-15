@@ -97,6 +97,15 @@ const guideAndPluginSidebar = [
             collapsed: false,
             items: [
               { text: 'com', link: '/plugins/connascence-rules/com' },
+              {
+                text: 'cop',
+                link: '/plugins/connascence-rules/cop',
+                collapsed: false,
+                items: [
+                  { text: 'cop-args', link: '/plugins/connascence-rules/cop-args' },
+                  { text: 'cop-struct', link: '/plugins/connascence-rules/cop-struct' },
+                ],
+              },
             ],
           },
           {

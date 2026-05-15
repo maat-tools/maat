@@ -41,7 +41,7 @@ coupling/layer-imports:@acme/payments@v1
    └─ matches churn in packages/payments/** or src/payments/**
 ```
 
-## Example
+## Configuration
 
 ```ts
 import erosion from '@maat-tools/insights/erosion';

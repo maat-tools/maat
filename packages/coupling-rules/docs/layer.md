@@ -6,6 +6,46 @@
 
 `layer(target)` builds a rule for enforcing import boundaries. Two modes are supported, auto-detected from the target string.
 
+::: details What this rule detects
+
+An import that crosses a layer boundary — any specifier not covered by `allows()` for the targeted package or file path.
+
+**Package mode** (`layer('@acme/payments').is(Pure).allows('@acme/core').build()`):
+
+```ts
+// packages/payments/src/processor.ts
+import { CoreType } from '@acme/core'       // ✓ allowed
+import { LegacyDb } from '@acme/legacy-db'  // ✗ blocked — not in allows()
+import { readFile } from 'node:fs'          // ✗ blocked — not in allows()
+import { localHelper } from './utils'       // ✓ allowed (relative import)
+```
+
+Findings:
+
+```txt
+payments imports "@acme/legacy-db" — not in allows()
+payments imports "node:fs" — not in allows()
+```
+
+**Path mode** (`layer('./src/domain/**').is(Pure).allows('./src/shared/**', 'react').build()`):
+
+```ts
+// src/domain/orders/service.ts
+import { SharedType } from '../shared/types'  // ✓ allowed (resolves to src/shared/types)
+import { db } from '../infrastructure/db'     // ✗ blocked (resolves to src/infrastructure/db)
+import React from 'react'                     // ✓ allowed (package match)
+import axios from 'axios'                     // ✗ blocked (not in allows())
+```
+
+Findings:
+
+```txt
+src/domain/orders/service.ts imports "../infrastructure/db" — not in allows()
+src/domain/orders/service.ts imports "axios" — not in allows()
+```
+
+:::
+
 ## Builder API
 
 ```ts

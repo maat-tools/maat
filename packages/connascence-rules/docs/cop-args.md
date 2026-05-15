@@ -16,6 +16,49 @@ This rule inspects collected function signatures — including standalone functi
 
 Boolean parameters are a common form of Connascence of Position because callers must silently remember which position carries which intent (`true` = active? `true` = archived? `true` = dry-run?). Replacing a boolean with a named option or a discriminated union eliminates the ambiguity.
 
+::: details What this rule detects
+
+Functions and methods flagged because callers depend on argument order without any named signal.
+
+```ts
+// flagged: 4 arguments — exceeds default threshold of 3
+export function createUser(
+  name: string,
+  email: string,
+  role: string,
+  age: number,
+) {}
+
+// flagged: boolean parameter — callers must silently remember what each position means
+//   createUser("Alice", "...", "admin", 30, true)  ← what does `true` mean here?
+export function sendEmail(
+  to: string,
+  subject: string,
+  isHtml: boolean,
+) {}
+
+// flagged: both violations — boolean params + exceeds threshold
+export class UserService {
+  updateUser(
+    id: string,
+    data: UserData,
+    notify: boolean,
+    force: boolean,
+    version: number,
+  ) {}
+}
+```
+
+Findings:
+
+```txt
+"createUser" — 4 params exceeds threshold of 3
+"sendEmail" — contains boolean param
+"UserService.updateUser" — contains boolean param; 5 params exceeds threshold of 3
+```
+
+:::
+
 ## Known Limitations
 
 - **No data flow analysis**: The rule only looks at the function definition, not how callers actually use the arguments. A function with 5 parameters where 3 have defaults and callers only pass 2 will still be flagged.
@@ -40,7 +83,7 @@ type CoPArgsRuleOptions = {
 
 All options have sensible defaults but can be tuned to match your project's conventions.
 
-## Example
+## Configuration
 
 ```ts
 import { defineConfig, rule } from '@maat-tools/core';

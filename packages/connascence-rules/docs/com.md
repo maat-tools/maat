@@ -19,6 +19,32 @@ Ignored values:
 
 Language-specific keywords (`undefined` in JS/TS, `None` in Python, `nil` in Ruby) and common numeric literals (`0`, `1`, `-1`) are **not** filtered by default, because their noisiness is domain-dependent. Pass them via `ignoreValues` if needed.
 
+::: details What this rule detects
+
+The same literal `"customer_status"` appears across three unrelated files. No single file imports another — they are coupled only by the shared string value.
+
+```ts
+// src/payments/processor.ts
+const STATUS_FIELD = "customer_status"
+await db.update({ [STATUS_FIELD]: newStatus })
+
+// src/users/profile.ts
+if (row["customer_status"] === "active") {
+  grantAccess(user)
+}
+
+// src/reports/monthly.ts
+export const FILTER_KEY = "customer_status"
+```
+
+Finding:
+
+```txt
+"customer_status" appears in 3 files — possible Connascence of Meaning
+```
+
+:::
+
 ## Options
 
 ```ts
@@ -33,7 +59,7 @@ type CoMRuleOptions = {
 | `threshold` | `2` | Minimum number of distinct files required before a value becomes a finding |
 | `ignoreValues` | `[]` | Extra literal values to ignore |
 
-## Example
+## Configuration
 
 ```ts
 import com from '@maat-tools/connascence-rules/com';

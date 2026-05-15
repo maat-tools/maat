@@ -12,6 +12,32 @@ The rule joins git commits with their file changes, filters to the configured wi
 
 Deleted files are counted the same as modifications — a file deleted and recreated frequently is still a churn signal.
 
+::: details What this rule detects
+
+A file that accumulates commits faster than the rest of the codebase, as seen in git history over a rolling time window.
+
+```
+# Commits touching src/payments/processor.ts in the last 90 days
+
+a1b2c3d  fix: handle payment timeout
+d4e5f6g  feat: add retry with exponential backoff
+7h8i9j0  fix: race condition under concurrent load
+k1l2m3n  refactor: extract validation into helper
+o4p5q6r  fix: memory leak in long-running jobs
+s7t8u9v  chore: align error messages with API spec
+w0x1y2z  fix: currency rounding edge case
+...
+# 14 commits total → exceeds threshold of 10
+```
+
+Finding:
+
+```txt
+"src/payments/processor.ts" changed 14 times in the last 90 days — high churn
+```
+
+:::
+
 ## Options
 
 ```ts
@@ -28,7 +54,7 @@ type ChurnOptions = {
 | `windowDays` | `90` | Rolling window in days |
 | `exclude` | `[]` | Glob patterns for paths to skip. Matched against the project-relative file path |
 
-## Example
+## Configuration
 
 ```ts
 import churn from '@maat-tools/git-rules/churn';

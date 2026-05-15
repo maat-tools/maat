@@ -47,5 +47,5 @@
 			"@maat-tools/cli": ["packages/cli/src/index.ts"]
 		}
 	},
-	"exclude": ["packages/cli/fixtures"]
+	"exclude": ["packages/*/fixtures", "packages/*/dist"]
 }

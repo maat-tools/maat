@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { TSCollector } from '@maat-tools/collector-ts';
 import type { Finding } from '@maat-tools/contracts';
 import { Kernel } from '@maat-tools/kernel';
-import { com, cop } from './index';
+import { com, copArgs, copStruct } from './index';
 
 const FIXTURE_DIR = resolve(import.meta.dir, '../../collector-ts/fixtures/sample-project');
 const FIXTURE_TSCONFIG = resolve(FIXTURE_DIR, 'tsconfig.json');
@@ -19,7 +19,8 @@ beforeAll(async () => {
 		const kernel = new Kernel();
 		kernel.registerCollector(new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG }));
 		kernel.registerRule(com({ threshold: 2 }));
-		kernel.registerRule(cop({ maxArgumentsAllowed: 3 }));
+		kernel.registerRule(copArgs({ maxArgumentsAllowed: 3 }));
+		kernel.registerRule(copStruct());
 		const result = await kernel.run();
 		findings = result.findings;
 
@@ -55,7 +56,7 @@ function hasNoFinding(ruleId: string, match: string) {
 // ─── Connascence of Position (cop) ───────────────────────────────────────────
 
 describe('connascence-rules e2e — cop', () => {
-	const COP_RULE = 'cop@v1';
+	const COP_RULE = 'cop-args@v1';
 
 	test('sendEmail (5 params) is flagged for exceeding threshold', () => {
 		expect(hasFinding(COP_RULE, 'sendEmail')).toBe(true);
@@ -84,6 +85,29 @@ describe('connascence-rules e2e — cop', () => {
 
 	test('cop produces exactly 2 findings', () => {
 		expect(findingsFor(COP_RULE)).toHaveLength(2);
+	});
+});
+
+// ─── Connascence of Position — data structures (cop-struct) ──────────────────
+
+describe('connascence-rules e2e — cop-struct', () => {
+	const COP_STRUCT_RULE = 'cop-struct@v1';
+
+	test('config (heterogeneous array) with index access is flagged', () => {
+		expect(hasFinding(COP_STRUCT_RULE, 'config')).toBe(true);
+	});
+
+	test('user (assigned from tuple-returning function) with destructuring is flagged', () => {
+		expect(hasFinding(COP_STRUCT_RULE, 'user')).toBe(true);
+	});
+
+	test('namedUser (object literal) is not flagged', () => {
+		expect(hasNoFinding(COP_STRUCT_RULE, 'namedUser')).toBe(true);
+	});
+
+	test('cross-file: getUserDetails called in remote.ts is flagged', () => {
+		expect(hasFinding(COP_STRUCT_RULE, 'getUserDetails')).toBe(true);
+		expect(hasFinding(COP_STRUCT_RULE, 'remote.ts')).toBe(true);
 	});
 });
 

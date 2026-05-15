@@ -14,16 +14,18 @@ export default defineConfig({
 		],
 	],
 	rules: [
-		rule('@maat-tools/connascence-rules/cop', {
+		rule('@maat-tools/connascence-rules/cop-args', {
 			flagBoolean: true,
 			maxArgumentsAllowed: 3,
 		}),
+
+		rule('@maat-tools/connascence-rules/cop-struct'),
 
 		layer('@maat-tools/contracts').is(Pure).allows('node:crypto'),
 		layer('@maat-tools/vocabulary').is(Pure).allows('@maat-tools/contracts', 'node:crypto'),
 		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts', 'node:crypto'),
 
-		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid'),
+		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid', 'node:util'),
 
 		layer('@maat-tools/coupling-rules').allows('@maat-tools/contracts', '@maat-tools/vocabulary', 'node:path'),
 		layer('@maat-tools/connascence-rules').allows(

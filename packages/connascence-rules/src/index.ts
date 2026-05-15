@@ -3,8 +3,8 @@ export { ConnascenceOfMeaningRule, default as com } from './com';
 export type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
 export {
 	ConnascenceOfPositionArgsRule,
-	copArgs,
 	ConnascenceOfPositionStructRule,
+	copArgs,
 	copStruct,
 } from './cop';
 

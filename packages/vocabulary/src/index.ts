@@ -50,12 +50,13 @@ export type PositionalSource = {
 	positions: { index: number; type: string }[];
 	isHeterogeneous: boolean;
 	location: SourceLocation;
+	callSites: { file: string; variableName: string; location: SourceLocation }[];
 };
 
 export type PositionalAccess = {
 	file: string;
 	variableName: string;
-	accessedIndex: number;
+	accessedIndex: number | string;
 	accessKind: 'index' | 'destructuring';
 	location: SourceLocation;
 };

@@ -105,3 +105,5 @@ tsConfigFilePath: [
 - Cross-package relative imports (e.g. `../../pkg-b/src/index`) are rewritten to the destination package name (e.g. `@scope/pkg-b`) so coupling rules see package-level boundaries, not filesystem paths.
 - Files included in multiple tsconfigs are processed once. Deduplication is by absolute file path.
 - The collector uses [ts-morph](https://ts-morph.com/) under the hood. It does not type-check — it only parses the AST. Cold-start time scales with the number of source files loaded.
+- Dynamically generated functions or those in non-standard patterns may not be extracted.
+- Custom type aliases that resolve to `boolean` may not always be resolved to their base type.

@@ -167,3 +167,4 @@ export {
 	type Rule,
 	type RuleBuilder,
 } from '@maat-tools/contracts';
+export { dump } from './dump';

@@ -10,13 +10,28 @@ import {
 	IMPORTS_CAPABILITY,
 	type Import,
 	type Parameter,
+	POSITIONAL_ACCESSES_CAPABILITY,
+	POSITIONAL_SOURCES_CAPABILITY,
+	type PositionalAccess,
+	type PositionalSource,
 } from '@maat-tools/vocabulary';
 import micromatch from 'micromatch';
 
 const { isMatch: micromatchIsMatch } = micromatch;
 
 import { glob } from 'tinyglobby';
-import { Project, type SourceFile } from 'ts-morph';
+import {
+	type ArrayBindingPattern,
+	type ArrayLiteralExpression,
+	type AsExpression,
+	type CallExpression,
+	type ElementAccessExpression,
+	type NumericLiteral,
+	Project,
+	type SourceFile,
+	SyntaxKind,
+	type TupleTypeNode,
+} from 'ts-morph';
 
 export type TSInput = {
 	tsConfigFilePath: string | string[];
@@ -234,9 +249,277 @@ function collectFunctionSignatures(sourceFile: SourceFile, file: string): Functi
 	return signatures;
 }
 
-export class TSCollector implements Collector<'constants' | 'imports' | 'functionSignatures'> {
+const POSITIONAL_API_CALLS = ['split', 'match', 'matchAll', 'Object.values', 'Object.entries'];
+
+function isPositionalApiCall(callExpr: string): boolean {
+	return POSITIONAL_API_CALLS.some((api) => callExpr.endsWith(`.${api}`) || callExpr === api);
+}
+
+function collectPositionalSources(sourceFile: SourceFile, file: string): PositionalSource[] {
+	const sources: PositionalSource[] = [];
+
+	for (const func of sourceFile.getFunctions()) {
+		const returnTypeNode = func.getReturnTypeNode();
+		if (returnTypeNode && returnTypeNode.getKind() === SyntaxKind.TupleType) {
+			const tupleNode = returnTypeNode as TupleTypeNode;
+			const elements = tupleNode.getElements();
+			const positions = elements.map((el: { getText: () => string }, i: number) => ({
+				index: i,
+				type: el.getText(),
+			}));
+			const typeSet = new Set(positions.map((p) => p.type));
+
+			sources.push({
+				file,
+				variableName: func.getName() ?? 'anonymous',
+				positions,
+				isHeterogeneous: typeSet.size > 1,
+				location: {
+					file,
+					line: func.getStartLineNumber(),
+					column: func.getStartLinePos(),
+				},
+				callSites: [],
+			});
+		} else {
+			const returnStatements = func.getDescendantsOfKind(SyntaxKind.ReturnStatement);
+			for (const ret of returnStatements) {
+				const expression = ret.getExpression();
+				if (expression && expression.getKind() === SyntaxKind.ArrayLiteralExpression) {
+					const arrayExpr = expression as ArrayLiteralExpression;
+					const elements = arrayExpr.getElements();
+					const positions = elements.map((el, i: number) => {
+						const type = el.getType().getText(el);
+						return { index: i, type };
+					});
+					const typeSet = new Set(positions.map((p) => p.type));
+
+					sources.push({
+						file,
+						variableName: func.getName() ?? 'anonymous',
+						positions,
+						isHeterogeneous: typeSet.size > 1,
+						location: {
+							file,
+							line: func.getStartLineNumber(),
+							column: func.getStartLinePos(),
+						},
+						callSites: [],
+					});
+					break;
+				}
+			}
+		}
+	}
+
+	for (const classDecl of sourceFile.getClasses()) {
+		for (const method of classDecl.getMethods()) {
+			const returnTypeNode = method.getReturnTypeNode();
+			if (returnTypeNode && returnTypeNode.getKind() === SyntaxKind.TupleType) {
+				const tupleNode = returnTypeNode as TupleTypeNode;
+				const elements = tupleNode.getElements();
+				const positions = elements.map((el: { getText: () => string }, i: number) => ({
+					index: i,
+					type: el.getText(),
+				}));
+				const typeSet = new Set(positions.map((p) => p.type));
+
+				sources.push({
+					file,
+					variableName: `${classDecl.getName()}.${method.getName()}`,
+					positions,
+					isHeterogeneous: typeSet.size > 1,
+					location: {
+						file,
+						line: method.getStartLineNumber(),
+						column: method.getStartLinePos(),
+					},
+					callSites: [],
+				});
+			}
+		}
+	}
+
+	for (const varDecl of sourceFile.getVariableDeclarations()) {
+		const initializer = varDecl.getInitializer();
+		if (initializer && initializer.getKind() === SyntaxKind.ArrayLiteralExpression) {
+			const arrayExpr = initializer as ArrayLiteralExpression;
+			const elements = arrayExpr.getElements();
+			const positions = elements.map((el, i: number) => {
+				const type = el.getType().getBaseTypeOfLiteralType().getText(el);
+				return { index: i, type };
+			});
+			const typeSet = new Set(positions.map((p) => p.type));
+
+			sources.push({
+				file,
+				variableName: varDecl.getName(),
+				positions,
+				isHeterogeneous: typeSet.size > 1,
+				location: {
+					file,
+					line: varDecl.getStartLineNumber(),
+					column: varDecl.getStartLinePos(),
+				},
+				callSites: [],
+			});
+		}
+	}
+
+	for (const varDecl of sourceFile.getVariableDeclarations()) {
+		const initializer = varDecl.getInitializer();
+		if (initializer && initializer.getKind() === SyntaxKind.AsExpression) {
+			const asExpr = initializer as AsExpression;
+			const typeNode = asExpr.getTypeNode();
+			if (typeNode && typeNode.getKind() === SyntaxKind.TupleType) {
+				const tupleNode = typeNode as TupleTypeNode;
+				const elements = tupleNode.getElements();
+				const positions = elements.map((el, i: number) => ({
+					index: i,
+					type: el.getText(),
+				}));
+				const typeSet = new Set(positions.map((p) => p.type));
+
+				sources.push({
+					file,
+					variableName: varDecl.getName(),
+					positions,
+					isHeterogeneous: typeSet.size > 1,
+					location: {
+						file,
+						line: varDecl.getStartLineNumber(),
+						column: varDecl.getStartLinePos(),
+					},
+					callSites: [],
+				});
+			}
+		}
+	}
+
+	for (const varDecl of sourceFile.getVariableDeclarations()) {
+		const initializer = varDecl.getInitializer();
+		if (initializer && initializer.getKind() === SyntaxKind.CallExpression) {
+			const callNode = initializer as CallExpression;
+			const callExpr = callNode.getExpression();
+			const calledName = callExpr.getText();
+			const source = sources.find((s) => s.variableName === calledName);
+			if (source) {
+				sources.push({
+					file,
+					variableName: varDecl.getName(),
+					positions: source.positions,
+					isHeterogeneous: source.isHeterogeneous,
+					location: {
+						file,
+						line: varDecl.getStartLineNumber(),
+						column: varDecl.getStartLinePos(),
+					},
+					callSites: [],
+				});
+			} else if (isPositionalApiCall(calledName)) {
+				sources.push({
+					file,
+					variableName: varDecl.getName(),
+					positions: [{ index: 0, type: 'unknown' }],
+					isHeterogeneous: false,
+					location: {
+						file,
+						line: varDecl.getStartLineNumber(),
+						column: varDecl.getStartLinePos(),
+					},
+					callSites: [],
+				});
+			}
+		}
+	}
+
+	return sources;
+}
+
+function collectPositionalAccesses(sourceFile: SourceFile, file: string): PositionalAccess[] {
+	const accesses: PositionalAccess[] = [];
+
+	for (const node of sourceFile.getDescendants()) {
+		if (node.getKind() === SyntaxKind.ElementAccessExpression) {
+			const accessExpr = node as ElementAccessExpression;
+			const argument = accessExpr.getArgumentExpression();
+			if (argument) {
+				const expression = accessExpr.getExpression();
+				const variableName = expression.getText();
+
+				if (argument.getKind() === SyntaxKind.NumericLiteral) {
+					const numericArg = argument as NumericLiteral;
+					accesses.push({
+						file,
+						variableName,
+						accessedIndex: parseInt(numericArg.getLiteralText(), 10),
+						accessKind: 'index',
+						location: {
+							file,
+							line: node.getStartLineNumber(),
+							column: node.getStartLinePos(),
+						},
+					});
+				} else {
+					accesses.push({
+						file,
+						variableName,
+						accessedIndex: argument.getText(),
+						accessKind: 'index',
+						location: {
+							file,
+							line: node.getStartLineNumber(),
+							column: node.getStartLinePos(),
+						},
+					});
+				}
+			}
+		}
+	}
+
+	for (const varDecl of sourceFile.getVariableDeclarations()) {
+		const nameNode = varDecl.getNameNode();
+		if (nameNode && nameNode.getKind() === SyntaxKind.ArrayBindingPattern) {
+			const bindingPattern = nameNode as ArrayBindingPattern;
+			const initializer = varDecl.getInitializer();
+			if (initializer) {
+				let variableName = initializer.getText();
+				if (variableName.endsWith('()')) {
+					variableName = variableName.slice(0, -2);
+				}
+				const elements = bindingPattern.getElements();
+
+				for (let i = 0; i < elements.length; i++) {
+					accesses.push({
+						file,
+						variableName,
+						accessedIndex: i,
+						accessKind: 'destructuring',
+						location: {
+							file,
+							line: varDecl.getStartLineNumber(),
+							column: varDecl.getStartLinePos(),
+						},
+					});
+				}
+			}
+		}
+	}
+
+	return accesses;
+}
+
+export class TSCollector
+	implements Collector<'constants' | 'imports' | 'functionSignatures' | 'positionalSources' | 'positionalAccesses'>
+{
 	public readonly id = 'ts';
-	public readonly provideFacts = [CONSTANTS_CAPABILITY, IMPORTS_CAPABILITY, FUNCTION_SIGNATURES_CAPABILITY] as const;
+	public readonly provideFacts = [
+		CONSTANTS_CAPABILITY,
+		IMPORTS_CAPABILITY,
+		FUNCTION_SIGNATURES_CAPABILITY,
+		POSITIONAL_SOURCES_CAPABILITY,
+		POSITIONAL_ACCESSES_CAPABILITY,
+	] as const;
 
 	public constructor(private readonly config: TSInput) {}
 
@@ -254,7 +537,9 @@ export class TSCollector implements Collector<'constants' | 'imports' | 'functio
 		return results;
 	}
 
-	public async collect(): Promise<Pick<FactRegistry, 'constants' | 'imports' | 'functionSignatures'>> {
+	public async collect(): Promise<
+		Pick<FactRegistry, 'constants' | 'imports' | 'functionSignatures' | 'positionalSources' | 'positionalAccesses'>
+	> {
 		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
 			? this.config.tsConfigFilePath
 			: [this.config.tsConfigFilePath];
@@ -267,6 +552,10 @@ export class TSCollector implements Collector<'constants' | 'imports' | 'functio
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
 		const functionSignatures: FunctionSignature[] = [];
+		const positionalSources: PositionalSource[] = [];
+		const positionalAccesses: PositionalAccess[] = [];
+		const sourceFiles: SourceFile[] = [];
+		const fileMap = new Map<SourceFile, string>();
 
 		for (const tsConfigPath of tsConfigPaths) {
 			const project = new Project({ tsConfigFilePath: tsConfigPath });
@@ -287,10 +576,44 @@ export class TSCollector implements Collector<'constants' | 'imports' | 'functio
 				imports.push(...collectImports(sourceFile, file, packageName));
 				constants.push(...collectConstants(sourceFile, file));
 				functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
+				positionalSources.push(...collectPositionalSources(sourceFile, file));
+				positionalAccesses.push(...collectPositionalAccesses(sourceFile, file));
+				sourceFiles.push(sourceFile);
+				fileMap.set(sourceFile, file);
 			}
 		}
 
-		return { constants, imports, functionSignatures };
+		for (const source of positionalSources) {
+			const funcName = source.variableName;
+			for (const sf of sourceFiles) {
+				const file = fileMap.get(sf);
+				if (!file) {
+					continue;
+				}
+
+				for (const varDecl of sf.getVariableDeclarations()) {
+					const initializer = varDecl.getInitializer();
+					if (initializer && initializer.getKind() === SyntaxKind.CallExpression) {
+						const callNode = initializer as CallExpression;
+						const callExpr = callNode.getExpression();
+						const calledName = callExpr.getText();
+						if (calledName === funcName || calledName.endsWith(`.${funcName}`)) {
+							source.callSites.push({
+								file,
+								variableName: varDecl.getName(),
+								location: {
+									file,
+									line: varDecl.getStartLineNumber(),
+									column: varDecl.getStartLinePos(),
+								},
+							});
+						}
+					}
+				}
+			}
+		}
+
+		return { constants, imports, functionSignatures, positionalSources, positionalAccesses };
 	}
 }
 

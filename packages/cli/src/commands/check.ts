@@ -42,14 +42,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		const spinner = options.silent ? null : createSpinner();
-		const { findings: currentFindings } = await this.kernel.run({
-			onProgress: (event: KernelProgressEvent) => {
-				if (event.type === 'collector:start') {
-					spinner?.update(`Collecting ${event.collectorId} (${event.index + 1}/${event.total})`);
-				}
-			},
-		});
-		spinner?.stop();
+		const { findings: currentFindings } = await this.kernel
+			.run({
+				onProgress: (event: KernelProgressEvent) => {
+					if (event.type === 'collector:start') {
+						spinner?.update(`Collecting ${event.collectorId} (${event.index + 1}/${event.total})`);
+					}
+				},
+			})
+			.finally(() => spinner?.stop());
 		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 
 		if (!this.isLedgerProvided()) {

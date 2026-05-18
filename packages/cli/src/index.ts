@@ -59,7 +59,7 @@ class MaatCLI {
 	public async run(argv = process.argv) {
 		if (isHelpOrVersionRequest(argv)) {
 			this.registerCommands({ collectors: [], rules: [] }, { warnMissingLedger: false });
-			this.program.parse(argv);
+			await this.program.parseAsync(argv);
 			return;
 		}
 
@@ -76,7 +76,16 @@ class MaatCLI {
 		await this.configureInsights(loadedConfig.config);
 		await this.configureLedger(loadedConfig.config);
 		this.registerCommands(loadedConfig.config);
-		this.program.parse(argv);
+
+		const commandName = argv.slice(2).find((a) => !a.startsWith('-'));
+		if (commandName && !argv.includes('--silent')) {
+			const start = performance.now();
+			process.on('exit', () => {
+				const elapsed = ((performance.now() - start) / 1000).toFixed(2);
+				process.stderr.write(`${commandName} took ${elapsed}s\n`);
+			});
+		}
+		await this.program.parseAsync(argv);
 	}
 
 	private registerCommands(maatConfig: MaatConfig, options: { warnMissingLedger?: boolean } = {}) {

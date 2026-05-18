@@ -6,7 +6,7 @@
 
 `cop-args` detects Connascence of Position in function signatures: call sites depend on the order of positional arguments, making every caller a silent dependency on the function's shape.
 
-## Coverage
+## What It Checks
 
 This rule inspects collected function signatures — including standalone functions and class methods — and flags those that match configured thresholds:
 
@@ -59,12 +59,6 @@ Findings:
 
 :::
 
-## Known Limitations
-
-- **No data flow analysis**: The rule only looks at the function definition, not how callers actually use the arguments. A function with 5 parameters where 3 have defaults and callers only pass 2 will still be flagged.
-- **Type-based boolean detection**: Boolean parameters are identified by their type text. Custom types that resolve to `boolean` (e.g., type aliases) may not always be caught.
-- **No overload awareness**: If a function has multiple overloads, each is evaluated independently.
-
 ## Options
 
 ```ts
@@ -114,6 +108,12 @@ If a function or method exceeds the threshold or contains boolean parameters, th
 "sendEmail" — contains boolean param
 "UserService.updateUser" — contains boolean param; 5 params exceeds threshold of 3
 ```
+
+## Limitations
+
+- **No data flow analysis**: The rule only looks at the function definition, not how callers actually use the arguments. A function with 5 parameters where 3 have defaults and callers only pass 2 will still be flagged.
+- **Type-based boolean detection**: Boolean parameters are identified by their type text. Custom types that resolve to `boolean` (e.g., type aliases) may not always be caught.
+- **No overload awareness**: If a function has multiple overloads, each is evaluated independently.
 
 ## Finding Identity
 

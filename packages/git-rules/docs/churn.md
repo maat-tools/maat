@@ -96,11 +96,3 @@ A finding for a given file remains stable across runs as long as the file keeps 
 ## Auto-Resolution
 
 Unlike structural findings, churn findings are self-healing. Once a file stops accumulating changes, old commits slide out of the window and the finding disappears without any manual action.
-
-## Handling a New Finding
-
-When a file crosses the threshold and you are not ready to refactor:
-
-- **Baseline** — acknowledge it and set an expiry date to revisit.
-- **Axiom** — declare the file's churn as permanently accepted (e.g. a config file that changes by design).
-- **Exclude** — add the path to `exclude` if the file category is noise for your project (generated files, lock files, etc.).

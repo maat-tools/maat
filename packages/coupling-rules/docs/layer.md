@@ -6,6 +6,8 @@
 
 `layer(target)` builds a rule for enforcing import boundaries. Two modes are supported, auto-detected from the target string.
 
+## What It Checks
+
 ::: details What this rule detects
 
 An import that crosses a layer boundary — any specifier not covered by `allows()` for the targeted package or file path.
@@ -154,3 +156,37 @@ layer('@maat-tools/kernel')
 	.allows('@maat-tools/contracts')
 	.build();
 ```
+
+## Configuration
+
+```ts
+import { defineConfig } from '@maat-tools/core';
+import { layer, Pure } from '@maat-tools/coupling-rules';
+
+export default defineConfig({
+	collectors: [
+		['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }],
+	],
+	rules: [
+		layer('@acme/payments').is(Pure).allows('@acme/core').build(),
+		layer('./src/domain/**').is(Pure).allows('./src/shared/**', 'react').build(),
+	],
+});
+```
+
+If a file inside the target layer imports something outside the allowed set, the rule reports:
+
+```txt
+payments imports "@acme/legacy-db" — not in allows()
+src/domain/orders/service.ts imports "axios" — not in allows()
+```
+
+## Finding Identity
+
+Findings are identified by the boundary target and the blocked import specifier:
+
+```ts
+ruleIdentifier: { target, specifier }
+```
+
+In package mode, `target` is the package name (e.g. `@acme/payments`). In path mode, `target` is the glob (e.g. `./src/domain/**`). A finding remains stable across runs as long as the same file in the same layer imports the same blocked specifier.

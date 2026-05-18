@@ -7,7 +7,7 @@
 
 `cop-struct` detects Connascence of Position in array and tuple structures: code that accesses elements by numeric index creates a dependency on the order and shape of that data.
 
-## Coverage
+## What It Checks
 
 This rule tracks positional data from its origin to every point where it is consumed:
 
@@ -57,14 +57,6 @@ Findings:
 
 :::
 
-## Known Limitations
-
-- **Literal type widening**: String/number/boolean literals are widened to their base types for the `isHeterogeneous` check. `['foo', 'bar']` is considered homogeneous (`string[]`). This is intentional to focus on structural risk, but means value-level positional dependencies in homogeneous arrays are only caught when `onlyHeterogeneous: false`.
-- **Not all access patterns are covered**: Optional chaining (`arr?.[i]`), the `at()` method (`arr.at(-1)`), and `for...of` iteration are not currently detected. These are edge cases that can be added if they appear in real code.
-- **No spread resolution**: Arrays with spread elements (e.g., `[...known, 'new']`) have partially unknown positions at static analysis time.
-- **Call-site linking is name-based**: Cross-file tracking matches by the function name text. Aliased imports (`import { getUserDetails as fetch }`) are tracked through the alias, but dynamic calls (`window[funcName]()`) are not.
-- **Relies on TypeScript type resolution**: If `ts-morph` cannot resolve a type (e.g., in the presence of complex generics), the source may be missed or misclassified.
-
 ## Options
 
 ```ts
@@ -109,6 +101,14 @@ When a positional source is accessed, the rule reports:
         ↳ location: src/admin.ts:4:17  variable: remoteUser  role: Usage (access)  index: 3  kind: index
         ↳ location: src/report.ts:5:10  variable: reportData  role: Usage (access)  index: 0  kind: index
 ```
+
+## Limitations
+
+- **Literal type widening**: String/number/boolean literals are widened to their base types for the `isHeterogeneous` check. `['foo', 'bar']` is considered homogeneous (`string[]`). This is intentional to focus on structural risk, but means value-level positional dependencies in homogeneous arrays are only caught when `onlyHeterogeneous: false`.
+- **Not all access patterns are covered**: Optional chaining (`arr?.[i]`), the `at()` method (`arr.at(-1)`), and `for...of` iteration are not currently detected. These are edge cases that can be added if they appear in real code.
+- **No spread resolution**: Arrays with spread elements (e.g., `[...known, 'new']`) have partially unknown positions at static analysis time.
+- **Call-site linking is name-based**: Cross-file tracking matches by the function name text. Aliased imports (`import { getUserDetails as fetch }`) are tracked through the alias, but dynamic calls (`window[funcName]()`) are not.
+- **Relies on TypeScript type resolution**: If `ts-morph` cannot resolve a type (e.g., in the presence of complex generics), the source may be missed or misclassified.
 
 ## Finding Identity
 

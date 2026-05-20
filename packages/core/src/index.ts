@@ -41,9 +41,7 @@ export type RuleEntry =
 
 export type EnricherEntry =
 	| keyof EnricherRegistry
-	| RegistryTuples<EnricherRegistry>
-	| (string & {})
-	| [string & {}, Record<string, unknown>];
+	| RegistryTuples<EnricherRegistry>;
 
 export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>] | Insight;
 
@@ -61,7 +59,7 @@ export type MaatConfig = {
 	insights?: InsightEntry[];
 } & ({ ledger: LedgerEntry } | { ledger?: never });
 
-export function defineConfig(config: MaatConfig): MaatConfig {
+export function defineConfig<const T extends MaatConfig>(config: T): T {
 	return config;
 }
 
@@ -193,4 +191,9 @@ export {
 	type Rule,
 	type RuleBuilder,
 } from '@maat-tools/contracts';
-export { dump } from './dump';
+
+export {
+	type LLMProvider,
+	type OpenAIModel,
+	type LLMConfig,
+} from '@maat-tools/utils';

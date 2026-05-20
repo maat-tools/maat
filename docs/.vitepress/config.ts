@@ -121,6 +121,14 @@ const guideAndPluginSidebar = [
         ],
       },
       {
+        text: 'Enrichers',
+        link: '/plugins/enricher-llm/',
+        collapsed: false,
+        items: [
+          { text: 'LLM enrichers', link: '/plugins/enricher-llm/' },
+        ],
+      },
+      {
         text: 'Insights',
         link: '/plugins/insights/',
         collapsed: false,

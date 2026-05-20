@@ -1,7 +1,7 @@
 {
-  "name": "@maat-tools/core",
-  "version": "0.1.9",
-  "description": "Orchestration layer providing MaatConfig, collector and rule entry resolution, and the base ledger backend",
+  "name": "@maat-tools/utils",
+  "version": "0.1.0",
+  "description": "Shared utilities for Maat packages",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,7 +9,8 @@
     ".": {
       "bun": "./src/index.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -27,19 +28,14 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "1.3.14",
-    "@biomejs/biome": "2.4.15"
-  },
-  "dependencies": {
-    "@maat-tools/contracts": "workspace:*",
-    "@maat-tools/utils": "workspace:*",
-    "ulid": "3.0.2"
+    "@types/bun": "1.3.13",
+    "@biomejs/biome": "2.4.14"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",
   "repository": {
     "type": "git",
     "url": "https://github.com/maat-tools/maat",
-    "directory": "packages/core"
+    "directory": "packages/utils"
   }
 }

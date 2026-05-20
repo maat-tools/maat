@@ -21,7 +21,7 @@
 		"packages/*"
 	],
 	"scripts": {
-		"build": 		"for pkg in contracts vocabulary core kernel collector-ts collector-git coupling-rules connascence-rules git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
+		"build": "for pkg in contracts vocabulary utils core kernel collector-ts collector-git enricher-llm coupling-rules connascence-rules git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
 		"docs:dev": "vitepress dev docs",
 		"docs:build": "vitepress build docs",
 		"docs:preview": "vitepress preview docs",
@@ -37,6 +37,7 @@
 		"@commitlint/cli": "21.0.1",
 		"@commitlint/config-conventional": "21.0.1",
 		"@maat-tools/collector-ts": "workspace:*",
+		"@maat-tools/enricher-llm": "workspace:*",
 		"@maat-tools/connascence-rules": "workspace:*",
 		"@maat-tools/coupling-rules": "workspace:*",
 		"@maat-tools/file-ledger": "workspace:*",

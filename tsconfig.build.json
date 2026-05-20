@@ -18,6 +18,8 @@
 			"@maat-tools/kernel": ["./packages/kernel/dist/index.d.ts"],
 			"@maat-tools/collector-ts": ["./packages/collector-ts/dist/index.d.ts"],
 			"@maat-tools/collector-git": ["./packages/collector-git/dist/index.d.ts"],
+			"@maat-tools/enricher-llm": ["./packages/enricher-llm/dist/index.d.ts"],
+			"@maat-tools/utils": ["./packages/utils/dist/index.d.ts"],
 			"@maat-tools/coupling-rules": ["./packages/coupling-rules/dist/index.d.ts"],
 			"@maat-tools/connascence-rules": ["./packages/connascence-rules/dist/index.d.ts"],
 			"@maat-tools/git-rules": ["./packages/git-rules/dist/index.d.ts"],

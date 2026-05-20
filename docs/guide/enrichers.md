@@ -197,6 +197,18 @@ A finding that comes from deterministic facts is fully deterministic. A finding 
 
 This is **architectural separation with explicit contamination tracking**, not a breakdown of determinism.
 
+## Enricher package structure
+
+The `@maat-tools/enricher-llm` package provides shared types and utilities for LLM-backed enrichers:
+
+```ts
+import type { EnricherLLMInput } from '@maat-tools/enricher-llm'
+```
+
+| Type | Purpose |
+|---|---|
+| `EnricherLLMInput` | OpenAI LLM configuration (`provider`, `model`, `apiKey`, `cacheDir`, etc.) |
+
 ## Related
 
 - [ADR-011: Enrichers — Probabilistic Facts Without Breaking Determinism](/adr/011-enrichers-probabilistic-facts)

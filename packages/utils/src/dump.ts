@@ -5,7 +5,7 @@ import { inspect } from 'node:util';
  * Handles circular references safely.
  *
  * Usage:
- *   import { dump } from '@maat-tools/core';
+ *   import { dump } from '@maat-tools/utils';
  *   dump(someObject);
  *   dump(someObject, { depth: 2 });
  */

@@ -12,5 +12,6 @@ Maat plugins package collectors, rules, insights, and ledger backends behind sta
 | [`@maat-tools/collector-git`](./collector-git/) | Collect git history facts (commits and file changes) |
 | [`@maat-tools/git-rules`](./git-rules/) | Rules derived from git history |
 | [`@maat-tools/insights`](./insights/) | Cross-cutting insights over findings from multiple rule families |
+| [`@maat-tools/enricher-llm`](./enricher-llm/) | LLM-backed enrichers for semantic interpretation (probabilistic) |
 
 Use the plugin-specific pages for rule options, examples, and finding behavior.

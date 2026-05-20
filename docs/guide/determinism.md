@@ -16,6 +16,24 @@ For the same rule version and the same collected facts, official Maat rules prod
 
 Official rules evaluate facts already collected by collectors. They do not inspect the repository directly, call external services, or make time-dependent decisions.
 
+## Enrichers and probabilistic facts
+
+Enrichers are a plugin type that consumes facts and produces new facts through interpretation, synthesis, or inference — typically using an LLM. **All enrichers are probabilistic by design.**
+
+This does not break the rule guarantee. Rules remain deterministic:
+
+- `Rule.evaluate(facts)` is still a synchronous pure function.
+- Rules do not call LLMs or make network requests.
+
+When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings:
+
+- display a `[Verify]` badge in CLI output;
+- never break strict builds;
+- never go to the ledger;
+- can only be treated as deterministic after human verification with `maat verify`.
+
+The non-determinism is explicitly contained at the **fact layer**, not the rule layer. See the [Enrichers guide](/guide/enrichers) and [ADR-011](/adr/011-enrichers-probabilistic-facts) for the full design.
+
 ## Third-party packages
 
 Third-party collectors, rules, insights, and ledger backends are outside the official guarantee.

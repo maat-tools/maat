@@ -5,6 +5,8 @@ import {
 	type Insight,
 	isCollector,
 	isCollectorFactory,
+	isEnricher,
+	isEnricherFactory,
 	isInsight,
 	isInsightFactory,
 	isInsightSet,
@@ -23,6 +25,7 @@ import { Axiom } from './commands/axiom';
 import { Baseline } from './commands/baseline';
 import { Check } from './commands/check';
 import { Resolve } from './commands/resolve';
+import { Verify } from './commands/verify';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
 import { Printer } from './printer';
@@ -72,6 +75,7 @@ class MaatCLI {
 		process.chdir(loadedConfig.rootDir);
 
 		await this.registerCollectors(loadedConfig.config);
+		await this.registerEnrichers(loadedConfig.config);
 		await this.registerRules(loadedConfig.config);
 		await this.configureInsights(loadedConfig.config);
 		await this.configureLedger(loadedConfig.config);
@@ -100,6 +104,7 @@ class MaatCLI {
 			new Axiom(...args),
 			new Baseline(...args),
 			new Resolve(...args),
+			new Verify(...args),
 			new Visualize(...args),
 		];
 
@@ -172,6 +177,31 @@ class MaatCLI {
 						`Use defineRule() or defineRuleSet() from @maat-tools/contracts to define it.`,
 				);
 			}
+		}
+	}
+
+	private async registerEnrichers(maatConfig: MaatConfig) {
+		for (const entry of maatConfig.enrichers ?? []) {
+			const [enricherId, options] = resolveEntry(entry as PluginEntry);
+			const factory = (await import(this.resolvePlugin(enricherId))).default;
+
+			if (!isEnricherFactory(factory)) {
+				throw new Error(
+					`Plugin "${enricherId}" default export is not a valid EnricherFactory. ` +
+						`Use defineEnricher() from @maat-tools/contracts to define it.`,
+				);
+			}
+
+			const enricher = factory(options);
+
+			if (!isEnricher(enricher)) {
+				throw new Error(
+					`Plugin "${enricherId}" factory did not return a valid Enricher. ` +
+						`Ensure the returned object has id, needFacts, provideFacts, and enrich().`,
+				);
+			}
+
+			this.kernel.registerEnricher(enricher);
 		}
 	}
 

@@ -1,6 +1,7 @@
 import {
 	type AxiomRecord,
 	type CollectorRegistry,
+	type EnricherRegistry,
 	type FindingRecord,
 	FindingStatus,
 	generateFingerprint,
@@ -38,6 +39,12 @@ export type RuleEntry =
 	| Rule
 	| RuleBuilder;
 
+export type EnricherEntry =
+	| keyof EnricherRegistry
+	| RegistryTuples<EnricherRegistry>
+	| (string & {})
+	| [string & {}, Record<string, unknown>];
+
 export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>] | Insight;
 
 export type LedgerEntry =
@@ -49,6 +56,7 @@ export type LedgerEntry =
 export type MaatConfig = {
 	check?: { strict: boolean };
 	collectors: CollectorEntry[];
+	enrichers?: EnricherEntry[];
 	rules: RuleEntry[];
 	insights?: InsightEntry[];
 } & ({ ledger: LedgerEntry } | { ledger?: never });
@@ -96,6 +104,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 					rule_id: event.rule_id,
 					message: event.message,
 					artifacts: event.artifacts,
+					verified: existing?.verified ?? false,
 				} satisfies FindingRecord;
 				break;
 			}
@@ -110,6 +119,20 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				const record = findings[event.fingerprint];
 				if (record !== undefined) {
 					findings[event.fingerprint] = { ...record, state: event.type };
+				}
+				break;
+			}
+			case FindingStatus.VERIFIED: {
+				const record = findings[event.fingerprint];
+				if (record !== undefined) {
+					findings[event.fingerprint] = { ...record, verified: true };
+				}
+				break;
+			}
+			case FindingStatus.REVOKED: {
+				const record = findings[event.fingerprint];
+				if (record !== undefined) {
+					findings[event.fingerprint] = { ...record, verified: false };
 				}
 				break;
 			}
@@ -150,15 +173,18 @@ export {
 	type BrandedRuleBuilder,
 	type Collector,
 	defineCollector,
+	defineEnricher,
 	defineInsight,
 	defineInsightSet,
 	defineLedgerBackend,
 	defineRule,
 	defineRuleBuilder,
 	defineRuleSet,
+	type Enricher,
 	type Insight,
 	type InsightResult,
 	type InsightSet,
+	isEnricherFactory,
 	isInsightFactory,
 	isInsightSet,
 	isLedgerBackendFactory,

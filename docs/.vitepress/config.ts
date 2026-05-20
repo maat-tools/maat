@@ -32,6 +32,7 @@ const guideAndPluginSidebar = [
       { text: 'Determinism', link: '/guide/determinism' },
       { text: 'ADRs vs Axioms', link: '/guide/adrs-vs-axioms' },
       { text: 'Plugin system', link: '/guide/plugins' },
+      { text: 'Enrichers', link: '/guide/enrichers' },
     ],
   },
   {
@@ -46,6 +47,7 @@ const guideAndPluginSidebar = [
           { text: 'maat check', link: '/commands/check' },
           { text: 'maat baseline', link: '/commands/baseline' },
           { text: 'maat resolve', link: '/commands/resolve' },
+          { text: 'maat verify', link: '/commands/verify' },
           { text: 'maat visualize', link: '/commands/visualize' },
         ],
       },
@@ -142,6 +144,7 @@ const guideAndPluginSidebar = [
       { text: '008 — Fingerprint-based finding identity', link: '/adr/008-fingerprint-based-finding-identity' },
       { text: '009 — Axiom lifecycle', link: '/adr/009-axiom-lifecycle' },
       { text: '010 — Rule builder fluent DSL', link: '/adr/010-rule-builder-fluent-dsl' },
+      { text: '011 — Enrichers', link: '/adr/011-enrichers-probabilistic-facts' },
     ],
   },
 ]
@@ -185,6 +188,7 @@ export default defineConfig({
             { text: '008 — Fingerprint-based finding identity', link: '/adr/008-fingerprint-based-finding-identity' },
             { text: '009 — Axiom lifecycle', link: '/adr/009-axiom-lifecycle' },
             { text: '010 — Rule builder fluent DSL', link: '/adr/010-rule-builder-fluent-dsl' },
+            { text: '011 — Enrichers', link: '/adr/011-enrichers-probabilistic-facts' },
           ],
         },
       ],

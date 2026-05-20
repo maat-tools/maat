@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import type { Collector, Rule } from '@maat-tools/contracts';
+import type { Collector, Enricher, Rule } from '@maat-tools/contracts';
 import { Kernel } from './index';
 
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		testFacts: string[];
 		otherFacts: string[];
+		enrichedFacts: string[];
 	}
 }
 
@@ -23,6 +24,32 @@ function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
 		needFacts: ['testFacts'] as const,
 		evaluate: ({ testFacts }) =>
 			testFacts.map((value, i) => ({
+				ruleId: id,
+				ruleIdentifier: { value, i },
+				message: `finding: ${value}`,
+				artifacts: [],
+			})),
+		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+	};
+}
+
+function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
+	return {
+		id: 'test-enricher',
+		needFacts: ['testFacts'] as const,
+		provideFacts: ['enrichedFacts'] as const,
+		enrich: async ({ testFacts }) => ({
+			enrichedFacts: testFacts.map((v) => `enriched:${v}`),
+		}),
+	};
+}
+
+function makeRuleConsumingEnriched(id = 'rule-enriched@v1'): Rule<'enrichedFacts'> {
+	return {
+		id,
+		needFacts: ['enrichedFacts'] as const,
+		evaluate: ({ enrichedFacts }) =>
+			enrichedFacts.map((value, i) => ({
 				ruleId: id,
 				ruleIdentifier: { value, i },
 				message: `finding: ${value}`,
@@ -144,6 +171,81 @@ describe('Kernel.run', () => {
 	});
 });
 
+describe('Kernel.run with enrichers', () => {
+	test('enricher consumes collector facts and produces new facts for rules', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerEnricher(makeEnricher())
+			.registerRule(makeRuleConsumingEnriched());
+
+		const { findings } = await kernel.run();
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toBe('finding: enriched:x');
+	});
+
+	test('enricher sets finding.requiresVerification and injects provenance artifact', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerEnricher(makeEnricher())
+			.registerRule(makeRuleConsumingEnriched());
+
+		const { findings } = await kernel.run();
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.requiresVerification).toBe(true);
+		const provenanceArtifacts = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
+		expect(provenanceArtifacts).toHaveLength(1);
+		expect(provenanceArtifacts?.[0]?.data).toEqual({
+			requiresVerification: true,
+			sources: ['enrichedFacts'],
+		});
+	});
+
+	test('rule consuming both collector and enriched facts gets requiresVerification true and provenance injected', async () => {
+		const mixedRule: Rule<'testFacts' | 'enrichedFacts'> = {
+			id: 'mixed@v1',
+			needFacts: ['testFacts', 'enrichedFacts'] as const,
+			evaluate: ({ testFacts, enrichedFacts }) => [
+				{
+					ruleId: 'mixed@v1',
+					ruleIdentifier: { count: testFacts.length + enrichedFacts.length },
+					message: 'mixed finding',
+					artifacts: [],
+				},
+			],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['a']))
+			.registerEnricher(makeEnricher())
+			.registerRule(mixedRule);
+
+		const { findings } = await kernel.run();
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.requiresVerification).toBe(true);
+		const provenanceArtifacts = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
+		expect(provenanceArtifacts).toHaveLength(1);
+	});
+
+	test('enricher skipped when required facts are missing', async () => {
+		const kernel = new Kernel().registerEnricher(makeEnricher()).registerRule(makeRuleConsumingEnriched());
+
+		const { findings } = await kernel.run();
+		expect(findings).toEqual([]);
+	});
+
+	test('enricher facts are merged into the global facts pool', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['a']))
+			.registerEnricher(makeEnricher())
+			.registerRule(makeRule());
+
+		const { findings } = await kernel.run();
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toBe('finding: a');
+	});
+});
+
 describe('Kernel fluent interface', () => {
 	test('registerCollector returns this', () => {
 		const kernel = new Kernel();
@@ -153,6 +255,11 @@ describe('Kernel fluent interface', () => {
 	test('registerRule returns this', () => {
 		const kernel = new Kernel();
 		expect(kernel.registerRule(makeRule())).toBe(kernel);
+	});
+
+	test('registerEnricher returns this', () => {
+		const kernel = new Kernel();
+		expect(kernel.registerEnricher(makeEnricher())).toBe(kernel);
 	});
 });
 
@@ -217,6 +324,66 @@ describe('Kernel.registerRule validation', () => {
 			evaluate: 'bad',
 		};
 		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('evaluate');
+	});
+});
+
+describe('Kernel.registerEnricher validation', () => {
+	test('throws if enricher id is empty', () => {
+		const enricher = {
+			id: '',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: [] }),
+		};
+		expect(() => new Kernel().registerEnricher(enricher as unknown as Enricher<'testFacts', 'enrichedFacts'>)).toThrow(
+			'non-empty id',
+		);
+	});
+
+	test('throws if enricher id is whitespace', () => {
+		const enricher = {
+			id: '   ',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: [] }),
+		};
+		expect(() => new Kernel().registerEnricher(enricher as unknown as Enricher<'testFacts', 'enrichedFacts'>)).toThrow(
+			'non-empty id',
+		);
+	});
+
+	test('throws if provideFacts is empty', () => {
+		const enricher = {
+			id: 'e',
+			needFacts: ['testFacts'] as const,
+			provideFacts: [] as const,
+			enrich: async () => ({}),
+		};
+		expect(() => new Kernel().registerEnricher(enricher as unknown as Enricher<'testFacts', never>)).toThrow(
+			'provideFacts',
+		);
+	});
+
+	test('throws if enrich is not a function', () => {
+		const enricher = {
+			id: 'e',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: 'bad',
+		};
+		expect(() => new Kernel().registerEnricher(enricher as unknown as Enricher<'testFacts', 'enrichedFacts'>)).toThrow(
+			'enrich',
+		);
+	});
+
+	test('accepts enricher with empty needFacts', () => {
+		const enricher = {
+			id: 'e@v1',
+			needFacts: [] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: [] }),
+		};
+		expect(() => new Kernel().registerEnricher(enricher as unknown as Enricher<never, 'enrichedFacts'>)).not.toThrow();
 	});
 });
 

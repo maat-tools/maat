@@ -14,6 +14,9 @@ export interface LedgerBackendRegistry {}
 // biome-ignore lint/suspicious/noEmptyInterface: intentionally empty for declaration merging
 export interface InsightRegistry {}
 
+// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty for declaration merging
+export interface EnricherRegistry {}
+
 export type Artifact = {
 	kind: string;
 	data: unknown;
@@ -24,6 +27,7 @@ export type Finding = {
 	fingerprint: string;
 	message: string;
 	artifacts: Artifact[];
+	requiresVerification?: boolean;
 };
 
 export type FindingRuleOutput = {
@@ -43,6 +47,8 @@ export const FindingStatus = {
 	OBSERVED: 'finding.observed',
 	BASELINED: 'finding.baselined',
 	RESOLVED: 'finding.resolved',
+	VERIFIED: 'finding.verified',
+	REVOKED: 'finding.revoked',
 	AXIOM_DECLARED: 'axiom.declared',
 	AXIOM_SUPERSEDED: 'axiom.superseded',
 	AXIOM_REVOKED: 'axiom.revoked',
@@ -77,7 +83,24 @@ export type FindingResolvedEvent = LedgerEntryBase & {
 	readonly fingerprint: string;
 };
 
-export type FindingEvent = FindingObservedEvent | FindingBaselinedEvent | FindingResolvedEvent;
+export type FindingVerifiedEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.VERIFIED;
+	readonly fingerprint: string;
+	readonly reason?: string;
+};
+
+export type FindingRevokedEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.REVOKED;
+	readonly fingerprint: string;
+	readonly reason?: string;
+};
+
+export type FindingEvent =
+	| FindingObservedEvent
+	| FindingBaselinedEvent
+	| FindingResolvedEvent
+	| FindingVerifiedEvent
+	| FindingRevokedEvent;
 
 export type FindingEventInput = WithoutEntryId<FindingEvent>;
 
@@ -106,6 +129,8 @@ export type LedgerEvent =
 	| FindingObservedEvent
 	| FindingBaselinedEvent
 	| FindingResolvedEvent
+	| FindingVerifiedEvent
+	| FindingRevokedEvent
 	| AxiomDeclaredEvent
 	| AxiomSupersededEvent
 	| AxiomRevokedEvent;
@@ -120,6 +145,7 @@ export type FindingRecord = {
 	readonly rule_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
+	verified: boolean;
 };
 
 export type AxiomRecord = {
@@ -154,6 +180,16 @@ export interface RuleBuilder {
 	build(): Rule;
 }
 
+export interface Enricher<
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
+> {
+	readonly id: string;
+	readonly needFacts: readonly TNeeds[];
+	readonly provideFacts: readonly TProduces[];
+	enrich(facts: { [K in TNeeds]: FactRegistry[K] }): Promise<{ [K in TProduces]: FactRegistry[K] }>;
+}
+
 export interface Insight {
 	readonly id: string;
 	readonly needRules: readonly string[];
@@ -173,9 +209,16 @@ export type RuleFactory<TOptions = Record<string, never>> = (options?: TOptions)
 
 export type InsightFactory<TOptions = Record<string, never>> = (options?: TOptions) => Insight;
 
+export type EnricherFactory<
+	TConfig,
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
+> = (config: TConfig) => Enricher<TNeeds, TProduces>;
+
 export type LedgerBackendFactory<TConfig = Record<string, never>> = (config: TConfig) => LedgerBackend;
 
 export const COLLECTOR_FACTORY_BRAND = Symbol.for('maat.CollectorFactory');
+export const ENRICHER_FACTORY_BRAND = Symbol.for('maat.EnricherFactory');
 export const RULE_FACTORY_BRAND = Symbol.for('maat.RuleFactory');
 export const RULE_SET_BRAND = Symbol.for('maat.RuleSet');
 export const RULE_BUILDER_BRAND = Symbol.for('maat.RuleBuilder');
@@ -188,6 +231,14 @@ export type BrandedCollectorFactory<TConfig, TKeys extends keyof FactRegistry = 
 	TKeys
 > & {
 	readonly [COLLECTOR_FACTORY_BRAND]: true;
+};
+
+export type BrandedEnricherFactory<
+	TConfig,
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
+> = EnricherFactory<TConfig, TNeeds, TProduces> & {
+	readonly [ENRICHER_FACTORY_BRAND]: true;
 };
 
 export type BrandedRuleFactory<TOptions = Record<string, never>> = RuleFactory<TOptions> & {
@@ -227,6 +278,14 @@ export function defineCollector<TConfig, TKeys extends keyof FactRegistry = keyo
 	factory: CollectorFactory<TConfig, TKeys>,
 ): BrandedCollectorFactory<TConfig, TKeys> {
 	return Object.assign(factory, { [COLLECTOR_FACTORY_BRAND]: true as const });
+}
+
+export function defineEnricher<
+	TConfig,
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
+>(factory: EnricherFactory<TConfig, TNeeds, TProduces>): BrandedEnricherFactory<TConfig, TNeeds, TProduces> {
+	return Object.assign(factory, { [ENRICHER_FACTORY_BRAND]: true as const });
 }
 
 export function defineRule<TOptions = Record<string, never>>(
@@ -279,6 +338,23 @@ export function isCollector(obj: unknown): obj is Collector<keyof FactRegistry> 
 		typeof (obj as Collector<keyof FactRegistry>).id === 'string' &&
 		Array.isArray((obj as Collector<keyof FactRegistry>).provideFacts) &&
 		typeof (obj as Collector<keyof FactRegistry>).collect === 'function'
+	);
+}
+
+export function isEnricherFactory(
+	fn: unknown,
+): fn is BrandedEnricherFactory<unknown, keyof FactRegistry, keyof FactRegistry> {
+	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[ENRICHER_FACTORY_BRAND] === true;
+}
+
+export function isEnricher(obj: unknown): obj is Enricher<keyof FactRegistry, keyof FactRegistry> {
+	return (
+		typeof obj === 'object' &&
+		obj !== null &&
+		typeof (obj as Enricher<keyof FactRegistry, keyof FactRegistry>).id === 'string' &&
+		Array.isArray((obj as Enricher<keyof FactRegistry, keyof FactRegistry>).needFacts) &&
+		Array.isArray((obj as Enricher<keyof FactRegistry, keyof FactRegistry>).provideFacts) &&
+		typeof (obj as Enricher<keyof FactRegistry, keyof FactRegistry>).enrich === 'function'
 	);
 }
 

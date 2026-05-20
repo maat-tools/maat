@@ -39,6 +39,9 @@ export class Kernel {
 		if (!collector.id || collector.id.trim() === '') {
 			throw new Error('Collector must have a non-empty id');
 		}
+		if (this.collectors.some((c) => c.id === collector.id)) {
+			throw new Error(`Collector with id "${collector.id}" is already registered`);
+		}
 		if (!Array.isArray(collector.provideFacts) || collector.provideFacts.length === 0) {
 			throw new Error(`Collector "${collector.id}" must declare at least one fact in provideFacts`);
 		}
@@ -55,6 +58,9 @@ export class Kernel {
 	): this {
 		if (!enricher.id || enricher.id.trim() === '') {
 			throw new Error('Enricher must have a non-empty id');
+		}
+		if (this.enrichers.some((e) => e.id === enricher.id)) {
+			throw new Error(`Enricher with id "${enricher.id}" is already registered`);
 		}
 		if (!Array.isArray(enricher.needFacts)) {
 			throw new Error(`Enricher "${enricher.id}" must have a needFacts array`);
@@ -73,6 +79,9 @@ export class Kernel {
 	public registerRule(rule: Rule): this {
 		if (!rule.id || rule.id.trim() === '') {
 			throw new Error('Rule must have a non-empty id');
+		}
+		if (this.rules.some((r) => r.id === rule.id)) {
+			throw new Error(`Rule with id "${rule.id}" is already registered`);
 		}
 		if (!Array.isArray(rule.needFacts)) {
 			throw new Error(`Rule "${rule.id}" must have a needFacts array`);

@@ -18,7 +18,15 @@ import { Axiom } from './axiom';
 import { Baseline } from './baseline';
 import { Check } from './check';
 import { Resolve } from './resolve';
+import { Verify } from './verify';
 import { Visualize } from './visualize';
+
+declare module '@maat-tools/contracts' {
+	interface FactRegistry {
+		testFacts: string[];
+		enrichedFacts: string[];
+	}
+}
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
@@ -145,6 +153,62 @@ describe('check without ledger', () => {
 
 	test('findings present, strict → exit 1', async () => {
 		await expect(makeCheck([RULE_OUTPUT], null, STRICT_CONFIG).action({})).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	test('only probabilistic findings present, strict → does NOT exit 1', async () => {
+		const kernel = new Kernel();
+		kernel.registerCollector({
+			id: 'test-collector',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => ({ testFacts: ['x'] }),
+		});
+		kernel.registerEnricher({
+			id: 'test-enricher',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: ['enriched:x'] }),
+		});
+		kernel.registerRule({
+			id: 'test@v1',
+			needFacts: ['enrichedFacts'] as const,
+			evaluate: () => [RULE_OUTPUT],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		});
+		const check = new Check(new Command(), STRICT_CONFIG, kernel, [], TEST_PRINTER, null);
+		await check.action({});
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	test('mixed deterministic + probabilistic findings, strict → exit 1', async () => {
+		const kernel = new Kernel();
+		kernel.registerCollector({
+			id: 'test-collector',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => ({ testFacts: ['x'] }),
+		});
+		kernel.registerEnricher({
+			id: 'test-enricher',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: ['enriched:x'] }),
+		});
+		// Regra deterministico: consome apenas collector facts
+		kernel.registerRule({
+			id: 'deterministic@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [RULE_OUTPUT],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		});
+		// Regra probabilistica: consome enriched facts
+		kernel.registerRule({
+			id: 'probabilistic@v1',
+			needFacts: ['enrichedFacts'] as const,
+			evaluate: () => [NEW_RULE_OUTPUT],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		});
+		const check = new Check(new Command(), STRICT_CONFIG, kernel, [], TEST_PRINTER, null);
+		await expect(check.action({})).rejects.toThrow('process.exit');
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
@@ -606,6 +670,142 @@ describe('axiom', () => {
 
 		const state = await ledger.getState();
 		expect(state.axioms['no-side-effects']?.claim).toBe('auth module must have no side effects');
+	});
+});
+
+// ── verify ───────────────────────────────────────────────────────────────────
+
+describe('verify', () => {
+	test('verify an observed probabilistic finding → verified becomes true', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+		});
+
+		const state = await ledger.getState();
+		expect(state.findings[FINGERPRINT]?.verified).toBe(true);
+		expect(state.findings[FINGERPRINT]?.state).toBe(FindingStatus.OBSERVED);
+	});
+
+	test('verify without ledger → exit 1', async () => {
+		await expect(
+			new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, null).action({
+				fingerprint: FINGERPRINT,
+			}),
+		).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	test('verify unknown fingerprint → exit 1', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await expect(
+			new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+				fingerprint: 'unknown',
+			}),
+		).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+	});
+
+	test('verify already verified → does not exit, warns', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+		});
+
+		const warnSpy = spyOn(console, 'warn').mockImplementation(() => {});
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+		});
+
+		expect(warnSpy).toHaveBeenCalled();
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	test('revoke a verified finding → verified becomes false', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+		});
+
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+			revoke: true,
+		});
+
+		const state = await ledger.getState();
+		expect(state.findings[FINGERPRINT]?.verified).toBe(false);
+	});
+
+	test('revoke a non-verified finding → warns, does nothing', async () => {
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+		await makeCheck([RULE_OUTPUT], ledger).action({ ledger: true });
+
+		const warnSpy = spyOn(console, 'warn').mockImplementation(() => {});
+		await new Verify(new Command(), BASE_CONFIG, makeKernel(), [], TEST_PRINTER, ledger).action({
+			fingerprint: FINGERPRINT,
+			revoke: true,
+		});
+
+		expect(warnSpy).toHaveBeenCalled();
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	test('verified finding reappears → persisted to ledger and can break strict build', async () => {
+		// Simulate probabilistic finding from enricher
+		const kernel = new Kernel();
+		kernel.registerCollector({
+			id: 'test-collector',
+			provideFacts: ['testFacts'] as const,
+			collect: async () => ({ testFacts: ['x'] }),
+		});
+		kernel.registerEnricher({
+			id: 'test-enricher',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async () => ({ enrichedFacts: ['enriched:x'] }),
+		});
+		kernel.registerRule({
+			id: 'test@v1',
+			needFacts: ['enrichedFacts'] as const,
+			evaluate: () => [RULE_OUTPUT],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		});
+
+		const ledger = new FilePathLedgerBackend({ path: ledgerPath });
+
+		// Run 1: finding appears as probabilistic, skip ledger
+		const check1 = new Check(new Command(), BASE_CONFIG, kernel, [], TEST_PRINTER, ledger);
+		await check1.action({ ledger: true });
+
+		const state1 = await ledger.getState();
+		expect(state1.findings[FINGERPRINT]).toBeUndefined(); // not persisted (probabilistic)
+
+		// Human verifies via ledger event (manual append)
+		await ledger.append({
+			type: FindingStatus.OBSERVED,
+			timestamp: new Date().toISOString(),
+			fingerprint: FINGERPRINT,
+			rule_id: RULE_OUTPUT.ruleId,
+			message: RULE_OUTPUT.message,
+			artifacts: RULE_OUTPUT.artifacts,
+		});
+		await ledger.append({
+			type: FindingStatus.VERIFIED,
+			timestamp: new Date().toISOString(),
+			fingerprint: FINGERPRINT,
+		});
+
+		// Run 2: same finding, now verified in ledger
+		const check2 = new Check(new Command(), STRICT_CONFIG, kernel, [], TEST_PRINTER, ledger);
+		await expect(check2.action({ ledger: true })).rejects.toThrow('process.exit');
+		expect(exitSpy).toHaveBeenCalledWith(1);
+
+		const state2 = await ledger.getState();
+		expect(state2.findings[FINGERPRINT]?.verified).toBe(true);
 	});
 });
 

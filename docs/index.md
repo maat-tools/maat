@@ -54,7 +54,7 @@ import { withBase } from 'vitepress'
     These patterns are invisible to linters, type checkers, SAST, and unit tests. Each function works correctly in isolation. Types compile. Tests pass. The damage accumulates silently — orphaned data, broken audit trails, compliance gaps that surface months later.
   </p>
   <p>
-    Maat was born to make these patterns detectable. The direction is clear: specialized collectors (including LLM-assisted ones) gather semantic facts from code, comments, and commit history. Deterministic rules check those facts against policies the team chooses to encode. LLMs for gathering judgment. Rules for guarantees.
+    Maat was born to make these patterns detectable. The direction is clear: deterministic collectors gather raw facts from code and history; enrichers add semantic interpretation when a rule needs higher-level judgment; deterministic rules check those facts against policies the team chooses to encode. Enrichers for interpretation. Rules for guarantees.
   </p>
 </section>
 
@@ -89,7 +89,11 @@ import { withBase } from 'vitepress'
 
 ## Who benefits most
 
-Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
+<section class="maat-panel">
+  <p>
+    Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
+  </p>
+</section>
 
 ## Design choices
 
@@ -123,27 +127,32 @@ Maat is most useful for backend repositories with meaningful domain logic, layer
 <div class="maat-flow" aria-label="what maat does when it runs">
   <div>
     <strong>Collect facts</strong>
-    <span>Collectors turn repository structure, metadata, or team-specific signals into facts.</span>
+    <span>Collectors gather deterministic facts from the codebase. Enrichers add semantic interpretation when a rule needs higher-level judgment.</span>
   </div>
   <div>
     <strong>Check rules</strong>
-    <span>Rules compare those facts with the policies the team chose to encode.</span>
+    <span>Rules compare facts against policies the team chose to encode. The check path stays deterministic and reproducible.</span>
   </div>
   <div>
     <strong>Report findings</strong>
-    <span>Violations are shown with stable fingerprints.</span>
+    <span>Violations are shown with stable fingerprints. Findings that depend on enriched facts are flagged for human verification.</span>
   </div>
   <div>
     <strong>Update ledger</strong>
-    <span>Accepted findings and decisions are stored with the repository.</span>
+    <span>Accepted findings and decisions are stored with the repository, so exceptions and resolutions travel with the code.</span>
   </div>
 </div>
 
 ## Configuration example
 
-Maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors and rules for codebase-specific problems.
-
-The CLI is just the runner — collectors, rules, insights, and ledger backends are separate packages you install per project based on what you need:
+<section class="maat-panel">
+  <p>
+    Maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors, enrichers, and rules for codebase-specific problems.
+  </p>
+  <p>
+    The CLI is just the runner — collectors, enrichers, rules, insights, and ledger backends are separate packages you install per project based on what you need:
+  </p>
+</section>
 
 ```bash
 npm install -D @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules

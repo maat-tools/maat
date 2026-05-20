@@ -68,7 +68,8 @@ export class Printer {
 			const rule = getRule(ruleId);
 			console.log(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)`);
 			for (const f of group) {
-				console.log(`    ${chalk.dim(f.fingerprint.slice(0, 8))}  ${f.message}`);
+				const badge = f.requiresVerification ? chalk.yellow('[Verify] ') : '';
+				console.log(`    ${chalk.dim(f.fingerprint.slice(0, 8))}  ${badge}${f.message}`);
 				for (const artifact of f.artifacts) {
 					console.log(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}`);
 				}

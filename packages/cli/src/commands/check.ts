@@ -48,10 +48,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					if (event.type === 'collector:start') {
 						spinner?.update(`Collecting ${event.collectorId} (${event.index + 1}/${event.total})`);
 					}
+					if (event.type === 'enricher:start') {
+						spinner?.update(`Enriching ${event.enricherId} (${event.index + 1}/${event.total})`);
+					}
 				},
 			})
 			.finally(() => spinner?.stop());
 		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
+
+		const actionableFindings = currentFindings.filter((f) => !f.requiresVerification);
 
 		if (!this.isLedgerProvided()) {
 			if (displayMode === 'all') {
@@ -63,7 +68,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			if (displayMode === 'all' || displayMode === 'insights') {
 				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
 			}
-			if (this.config.check?.strict && currentFindings.length > 0) {
+			if (this.config.check?.strict && actionableFindings.length > 0) {
 				process.exit(1);
 			}
 			return;
@@ -72,13 +77,25 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const snapshot = await this.ledger.getState();
 		const analysis = this.analyzeLedgerState(snapshot, currentFingerprints);
 
+		const currentFindingsWithVerification = this.clearVerificationForApprovedFindings(currentFindings, snapshot);
+
 		if (options.ledger === true) {
-			await this.syncLedgerEvents(this.ledger, snapshot.findings, currentFindings, currentFingerprints, analysis);
+			await this.syncLedgerEvents(
+				this.ledger,
+				snapshot.findings,
+				currentFindingsWithVerification,
+				currentFingerprints,
+				analysis,
+			);
 		}
 
 		const visibleFindings = options.showBaselined
-			? currentFindings
-			: this.getActiveFindings(currentFindings, analysis.baselinedFingerprints, analysis.axiomExceptedFingerprints);
+			? currentFindingsWithVerification
+			: this.getActiveFindings(
+					currentFindingsWithVerification,
+					analysis.baselinedFingerprints,
+					analysis.axiomExceptedFingerprints,
+				);
 
 		if (displayMode === 'all') {
 			this.printRunContext(printer, {
@@ -91,7 +108,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
 		}
 		if (displayMode === 'all' || displayMode === 'insights') {
-			await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+			await this.printInsights(currentFindingsWithVerification, printer, { warnAboutScope: displayMode === 'all' });
 		}
 		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
 	}
@@ -187,6 +204,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			analysis.baselinedFingerprints,
 			analysis.axiomExceptedFingerprints,
 		)) {
+			if (finding.requiresVerification) {
+				continue;
+			}
 			if (findingsSnapshot[finding.fingerprint] !== undefined) {
 				continue;
 			}
@@ -273,7 +293,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		if (this.config.check?.strict && visibleFindings.length > 0) {
+		const actionableFindings = visibleFindings.filter((f) => !f.requiresVerification);
+
+		if (this.config.check?.strict && actionableFindings.length > 0) {
 			printer.error(
 				'One or more findings detected. Please address these issues to comply with the defined architecture.',
 			);
@@ -297,6 +319,21 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.`;
 			printer.log(summary);
 		}
+	}
+
+	private clearVerificationForApprovedFindings(findings: Finding[], snapshot: LedgerSnapshot): Finding[] {
+		return findings.map((finding) => {
+			const record = snapshot.findings[finding.fingerprint];
+			if (!finding.requiresVerification || !record?.verified) {
+				return finding;
+			}
+
+			return {
+				...finding,
+				requiresVerification: false,
+				artifacts: finding.artifacts.filter((a) => a.kind !== 'finding.provenance'),
+			};
+		});
 	}
 
 	private getActiveFindings(

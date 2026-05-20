@@ -5,6 +5,7 @@ Maat plugins are packages that implement one of the public extension interfaces:
 | Plugin type | Purpose |
 |---|---|
 | Collector | Read a repository or external source and return facts |
+| Enricher | Consume facts and produce new facts (probabilistic interpretation) |
 | Rule | Evaluate facts and return findings |
 | Insight | Analyze findings and return derived observations |
 | Ledger backend | Persist finding and axiom history |
@@ -20,6 +21,49 @@ The short version:
 - Rules and insights must be synchronous and pure.
 - Collectors may perform I/O, but must produce deterministic facts for the same inputs.
 - Ledger backends may perform I/O, but must preserve the events they are asked to append.
+
+## Enricher
+
+An enricher consumes facts and produces new facts. Unlike a collector, it does not read the filesystem or network. Unlike a rule, it does not produce findings. Its sole purpose is to derive higher-level facts from lower-level ones.
+
+**All enrichers are probabilistic by definition.** They interpret, synthesize, or infer. If a transformation is deterministic, it belongs in a collector, a rule, or an insight.
+
+When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings display a `[Verify]` badge, never break strict builds, and never go to the ledger until a human verifies them.
+
+```ts
+import { type Enricher, defineEnricher, type FactRegistry } from '@maat-tools/contracts'
+
+export type SemanticSimilarity = {
+  functionA: string
+  functionB: string
+  reason: string
+}
+
+export class SemanticSimilarityEnricher
+  implements Enricher<'acme.ts.functions', 'acme.semantic.similarity'>
+{
+  readonly id = 'acme.semantic-similarity'
+  readonly needFacts = ['acme.ts.functions'] as const
+  readonly provideFacts = ['acme.semantic.similarity'] as const
+
+  async enrich(facts: { 'acme.ts.functions': unknown[] }): Promise<{
+    'acme.semantic.similarity': SemanticSimilarity[]
+  }> {
+    // Use an LLM or other probabilistic model to identify semantic patterns
+    return { 'acme.semantic.similarity': [] }
+  }
+}
+
+declare module '@maat-tools/contracts' {
+  interface FactRegistry {
+    'acme.semantic.similarity': SemanticSimilarity[]
+  }
+}
+
+export default defineEnricher(() => new SemanticSimilarityEnricher())
+```
+
+See the [Enrichers guide](/guide/enrichers) for the full documentation, including tradeoffs, verification workflow, and determinism implications.
 
 ## Collector
 

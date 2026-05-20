@@ -39,9 +39,7 @@ export type RuleEntry =
 	| Rule
 	| RuleBuilder;
 
-export type EnricherEntry =
-	| keyof EnricherRegistry
-	| RegistryTuples<EnricherRegistry>;
+export type EnricherEntry = keyof EnricherRegistry | RegistryTuples<EnricherRegistry>;
 
 export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>] | Insight;
 
@@ -192,8 +190,8 @@ export {
 	type RuleBuilder,
 } from '@maat-tools/contracts';
 
-export {
-	type LLMProvider,
-	type OpenAIModel,
-	type LLMConfig,
+export type {
+	LLMConfig,
+	LLMProvider,
+	OpenAIModel,
 } from '@maat-tools/utils';

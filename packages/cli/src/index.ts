@@ -205,10 +205,17 @@ class MaatCLI {
 		}
 	}
 
+	private registerInsight(insight: Insight) {
+		if (this.insights.some((i) => i.id === insight.id)) {
+			throw new Error(`Insight with id "${insight.id}" is already registered`);
+		}
+		this.insights.push(insight);
+	}
+
 	private async configureInsights(maatConfig: MaatConfig) {
 		for (const entry of maatConfig.insights ?? []) {
 			if (isInsight(entry)) {
-				this.insights.push(entry);
+				this.registerInsight(entry);
 				continue;
 			}
 
@@ -217,7 +224,7 @@ class MaatCLI {
 
 			if (isInsightSet(exported)) {
 				for (const factory of exported.factories) {
-					this.insights.push(factory(options));
+					this.registerInsight(factory(options));
 				}
 			} else if (isInsightFactory(exported)) {
 				const insight = exported(options as Record<string, never>);
@@ -229,7 +236,7 @@ class MaatCLI {
 					);
 				}
 
-				this.insights.push(insight);
+				this.registerInsight(insight);
 			} else {
 				throw new Error(
 					`Insight "${insightId}" default export is not a valid InsightFactory or InsightSet. ` +

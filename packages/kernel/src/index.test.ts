@@ -10,9 +10,9 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-function makeCollector(items: string[]): Collector<'testFacts'> {
+function makeCollector(items: string[], id = 'test-collector'): Collector<'testFacts'> {
 	return {
-		id: 'test-collector',
+		id,
 		provideFacts: ['testFacts'] as const,
 		collect: async () => ({ testFacts: items }),
 	};
@@ -96,8 +96,8 @@ describe('Kernel.run', () => {
 
 	test('two collectors with same array fact key → arrays merged', async () => {
 		const kernel = new Kernel()
-			.registerCollector(makeCollector(['a']))
-			.registerCollector(makeCollector(['b']))
+			.registerCollector(makeCollector(['a'], 'collector-a'))
+			.registerCollector(makeCollector(['b'], 'collector-b'))
 			.registerRule(makeRule());
 
 		const { findings } = await kernel.run();
@@ -401,5 +401,28 @@ describe('Kernel.getRuleById', () => {
 
 	test('returns undefined when no rules registered', () => {
 		expect(new Kernel().getRuleById('any@v1')).toBeUndefined();
+	});
+});
+
+describe('Kernel duplicate registration', () => {
+	test('throws if collector id is duplicated', () => {
+		const kernel = new Kernel().registerCollector(makeCollector(['a']));
+		expect(() => kernel.registerCollector(makeCollector(['b']))).toThrow(
+			'Collector with id "test-collector" is already registered',
+		);
+	});
+
+	test('throws if enricher id is duplicated', () => {
+		const kernel = new Kernel().registerEnricher(makeEnricher());
+		expect(() => kernel.registerEnricher(makeEnricher())).toThrow(
+			'Enricher with id "test-enricher" is already registered',
+		);
+	});
+
+	test('throws if rule id is duplicated', () => {
+		const kernel = new Kernel().registerRule(makeRule('dup-rule@v1'));
+		expect(() => kernel.registerRule(makeRule('dup-rule@v1'))).toThrow(
+			'Rule with id "dup-rule@v1" is already registered',
+		);
 	});
 });

@@ -35,6 +35,12 @@
       "import": "./dist/cop/struct.js",
       "types": "./dist/cop/struct.d.ts",
       "default": "./dist/cop/struct.js"
+    },
+    "./coa-technical": {
+      "bun": "./src/coa/technical.ts",
+      "import": "./dist/coa/technical.js",
+      "types": "./dist/coa/technical.d.ts",
+      "default": "./dist/coa/technical.js"
     }
   },
   "files": [
@@ -45,7 +51,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/com.ts src/cop/index.ts src/cop/args.ts src/cop/struct.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/com.ts src/cop/index.ts src/cop/args.ts src/cop/struct.ts src/coa/technical.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
     "dev": "bun run src/index.ts",
     "lint": "biome check .",
     "test": "bun test",
@@ -53,7 +59,8 @@
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
-    "@biomejs/biome": "2.4.15"
+    "@biomejs/biome": "2.4.15",
+    "@maat-tools/presets-ts": "workspace:*"
   },
   "dependencies": {
     "@maat-tools/contracts": "workspace:*",

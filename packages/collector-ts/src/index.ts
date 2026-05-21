@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
 import {
+	ALGORITHMIC_BINDINGS_CAPABILITY,
+	type AlgorithmicBinding,
+	type AlgorithmicPattern,
 	CONSTANTS_CAPABILITY,
 	type Constant,
 	type ConstantContext,
@@ -25,17 +28,24 @@ import {
 	type ArrayLiteralExpression,
 	type AsExpression,
 	type CallExpression,
+	type ClassDeclaration,
 	type ElementAccessExpression,
+	type FunctionDeclaration,
+	type MethodDeclaration,
+	type Node,
 	type NumericLiteral,
 	Project,
 	type SourceFile,
 	SyntaxKind,
+	type TemplateExpression,
 	type TupleTypeNode,
+	type VariableDeclaration,
 } from 'ts-morph';
 
 export type TSInput = {
 	tsConfigFilePath: string | string[];
 	exclude?: string[];
+	algorithmicPatterns?: AlgorithmicPattern[];
 };
 
 const DEFAULT_EXCLUDE_PATTERNS = ['**/*.test.ts', '**/*.spec.ts'];
@@ -509,8 +519,163 @@ function collectPositionalAccesses(sourceFile: SourceFile, file: string): Positi
 	return accesses;
 }
 
+function getContainingFunctionName(node: Node): string | null {
+	let current: Node | undefined = node.getParent();
+	while (current) {
+		const kind = current.getKind();
+		if (kind === SyntaxKind.FunctionDeclaration) {
+			return (current as FunctionDeclaration).getName() ?? 'anonymous';
+		}
+		if (kind === SyntaxKind.MethodDeclaration) {
+			const method = current as MethodDeclaration;
+			const classDecl = method.getParent();
+			if (classDecl && classDecl.getKind() === SyntaxKind.ClassDeclaration) {
+				return `${(classDecl as ClassDeclaration).getName()}.${method.getName()}`;
+			}
+			return method.getName();
+		}
+		if (kind === SyntaxKind.ArrowFunction) {
+			const parent = current.getParent();
+			if (parent && parent.getKind() === SyntaxKind.VariableDeclaration) {
+				return (parent as VariableDeclaration).getName();
+			}
+			return 'arrow';
+		}
+		current = current.getParent();
+	}
+	return null;
+}
+
+function collectAlgorithmicBindings(
+	sourceFile: SourceFile,
+	file: string,
+	patterns: AlgorithmicPattern[],
+): AlgorithmicBinding[] {
+	const bindings: AlgorithmicBinding[] = [];
+	if (patterns.length === 0) {
+		return bindings;
+	}
+
+	for (const pattern of patterns) {
+		for (const matcher of pattern.matchers) {
+			const expressionKind = matcher.expressionKind ?? 'call';
+			const functionRegex = new RegExp(matcher.functionPattern);
+
+			if (expressionKind === 'template') {
+				for (const node of sourceFile.getDescendants()) {
+					if (node.getKind() === SyntaxKind.TemplateExpression) {
+						const templateNode = node as TemplateExpression;
+						const spans = templateNode.getTemplateSpans();
+						const segments: string[] = [];
+
+						// Head: "`text${"  → extract text between backtick and "${"
+						const headText = templateNode.getHead().getText();
+						const headLiteral = headText.slice(1, -2);
+						if (headLiteral.length > 0 && !/^(\s|\\[ntrfv0])+$/.test(headLiteral)) {
+							segments.push(headLiteral);
+						}
+
+						for (let i = 0; i < spans.length; i++) {
+							const span = spans[i];
+							if (!span) {
+								continue;
+							}
+							const literalText = span.getLiteral().getText();
+							const isLast = i === spans.length - 1;
+							// Middle: "}text${" → slice(1, -2) removes "}" and "${"
+							// Tail:   "}text`" → slice(1, -1) removes "}" and "`"
+							const text = isLast ? literalText.slice(1, -1) : literalText.slice(1, -2);
+							if (text.length > 0 && !(isLast && /^(\s|\\[ntrfv0])+$/.test(text))) {
+								segments.push(text);
+							}
+						}
+
+						for (const segment of segments) {
+							bindings.push({
+								patternId: pattern.id,
+								role: matcher.role,
+								bindingKey: segment,
+								functionName: 'template-literal',
+								file,
+								location: {
+									file,
+									line: node.getStartLineNumber(),
+									column: node.getStartLinePos(),
+								},
+								containingFunction: getContainingFunctionName(templateNode),
+							});
+						}
+					}
+				}
+			} else {
+				for (const node of sourceFile.getDescendants()) {
+					if (node.getKind() !== SyntaxKind.CallExpression) {
+						continue;
+					}
+
+					const callNode = node as CallExpression;
+					const expression = callNode.getExpression();
+					const calledName = expression.getText();
+
+					if (!functionRegex.test(calledName)) {
+						continue;
+					}
+
+					if (matcher.literalArgIndex !== undefined) {
+						const args = callNode.getArguments();
+						const arg = args[matcher.literalArgIndex];
+						if (arg && arg.getKind() === SyntaxKind.StringLiteral) {
+							const raw = arg.getText();
+							const value = raw.slice(1, -1);
+
+							bindings.push({
+								patternId: pattern.id,
+								role: matcher.role,
+								bindingKey: value,
+								functionName: calledName,
+								file,
+								location: {
+									file,
+									line: node.getStartLineNumber(),
+									column: node.getStartLinePos(),
+								},
+								containingFunction: getContainingFunctionName(callNode),
+							});
+						}
+					} else {
+						// No literal argument required; bind to an empty key
+						bindings.push({
+							patternId: pattern.id,
+							role: matcher.role,
+							bindingKey: '',
+							functionName: calledName,
+							file,
+							location: {
+								file,
+								line: node.getStartLineNumber(),
+								column: node.getStartLinePos(),
+							},
+							containingFunction: getContainingFunctionName(callNode),
+						});
+					}
+				}
+			}
+		}
+	}
+
+	return bindings;
+}
+
 export class TSCollector
-	implements Collector<'constants' | 'imports' | 'functionSignatures' | 'positionalSources' | 'positionalAccesses'>
+	implements
+		Collector<
+			| 'constants'
+			| 'imports'
+			| 'functionSignatures'
+			| 'positionalSources'
+			| 'positionalAccesses'
+			| 'algorithmicBindings'
+		>
 {
 	public readonly id = 'ts';
 	public readonly provideFacts = [
@@ -519,6 +684,7 @@ export class TSCollector
 		FUNCTION_SIGNATURES_CAPABILITY,
 		POSITIONAL_SOURCES_CAPABILITY,
 		POSITIONAL_ACCESSES_CAPABILITY,
+		ALGORITHMIC_BINDINGS_CAPABILITY,
 	] as const;
 
 	public constructor(private readonly config: TSInput) {}
@@ -538,7 +704,15 @@ export class TSCollector
 	}
 
 	public async collect(): Promise<
-		Pick<FactRegistry, 'constants' | 'imports' | 'functionSignatures' | 'positionalSources' | 'positionalAccesses'>
+		Pick<
+			FactRegistry,
+			| 'constants'
+			| 'imports'
+			| 'functionSignatures'
+			| 'positionalSources'
+			| 'positionalAccesses'
+			| 'algorithmicBindings'
+		>
 	> {
 		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
 			? this.config.tsConfigFilePath
@@ -548,12 +722,14 @@ export class TSCollector
 		const tsConfigPaths = await this.expandGlobs(rawPatterns, projectRoot);
 
 		const excludePatterns = this.config.exclude ?? DEFAULT_EXCLUDE_PATTERNS;
+		const algorithmicPatterns = this.config.algorithmicPatterns ?? [];
 		const seenFiles = new Set<string>();
 		const constants: Constant[] = [];
 		const imports: Import[] = [];
 		const functionSignatures: FunctionSignature[] = [];
 		const positionalSources: PositionalSource[] = [];
 		const positionalAccesses: PositionalAccess[] = [];
+		const algorithmicBindings: AlgorithmicBinding[] = [];
 		const sourceFiles: SourceFile[] = [];
 		const fileMap = new Map<SourceFile, string>();
 
@@ -578,6 +754,7 @@ export class TSCollector
 				functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
 				positionalSources.push(...collectPositionalSources(sourceFile, file));
 				positionalAccesses.push(...collectPositionalAccesses(sourceFile, file));
+				algorithmicBindings.push(...collectAlgorithmicBindings(sourceFile, file, algorithmicPatterns));
 				sourceFiles.push(sourceFile);
 				fileMap.set(sourceFile, file);
 			}
@@ -613,7 +790,7 @@ export class TSCollector
 			}
 		}
 
-		return { constants, imports, functionSignatures, positionalSources, positionalAccesses };
+		return { constants, imports, functionSignatures, positionalSources, positionalAccesses, algorithmicBindings };
 	}
 }
 

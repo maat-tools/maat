@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 import {
+	ALGORITHMIC_BINDINGS_CAPABILITY,
 	CONSTANTS_CAPABILITY,
 	FUNCTION_SIGNATURES_CAPABILITY,
 	IMPORTS_CAPABILITY,
@@ -538,5 +540,134 @@ describe('TSCollector.collect() — callSites tracking', () => {
 		const { positionalSources } = await collector.collect();
 		const remoteSource = positionalSources.find((s) => s.variableName === 'remoteUser');
 		expect(remoteSource).toBeUndefined();
+	});
+});
+
+describe('TSCollector.collect() — algorithmicBindings fact', () => {
+	test('provides algorithmicBindings in provideFacts', () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		expect(collector.provideFacts).toContain(ALGORITHMIC_BINDINGS_CAPABILITY);
+	});
+
+	test('emits no bindings when no patterns configured', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { algorithmicBindings } = await collector.collect();
+		expect(algorithmicBindings).toHaveLength(0);
+	});
+
+	test('emits bindings for matching call expressions', async () => {
+		const collector = new TSCollector({
+			tsConfigFilePath: FIXTURE_TSCONFIG,
+			algorithmicPatterns: [
+				{
+					id: 'pack-unpack',
+					roles: ['packer', 'unpacker'],
+					matchers: [
+						{ role: 'packer', functionPattern: '\\.join$', literalArgIndex: 0 },
+						{ role: 'unpacker', functionPattern: '\\.split$', literalArgIndex: 0 },
+					],
+				},
+			],
+		});
+		const { algorithmicBindings } = await collector.collect();
+		expect(algorithmicBindings.length).toBeGreaterThan(0);
+
+		const splitBindings = algorithmicBindings.filter((b) => b.functionName.includes('split'));
+		expect(splitBindings.length).toBeGreaterThan(0);
+		for (const b of splitBindings) {
+			expect(b.patternId).toBe('pack-unpack');
+			expect(b.role).toBe('unpacker');
+			expect(typeof b.bindingKey).toBe('string');
+			expect(b.file).not.toContain('\\');
+			expect(b.location.line).toBeGreaterThan(0);
+		}
+	});
+
+	test('does not emit bindings for non-matching functions', async () => {
+		const collector = new TSCollector({
+			tsConfigFilePath: FIXTURE_TSCONFIG,
+			algorithmicPatterns: [
+				{
+					id: 'hash-verify',
+					roles: ['hasher'],
+					matchers: [{ role: 'hasher', functionPattern: '^createHash$', literalArgIndex: 0 }],
+				},
+			],
+		});
+		const { algorithmicBindings } = await collector.collect();
+		expect(algorithmicBindings).toHaveLength(0);
+	});
+
+	test('emits template-literal bindings when expressionKind is template', async () => {
+		const collector = new TSCollector({
+			tsConfigFilePath: FIXTURE_TSCONFIG,
+			algorithmicPatterns: [
+				{
+					id: 'pack-unpack',
+					roles: ['packer', 'unpacker'],
+					matchers: [
+						{ role: 'packer', functionPattern: '^template-literal$', expressionKind: 'template' },
+						{ role: 'unpacker', functionPattern: '\\.split$', literalArgIndex: 0 },
+					],
+				},
+			],
+		});
+		const { algorithmicBindings } = await collector.collect();
+		const templateBindings = algorithmicBindings.filter((b) => b.functionName === 'template-literal');
+		expect(templateBindings.length).toBeGreaterThan(0);
+		for (const b of templateBindings) {
+			expect(b.patternId).toBe('pack-unpack');
+			expect(b.role).toBe('packer');
+		}
+	});
+
+	test('does not emit bindings for whitespace-only prefix/suffix in template literals', async () => {
+		const tmpDir = resolve(import.meta.dir, '../fixtures/template-whitespace-test');
+		const srcDir = resolve(tmpDir, 'src');
+		await mkdir(srcDir, { recursive: true });
+		const tsConfigPath = resolve(tmpDir, 'tsconfig.json');
+
+		await writeFile(tsConfigPath, JSON.stringify({ compilerOptions: {} }));
+		await writeFile(resolve(srcDir, 'prefix.ts'), 'console.log(`\\n${heading}`);\n');
+		await writeFile(resolve(srcDir, 'suffix.ts'), 'proc.write(`${text}\\n`);\n');
+		await writeFile(resolve(srcDir, 'split.ts'), 'const lines = buffer.split("\\n");\n');
+		await writeFile(resolve(srcDir, 'sep.ts'), 'const msg = `${header}\\n${body}`;\n');
+
+		const collector = new TSCollector({
+			tsConfigFilePath: tsConfigPath,
+			algorithmicPatterns: [
+				{
+					id: 'pack-unpack',
+					roles: ['packer', 'unpacker'],
+					matchers: [
+						{ role: 'packer', functionPattern: '^template-literal$', expressionKind: 'template' },
+						{ role: 'unpacker', functionPattern: '\\.split$', literalArgIndex: 0 },
+					],
+				},
+			],
+		});
+		const { algorithmicBindings } = await collector.collect();
+
+		const prefixBinding = algorithmicBindings.find((b) => b.file.includes('prefix'));
+		const suffixBinding = algorithmicBindings.find((b) => b.file.includes('suffix'));
+		const splitBinding = algorithmicBindings.find((b) => b.file.includes('split'));
+		const sepBinding = algorithmicBindings.find((b) => b.file.includes('sep'));
+
+		// Prefix whitespace (\n${heading}) should NOT be extracted
+		expect(prefixBinding).toBeUndefined();
+
+		// Suffix whitespace (${text}\n) should NOT be extracted
+		expect(suffixBinding).toBeUndefined();
+
+		// Separator between expressions (${header}\n${body}) SHOULD be extracted
+		expect(sepBinding).toBeDefined();
+		expect(sepBinding?.bindingKey).toBe('\\n');
+
+		// Unpacker (.split) should still be extracted
+		expect(splitBinding).toBeDefined();
+		expect(splitBinding?.bindingKey).toBe('\\n');
+
+		// Cleanup
+		await rm(tmpDir, { recursive: true });
 	});
 });

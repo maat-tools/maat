@@ -1,3 +1,5 @@
+export type { CoATechnicalOptions } from './coa/technical';
+export { ConnascenceOfAlgorithmTechnicalRule, default as coaTechnical } from './coa/technical';
 export type { CoMRuleOptions } from './com';
 export { ConnascenceOfMeaningRule, default as com } from './com';
 export type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
@@ -9,6 +11,8 @@ export {
 } from './cop';
 
 import { defineRuleSet } from '@maat-tools/contracts';
+import type { CoATechnicalOptions } from './coa/technical';
+import coaTechnical from './coa/technical';
 import type { CoMRuleOptions } from './com';
 import com from './com';
 import type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
@@ -21,11 +25,13 @@ declare module '@maat-tools/contracts' {
 			com: CoMRuleOptions;
 			copArgs: CoPArgsRuleOptions;
 			copStruct: CoPStructRuleOptions;
+			coaTechnical: CoATechnicalOptions;
 		};
 		'@maat-tools/connascence-rules/com': CoMRuleOptions;
 		'@maat-tools/connascence-rules/cop-args': CoPArgsRuleOptions;
 		'@maat-tools/connascence-rules/cop-struct': CoPStructRuleOptions;
+		'@maat-tools/connascence-rules/coa-technical': CoATechnicalOptions;
 	}
 }
 
-export default defineRuleSet([com, copArgs, copStruct]);
+export default defineRuleSet([com, copArgs, copStruct, coaTechnical]);

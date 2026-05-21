@@ -108,6 +108,14 @@ const guideAndPluginSidebar = [
                   { text: 'cop-struct', link: '/plugins/connascence-rules/cop-struct' },
                 ],
               },
+              {
+                text: 'coa',
+                link: '/plugins/connascence-rules/coa-technical',
+                collapsed: false,
+                items: [
+                  { text: 'coa-technical', link: '/plugins/connascence-rules/coa-technical' },
+                ],
+              },
             ],
           },
           {
@@ -118,6 +126,13 @@ const guideAndPluginSidebar = [
               { text: 'churn', link: '/plugins/git-rules/churn' },
             ],
           },
+        ],
+      },
+      {
+        text: 'Presets',
+        collapsed: false,
+        items: [
+          { text: 'TypeScript', link: '/plugins/presets-ts/' },
         ],
       },
       {

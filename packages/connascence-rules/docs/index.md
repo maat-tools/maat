@@ -13,6 +13,7 @@ Built-in rules for detecting connascence in source code. The taxonomy and defini
 | [`com`](./com.md) | [Connascence of Meaning](https://connascence.io/meaning.html) | Detect repeated string and numeric literals across files | Optional |
 | [`cop-args`](./cop-args.md) | [Connascence of Position](https://connascence.io/position.html) | Detect functions with too many or boolean positional parameters | Optional |
 | [`cop-struct`](./cop-struct.md) | [Connascence of Position](https://connascence.io/position.html) | Detect index-based access to arrays and tuples | Optional |
+| [`coa-technical`](./coa-technical.md) | [Connascence of Algorithm](https://connascence.io/algorithm.html) | Detect complementary operations sharing an invariant without a shared abstraction | Required |
 
 ## Usage
 

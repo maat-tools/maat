@@ -6,6 +6,7 @@ export const FUNCTION_SIGNATURES_CAPABILITY = 'functionSignatures' as const;
 export const POSITIONAL_SOURCES_CAPABILITY = 'positionalSources' as const;
 export const POSITIONAL_ACCESSES_CAPABILITY = 'positionalAccesses' as const;
 export const FUNCTION_CONTRACTS_CAPABILITY = 'functionContracts' as const;
+export const ALGORITHMIC_BINDINGS_CAPABILITY = 'algorithmicBindings' as const;
 
 export type ConstantContext = 'argument' | 'assignment' | 'return' | 'condition' | 'import' | 'decorator' | 'other';
 
@@ -80,6 +81,29 @@ export type FunctionContract = {
 	isExported: boolean;
 };
 
+export type AlgorithmicPatternMatcher = {
+	role: string;
+	functionPattern: string;
+	literalArgIndex?: number;
+	expressionKind?: 'call' | 'template';
+};
+
+export type AlgorithmicPattern = {
+	id: string;
+	roles: string[];
+	matchers: AlgorithmicPatternMatcher[];
+};
+
+export type AlgorithmicBinding = {
+	patternId: string;
+	role: string;
+	bindingKey: string;
+	functionName: string;
+	file: string;
+	location: SourceLocation;
+	containingFunction: string | null;
+};
+
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		constants: Constant[];
@@ -88,5 +112,6 @@ declare module '@maat-tools/contracts' {
 		positionalSources: PositionalSource[];
 		positionalAccesses: PositionalAccess[];
 		functionContracts: FunctionContract[];
+		algorithmicBindings: AlgorithmicBinding[];
 	}
 }

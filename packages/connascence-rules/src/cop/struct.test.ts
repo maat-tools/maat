@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { PositionalAccess, PositionalSource } from '@maat-tools/vocabulary';
+import type { CallGraph, PositionalAccess, PositionalSource } from '@maat-tools/vocabulary';
 import { ConnascenceOfPositionStructRule } from './struct';
+
+const EMPTY_CALL_GRAPH: CallGraph = { nodes: [], edges: [] };
 
 function makeSource(overrides: Partial<PositionalSource> = {}): PositionalSource {
 	return {
@@ -14,7 +16,6 @@ function makeSource(overrides: Partial<PositionalSource> = {}): PositionalSource
 		],
 		isHeterogeneous: true,
 		location: { file: '/src/users.ts', line: 5, column: 2 },
-		callSites: [],
 		...overrides,
 	};
 }
@@ -30,10 +31,18 @@ function makeAccess(overrides: Partial<PositionalAccess> = {}): PositionalAccess
 	};
 }
 
+function makeCallGraph(overrides: Partial<CallGraph> = {}): CallGraph {
+	return {
+		nodes: [],
+		edges: [],
+		...overrides,
+	};
+}
+
 describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 	test('no sources, no accesses → no findings', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({ positionalSources: [], positionalAccesses: [] });
+		const findings = rule.evaluate({ positionalSources: [], positionalAccesses: [], callGraph: EMPTY_CALL_GRAPH });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -42,6 +51,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [makeSource()],
 			positionalAccesses: [],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -51,6 +61,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [],
 			positionalAccesses: [makeAccess()],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -62,16 +73,18 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('cop-struct@v1');
 	});
 
-	test('source and access in different files with no callSites → no finding', () => {
+	test('source and access in different files with no call graph edges → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const findings = rule.evaluate({
-			positionalSources: [makeSource({ variableName: 'user', file: '/src/users.ts', callSites: [] })],
+			positionalSources: [makeSource({ variableName: 'user', file: '/src/users.ts' })],
 			positionalAccesses: [makeAccess({ variableName: 'user', file: '/src/auth.ts' })],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -81,6 +94,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [makeSource({ variableName: 'user' })],
 			positionalAccesses: [makeAccess({ variableName: 'data' })],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -92,6 +106,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -103,6 +118,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(1);
 	});
@@ -115,6 +131,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access1, access2],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.artifacts).toHaveLength(3);
@@ -129,6 +146,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source1, source2],
 			positionalAccesses: [access1, access2],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(2);
 	});
@@ -140,61 +158,96 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(1);
 	});
 
-	test('cross-file: callSite in another file matches access there → finding produced', () => {
+	test('cross-file: call graph edge matches access location → finding produced', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({
 			variableName: 'result',
 			file: '/src/parser.ts',
-			callSites: [
-				{ file: '/src/consumer.ts', variableName: 'parsed', location: { file: '/src/consumer.ts', line: 3 } },
+			location: { file: '/src/parser.ts', line: 10, column: 0 },
+		});
+		const access = makeAccess({
+			variableName: 'parsed',
+			file: '/src/consumer.ts',
+			accessedIndex: 1,
+			location: { file: '/src/consumer.ts', line: 3, column: 2 },
+		});
+		const callGraph = makeCallGraph({
+			edges: [
+				{
+					callerId: '/src/consumer.ts:3:2',
+					calleeId: '/src/parser.ts:10:0',
+					location: { file: '/src/consumer.ts', line: 3, column: 2 },
+				},
 			],
 		});
-		const access = makeAccess({ variableName: 'parsed', file: '/src/consumer.ts', accessedIndex: 1 });
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph,
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('cop-struct@v1');
 	});
 
-	test('cross-file: multiple callSites each with an access → single finding with all artifacts', () => {
+	test('cross-file: multiple edges each with an access → single finding with all artifacts', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({
 			variableName: 'tuple',
 			file: '/src/db.ts',
-			callSites: [
-				{ file: '/src/a.ts', variableName: 'row', location: { file: '/src/a.ts', line: 2 } },
-				{ file: '/src/b.ts', variableName: 'entry', location: { file: '/src/b.ts', line: 5 } },
+			location: { file: '/src/db.ts', line: 5, column: 0 },
+		});
+		const accessA = makeAccess({
+			variableName: 'row',
+			file: '/src/a.ts',
+			accessedIndex: 0,
+			location: { file: '/src/a.ts', line: 2, column: 1 },
+		});
+		const accessB = makeAccess({
+			variableName: 'entry',
+			file: '/src/b.ts',
+			accessedIndex: 1,
+			location: { file: '/src/b.ts', line: 5, column: 3 },
+		});
+		const callGraph = makeCallGraph({
+			edges: [
+				{ callerId: '/src/a.ts:2:1', calleeId: '/src/db.ts:5:0', location: { file: '/src/a.ts', line: 2, column: 1 } },
+				{ callerId: '/src/b.ts:5:3', calleeId: '/src/db.ts:5:0', location: { file: '/src/b.ts', line: 5, column: 3 } },
 			],
 		});
-		const accessA = makeAccess({ variableName: 'row', file: '/src/a.ts', accessedIndex: 0 });
-		const accessB = makeAccess({ variableName: 'entry', file: '/src/b.ts', accessedIndex: 1 });
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [accessA, accessB],
+			callGraph,
 		});
 		expect(findings).toHaveLength(1);
-		// source artifact + 2 access artifacts
 		expect(findings[0]?.artifacts).toHaveLength(3);
 	});
 
-	test('callSite present but no matching access → no finding', () => {
+	test('edge present but no matching access → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({
 			variableName: 'result',
 			file: '/src/parser.ts',
-			callSites: [
-				{ file: '/src/consumer.ts', variableName: 'parsed', location: { file: '/src/consumer.ts', line: 3 } },
+			location: { file: '/src/parser.ts', line: 10, column: 0 },
+		});
+		const callGraph = makeCallGraph({
+			edges: [
+				{
+					callerId: '/src/consumer.ts:3:2',
+					calleeId: '/src/parser.ts:10:0',
+					location: { file: '/src/consumer.ts', line: 3, column: 2 },
+				},
 			],
 		});
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [],
+			callGraph,
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -206,6 +259,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('/src/util.ts[0]');
@@ -218,6 +272,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings[0]?.message).toContain('data');
 		expect(findings[0]?.message).toContain('/src/users.ts');
@@ -230,6 +285,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
+			callGraph: EMPTY_CALL_GRAPH,
 		});
 		expect(findings[0]?.ruleIdentifier).toHaveProperty('variable', 'data');
 		expect(findings[0]?.ruleIdentifier).toHaveProperty('file', '/src/users.ts');

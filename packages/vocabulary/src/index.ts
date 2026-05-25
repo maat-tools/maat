@@ -52,7 +52,6 @@ export type PositionalSource = {
 	positions: { index: number; type: string }[];
 	isHeterogeneous: boolean;
 	location: SourceLocation;
-	callSites: { file: string; variableName: string; location: SourceLocation }[];
 };
 
 export type PositionalAccess = {
@@ -79,6 +78,29 @@ export type FunctionContract = {
 	calledFunctions: string[];
 	location: SourceLocation;
 	isExported: boolean;
+};
+
+export const CALL_GRAPH_CAPABILITY = 'callGraph' as const;
+
+export type CallNodeKind = 'function' | 'method' | 'arrow' | 'class' | 'module';
+
+export type CallNode = {
+	id: string;
+	file: string;
+	name: string;
+	kind: CallNodeKind;
+	location: SourceLocation;
+};
+
+export type CallEdge = {
+	callerId: string;
+	calleeId: string;
+	location: SourceLocation;
+};
+
+export type CallGraph = {
+	nodes: CallNode[];
+	edges: CallEdge[];
 };
 
 export type AlgorithmicPatternMatcher = {
@@ -113,5 +135,6 @@ declare module '@maat-tools/contracts' {
 		positionalAccesses: PositionalAccess[];
 		functionContracts: FunctionContract[];
 		algorithmicBindings: AlgorithmicBinding[];
+		callGraph: CallGraph;
 	}
 }

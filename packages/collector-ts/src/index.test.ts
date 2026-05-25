@@ -286,17 +286,6 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 		expect(source?.positions).toHaveLength(4);
 	});
 
-	test('tracks cross-file call sites for tuple-returning function', async () => {
-		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserDetails');
-		expect(source).toBeDefined();
-		expect(source?.callSites.length).toBeGreaterThan(0);
-		const remoteCall = source?.callSites.find((cs) => cs.file.includes('remote.ts'));
-		expect(remoteCall).toBeDefined();
-		expect(remoteCall?.variableName).toBe('remoteUser');
-	});
-
 	test('does not flag named object returns as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
@@ -518,31 +507,6 @@ describe('TSCollector.collect() — cross-file positionalAccesses in remote.ts',
 	});
 });
 
-describe('TSCollector.collect() — callSites tracking', () => {
-	test('getUserDetails callSites include the intra-file user variable from positional.ts', async () => {
-		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserDetails');
-		const intraCall = source?.callSites.find((cs) => cs.variableName === 'user' && cs.file.endsWith('positional.ts'));
-		expect(intraCall).toBeDefined();
-	});
-
-	test('sources that are never called have empty callSites', async () => {
-		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserDetailsImplicit');
-		expect(source).toBeDefined();
-		expect(source?.callSites).toHaveLength(0);
-	});
-
-	test('remoteUser is not itself a positional source — cross-file calls only produce a callSite entry', async () => {
-		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { positionalSources } = await collector.collect();
-		const remoteSource = positionalSources.find((s) => s.variableName === 'remoteUser');
-		expect(remoteSource).toBeUndefined();
-	});
-});
-
 describe('TSCollector.collect() — algorithmicBindings fact', () => {
 	test('provides algorithmicBindings in provideFacts', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
@@ -669,5 +633,21 @@ describe('TSCollector.collect() — algorithmicBindings fact', () => {
 
 		// Cleanup
 		await rm(tmpDir, { recursive: true });
+	});
+});
+
+import { CALL_GRAPH_CAPABILITY } from '@maat-tools/vocabulary';
+
+describe('TSCollector.collect() — callGraph fact', () => {
+	test('provides callGraph in provideFacts', () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		expect(collector.provideFacts).toContain(CALL_GRAPH_CAPABILITY);
+	});
+
+	test('returns callGraph with expected structure', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { callGraph } = await collector.collect();
+		expect(Array.isArray(callGraph.nodes)).toBe(true);
+		expect(Array.isArray(callGraph.edges)).toBe(true);
 	});
 });

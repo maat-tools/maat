@@ -1,5 +1,7 @@
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
 import {
+	CALL_GRAPH_CAPABILITY,
+	type CallGraph,
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
 	type PositionalAccess,
@@ -16,9 +18,13 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-export class ConnascenceOfPositionStructRule implements Rule<'positionalSources' | 'positionalAccesses'> {
+export class ConnascenceOfPositionStructRule implements Rule<'positionalSources' | 'positionalAccesses' | 'callGraph'> {
 	public readonly id = 'cop-struct@v1';
-	public readonly needFacts = [POSITIONAL_SOURCES_CAPABILITY, POSITIONAL_ACCESSES_CAPABILITY] as const;
+	public readonly needFacts = [
+		POSITIONAL_SOURCES_CAPABILITY,
+		POSITIONAL_ACCESSES_CAPABILITY,
+		CALL_GRAPH_CAPABILITY,
+	] as const;
 
 	private readonly onlyHeterogeneous: boolean;
 
@@ -29,8 +35,9 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 	public evaluate(facts: {
 		positionalSources: PositionalSource[];
 		positionalAccesses: PositionalAccess[];
+		callGraph: CallGraph;
 	}): FindingRuleOutput[] {
-		const { positionalSources, positionalAccesses } = facts;
+		const { positionalSources, positionalAccesses, callGraph } = facts;
 
 		const accessMap = new Map<string, PositionalAccess[]>();
 		for (const acc of positionalAccesses) {
@@ -55,11 +62,33 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 				matchedAccesses.push(...intraAccesses);
 			}
 
-			for (const callSite of source.callSites ?? []) {
-				const callKey = `${callSite.file}::${callSite.variableName}`;
-				const callAccesses = accessMap.get(callKey);
-				if (callAccesses) {
-					matchedAccesses.push(...callAccesses);
+			const sourceFile = source.file;
+			const sourceLine = source.location.line;
+
+			const callerFilePatterns: string[] = [];
+			for (const edge of callGraph.edges) {
+				const parts = edge.calleeId.split(':');
+				const calleeFile = parts[0];
+				const calleeLine = Number(parts[1]);
+				if (!calleeFile) {
+					continue;
+				}
+
+				const fileMatches = calleeFile.endsWith(sourceFile) || sourceFile.endsWith(calleeFile);
+				const lineMatches = calleeLine === sourceLine;
+
+				if (fileMatches && lineMatches) {
+					callerFilePatterns.push(edge.location.file);
+				}
+			}
+
+			for (const acc of positionalAccesses) {
+				for (const callerPattern of callerFilePatterns) {
+					const accFileMatches = acc.file.endsWith(callerPattern) || callerPattern.endsWith(acc.file);
+					if (accFileMatches) {
+						matchedAccesses.push(acc);
+						break;
+					}
 				}
 			}
 

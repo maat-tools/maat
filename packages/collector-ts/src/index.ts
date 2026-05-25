@@ -1,10 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { readFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, relative, resolve } from 'node:path';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
 	type AlgorithmicBinding,
 	type AlgorithmicPattern,
+	CALL_GRAPH_CAPABILITY,
+	type CallEdge,
+	type CallGraph,
+	type CallNode,
 	CONSTANTS_CAPABILITY,
 	type Constant,
 	type ConstantContext,
@@ -18,6 +24,7 @@ import {
 	type PositionalAccess,
 	type PositionalSource,
 } from '@maat-tools/vocabulary';
+import { execa } from 'execa';
 import micromatch from 'micromatch';
 
 const { isMatch: micromatchIsMatch } = micromatch;
@@ -46,6 +53,10 @@ export type TSInput = {
 	tsConfigFilePath: string | string[];
 	exclude?: string[];
 	algorithmicPatterns?: AlgorithmicPattern[];
+	callGraph?: {
+		maxIndirections?: number;
+		timeout?: number;
+	};
 };
 
 const DEFAULT_EXCLUDE_PATTERNS = ['**/*.test.ts', '**/*.spec.ts'];
@@ -289,7 +300,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 					line: func.getStartLineNumber(),
 					column: func.getStartLinePos(),
 				},
-				callSites: [],
 			});
 		} else {
 			const returnStatements = func.getDescendantsOfKind(SyntaxKind.ReturnStatement);
@@ -314,7 +324,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 							line: func.getStartLineNumber(),
 							column: func.getStartLinePos(),
 						},
-						callSites: [],
 					});
 					break;
 				}
@@ -344,7 +353,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 						line: method.getStartLineNumber(),
 						column: method.getStartLinePos(),
 					},
-					callSites: [],
 				});
 			}
 		}
@@ -371,7 +379,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 					line: varDecl.getStartLineNumber(),
 					column: varDecl.getStartLinePos(),
 				},
-				callSites: [],
 			});
 		}
 	}
@@ -400,7 +407,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 						line: varDecl.getStartLineNumber(),
 						column: varDecl.getStartLinePos(),
 					},
-					callSites: [],
 				});
 			}
 		}
@@ -424,7 +430,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 						line: varDecl.getStartLineNumber(),
 						column: varDecl.getStartLinePos(),
 					},
-					callSites: [],
 				});
 			} else if (isPositionalApiCall(calledName)) {
 				sources.push({
@@ -437,7 +442,6 @@ function collectPositionalSources(sourceFile: SourceFile, file: string): Positio
 						line: varDecl.getStartLineNumber(),
 						column: varDecl.getStartLinePos(),
 					},
-					callSites: [],
 				});
 			}
 		}
@@ -666,6 +670,38 @@ function collectAlgorithmicBindings(
 	return bindings;
 }
 
+/**
+ * Parses a Jelly location string into file, line, and column.
+ *
+ * Jelly uses index-based locations: "fileIndex:startLine:startCol:endLine:endCol"
+ * See: https://github.com/cs-au-dk/jelly/blob/master/src/typings/callgraph.ts
+ */
+function parseJellyLocation(loc: string, files: string[]): { file: string; line: number; column: number } | null {
+	const parts = loc.split(':');
+	if (parts.length < 5) {
+		return null;
+	}
+
+	const fileIndex = Number(parts[0]);
+	const startLine = parts[1];
+	const startCol = parts[2];
+
+	if (startLine === '?' || startCol === '?') {
+		return null;
+	}
+
+	const file = files[fileIndex];
+	if (!file) {
+		return null;
+	}
+
+	return {
+		file,
+		line: Number(startLine),
+		column: Number(startCol) - 1,
+	};
+}
+
 export class TSCollector
 	implements
 		Collector<
@@ -675,6 +711,7 @@ export class TSCollector
 			| 'positionalSources'
 			| 'positionalAccesses'
 			| 'algorithmicBindings'
+			| 'callGraph'
 		>
 {
 	public readonly id = 'ts';
@@ -685,6 +722,7 @@ export class TSCollector
 		POSITIONAL_SOURCES_CAPABILITY,
 		POSITIONAL_ACCESSES_CAPABILITY,
 		ALGORITHMIC_BINDINGS_CAPABILITY,
+		CALL_GRAPH_CAPABILITY,
 	] as const;
 
 	public constructor(private readonly config: TSInput) {}
@@ -712,6 +750,7 @@ export class TSCollector
 			| 'positionalSources'
 			| 'positionalAccesses'
 			| 'algorithmicBindings'
+			| 'callGraph'
 		>
 	> {
 		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
@@ -732,6 +771,7 @@ export class TSCollector
 		const algorithmicBindings: AlgorithmicBinding[] = [];
 		const sourceFiles: SourceFile[] = [];
 		const fileMap = new Map<SourceFile, string>();
+		const includedFiles: string[] = [];
 
 		for (const tsConfigPath of tsConfigPaths) {
 			const project = new Project({ tsConfigFilePath: tsConfigPath });
@@ -748,6 +788,8 @@ export class TSCollector
 					continue;
 				}
 
+				includedFiles.push(absoluteFile);
+
 				const packageName = resolvePackageName(absoluteFile);
 				imports.push(...collectImports(sourceFile, file, packageName));
 				constants.push(...collectConstants(sourceFile, file));
@@ -760,37 +802,127 @@ export class TSCollector
 			}
 		}
 
-		for (const source of positionalSources) {
-			const funcName = source.variableName;
-			for (const sf of sourceFiles) {
-				const file = fileMap.get(sf);
-				if (!file) {
-					continue;
-				}
+		const callGraph = await this.collectCallGraphWithJelly(includedFiles, projectRoot);
 
-				for (const varDecl of sf.getVariableDeclarations()) {
-					const initializer = varDecl.getInitializer();
-					if (initializer && initializer.getKind() === SyntaxKind.CallExpression) {
-						const callNode = initializer as CallExpression;
-						const callExpr = callNode.getExpression();
-						const calledName = callExpr.getText();
-						if (calledName === funcName || calledName.endsWith(`.${funcName}`)) {
-							source.callSites.push({
-								file,
-								variableName: varDecl.getName(),
-								location: {
-									file,
-									line: varDecl.getStartLineNumber(),
-									column: varDecl.getStartLinePos(),
-								},
-							});
-						}
-					}
-				}
-			}
+		return {
+			constants,
+			imports,
+			functionSignatures,
+			positionalSources,
+			positionalAccesses,
+			algorithmicBindings,
+			callGraph,
+		};
+	}
+
+	private async collectCallGraphWithJelly(entryFiles: string[], projectRoot: string): Promise<CallGraph> {
+		const tmpFile = resolve(tmpdir(), `maat-cg-${Date.now()}.json`);
+
+		const jellyArgs = ['--ignore-dependencies', '-j', tmpFile, '--no-print-progress', ...entryFiles];
+
+		if (this.config.callGraph?.maxIndirections !== undefined) {
+			jellyArgs.push('--max-indirections', String(this.config.callGraph.maxIndirections));
 		}
 
-		return { constants, imports, functionSignatures, positionalSources, positionalAccesses, algorithmicBindings };
+		if (this.config.callGraph?.timeout !== undefined) {
+			jellyArgs.push('--timeout', String(this.config.callGraph.timeout));
+		}
+
+		const jellyBinary = this.resolveJellyBinary();
+
+		try {
+			await execa(jellyBinary, jellyArgs, {
+				cwd: projectRoot,
+				stdio: 'pipe',
+			});
+
+			const raw = JSON.parse(await readFile(tmpFile, 'utf-8'));
+			await unlink(tmpFile);
+
+			return this.mapJellyToMaat(raw, projectRoot);
+		} catch (error) {
+			try {
+				await unlink(tmpFile);
+			} catch {
+				// Ignore cleanup errors
+			}
+
+			throw error;
+		}
+	}
+
+	private resolveJellyBinary(): string {
+		return require.resolve('@cs-au-dk/jelly/lib/main.js');
+	}
+
+	private mapJellyToMaat(
+		jellyCg: {
+			files: string[];
+			functions: Record<number, string>;
+			calls: Record<number, string>;
+			call2fun: Array<[number, number]>;
+		},
+		projectRoot: string,
+	): CallGraph {
+		const nodes: CallNode[] = [];
+		const edges: CallEdge[] = [];
+		const files = jellyCg.files.map((f) => toProjectRelativePath(projectRoot, f));
+
+		const functionIdMap = new Map<number, string>();
+
+		for (const [indexStr, locStr] of Object.entries(jellyCg.functions)) {
+			const index = Number(indexStr);
+			const parsed = parseJellyLocation(locStr, files);
+			if (!parsed) {
+				continue;
+			}
+
+			const id = `${parsed.file}:${parsed.line}:${parsed.column}`;
+			functionIdMap.set(index, id);
+
+			nodes.push({
+				id,
+				file: parsed.file,
+				name: `function_${index}`,
+				kind: 'function',
+				location: {
+					file: parsed.file,
+					line: parsed.line,
+					column: parsed.column,
+				},
+			});
+		}
+
+		for (const [callIdx, funcIdx] of jellyCg.call2fun ?? []) {
+			const calleeId = functionIdMap.get(funcIdx);
+			if (!calleeId) {
+				continue;
+			}
+
+			const callLocStr = jellyCg.calls[callIdx];
+			if (!callLocStr) {
+				continue;
+			}
+
+			const callLoc = parseJellyLocation(callLocStr, files);
+			if (!callLoc) {
+				continue;
+			}
+
+			const callerId = `${callLoc.file}:${callLoc.line}:${callLoc.column}`;
+
+			edges.push({
+				callerId,
+				calleeId,
+				location: {
+					file: callLoc.file,
+					line: callLoc.line,
+					column: callLoc.column,
+				},
+			});
+		}
+
+		return { nodes, edges };
 	}
 }
 

@@ -37,14 +37,6 @@ function findingsFor(ruleId: string) {
 	return findings.filter((f) => f.ruleId === ruleId);
 }
 
-function hasFinding(ruleId: string, match: string) {
-	return findings.some((f) => f.ruleId === ruleId && f.message.includes(match));
-}
-
-function hasNoFinding(ruleId: string, match: string) {
-	return !hasFinding(ruleId, match);
-}
-
 // ─── runtime coupling detection ──────────────────────────────────────────────
 
 describe('coupling-rules integration — runtime coupling', () => {

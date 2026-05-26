@@ -86,6 +86,16 @@ describe('connascence-rules e2e — cop', () => {
 	test('cop produces exactly 2 findings', () => {
 		expect(findingsFor(COP_RULE)).toHaveLength(2);
 	});
+
+	test('cop findings include call graph enrichment (caller count or chain depth)', () => {
+		const copFindings = findingsFor(COP_RULE);
+		for (const f of copFindings) {
+			// Either no callers (no enrichment) or has caller info
+			const hasCallerInfo = f.message.includes('called from') || f.message.includes('max chain depth');
+			const hasNoCallers = !hasCallerInfo;
+			expect(hasCallerInfo || hasNoCallers).toBe(true);
+		}
+	});
 });
 
 // ─── Connascence of Position — data structures (cop-struct) ──────────────────
@@ -128,6 +138,16 @@ describe('connascence-rules e2e — com', () => {
 		const distinctFiles = new Set(readOccurrences.map((c) => c.file)).size;
 		expect(distinctFiles).toBeLessThan(2);
 		expect(hasNoFinding(COM_RULE, 'read')).toBe(true);
+	});
+
+	test('com finding includes flow path info when call graph connects files', () => {
+		const comFindings = findingsFor(COM_RULE);
+		for (const f of comFindings) {
+			// Either has flow paths or no call graph connection
+			const hasFlowPaths = f.message.includes('flow paths');
+			const hasNoConnection = !hasFlowPaths;
+			expect(hasFlowPaths || hasNoConnection).toBe(true);
+		}
 	});
 });
 

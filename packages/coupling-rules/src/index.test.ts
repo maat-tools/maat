@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { type BrandedRuleBuilder, isRule, isRuleBuilder, RULE_BUILDER_BRAND } from '@maat-tools/contracts';
-import type { Import } from '@maat-tools/vocabulary';
+import type { CallGraph, Import } from '@maat-tools/vocabulary';
 import { layer } from './layer';
 import { Pure } from './roles';
 
@@ -12,6 +12,27 @@ function makeImport(overrides: Partial<Import> = {}): Import {
 		location: { file: '/repo/packages/kernel/src/index.ts', line: 1 },
 		...overrides,
 	};
+}
+
+function makeCallGraph(overrides: Partial<CallGraph> = {}): CallGraph {
+	return {
+		nodes: [],
+		edges: [],
+		...overrides,
+	};
+}
+
+function makeCallEdge(overrides: Partial<CallGraph['edges'][number]> = {}): CallGraph['edges'][number] {
+	return {
+		callerId: '/repo/packages/kernel/src/index.ts:1:1',
+		calleeId: '/repo/packages/contracts/src/index.ts:1:1',
+		location: { file: '/repo/packages/kernel/src/index.ts', line: 1, column: 1 },
+		...overrides,
+	};
+}
+
+function makeFacts(imports: Import[], callGraph: CallGraph = makeCallGraph()) {
+	return { imports, callGraph };
 }
 
 describe('layer()', () => {
@@ -73,26 +94,22 @@ describe('layer()', () => {
 describe('LayerRule.evaluate() — allowlist', () => {
 	test('no finding when specifier is in allows list', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: '@maat-tools/contracts' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/contracts' })]));
 		expect(findings).toHaveLength(0);
 	});
 
 	test('finding when specifier is NOT in allows list', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'uuid' })]));
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('coupling/pure-imports:@maat-tools/kernel@v1');
 	});
 
 	test('no finding for relative imports regardless of allows list', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: './utils' }), makeImport({ specifier: '../types' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makeImport({ specifier: './utils' }), makeImport({ specifier: '../types' })]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
@@ -102,47 +119,38 @@ describe('LayerRule.evaluate() — allowlist', () => {
 		// a package boundary and re-recording them as package specifiers.
 		// When it does, the allowlist check catches them normally.
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			// collector normalized ../../contracts/src/index → @maat-tools/vocabulary (not allowed)
-			imports: [makeImport({ specifier: '@maat-tools/vocabulary' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/vocabulary' })]));
 		expect(findings).toHaveLength(1);
 	});
 
 	test('no finding when packageName does not match target', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ packageName: '@maat-tools/cli', specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ packageName: '@maat-tools/cli', specifier: 'uuid' })]));
 		expect(findings).toHaveLength(0);
 	});
 
 	test('allows() with empty list — any non-relative import is a finding', () => {
 		const rule = layer('@maat-tools/contracts').is(Pure).allows().build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({
 					packageName: '@maat-tools/contracts',
 					specifier: 'node:crypto',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 	});
 
 	test('string pattern matches sub-path', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: '@maat-tools/contracts/types' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/contracts/types' })]));
 		expect(findings).toHaveLength(0);
 	});
 
 	test('string pattern does not match partial package name', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: '@maat-tools/contracts-extra' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/contracts-extra' })]));
 		expect(findings).toHaveLength(1);
 	});
 
@@ -151,9 +159,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 			.is(Pure)
 			.allows(/^@maat-tools\//)
 			.build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: '@maat-tools/contracts' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/contracts' })]));
 		expect(findings).toHaveLength(0);
 	});
 
@@ -162,30 +168,26 @@ describe('LayerRule.evaluate() — allowlist', () => {
 			.is(Pure)
 			.allows(/^@maat-tools\//)
 			.build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'uuid' })]));
 		expect(findings).toHaveLength(1);
 	});
 
 	test('includes role name in message', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'uuid' })]));
 		expect(findings[0]?.message).toContain('Pure');
 	});
 
 	test('multiple imports — only disallowed ones produce findings', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts', '@maat-tools/core').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({ specifier: '@maat-tools/contracts' }),
 				makeImport({ specifier: '@maat-tools/core' }),
 				makeImport({ specifier: 'uuid' }),
 				makeImport({ specifier: './utils' }),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: 'uuid' });
 	});
@@ -200,25 +202,19 @@ describe('roles', () => {
 describe('PureLayerRule — external deps in allows()', () => {
 	test('external explicitly in allows → no finding', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts', 'node:crypto').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'node:crypto' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'node:crypto' })]));
 		expect(findings).toHaveLength(0);
 	});
 
 	test('external NOT in allows → finding', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts', 'node:path').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'node:crypto' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'node:crypto' })]));
 		expect(findings).toHaveLength(1);
 	});
 
 	test('no externals in allows — any external import is a finding', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'node:crypto' })],
-		});
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: 'node:crypto' })]));
 		expect(findings).toHaveLength(1);
 	});
 
@@ -227,9 +223,9 @@ describe('PureLayerRule — external deps in allows()', () => {
 			.is(Pure)
 			.allows(/^node:/)
 			.build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ specifier: 'node:crypto' }), makeImport({ specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makeImport({ specifier: 'node:crypto' }), makeImport({ specifier: 'uuid' })]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: 'uuid' });
 	});
@@ -238,12 +234,12 @@ describe('PureLayerRule — external deps in allows()', () => {
 describe('PureLayerRule — transitive check', () => {
 	test('dep imports from outside budget — caught by default', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
 				makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' }),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({
 			target: '@maat-tools/kernel',
@@ -255,51 +251,51 @@ describe('PureLayerRule — transitive check', () => {
 
 	test('contracts own rule catches its own violation', () => {
 		const rule = layer('@maat-tools/contracts').is(Pure).allows().build();
-		const findings = rule.evaluate({
-			imports: [makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' })]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('@maat-tools/contracts');
 	});
 
 	test('transitive dep importing bare "." (index) → no false positive', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
 				makeImport({
 					packageName: '@maat-tools/contracts',
 					file: 'packages/contracts/src/definition/accessors/IAccessors.ts',
 					specifier: '.',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('transitive dep importing bare ".." (parent index) → no false positive', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
 				makeImport({
 					packageName: '@maat-tools/contracts',
 					file: 'packages/contracts/src/blocks/deprecations.ts',
 					specifier: '..',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('transitive: false preserves direct-only behavior', () => {
 		const rule = layer('@maat-tools/kernel').is(Pure, { transitive: false }).allows('@maat-tools/contracts').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makeImport({ packageName: '@maat-tools/kernel', specifier: '@maat-tools/contracts' }),
 				makeImport({ packageName: '@maat-tools/contracts', specifier: 'node:crypto' }),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 });
@@ -337,39 +333,37 @@ function makePathImport(overrides: Partial<Import> = {}): Import {
 describe('PathLayerRule — file target matching', () => {
 	test('file outside target glob → ignored even with disallowed specifier', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/infrastructure/db.ts', specifier: 'node:fs' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makePathImport({ file: 'src/infrastructure/db.ts', specifier: 'node:fs' })]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('** glob matches deeply nested file', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/deeply/nested/feature/service.ts',
 					specifier: 'uuid',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 	});
 
 	test('* glob matches only single path segment', () => {
 		const rule = layer('./src/domain/*').allows('./src/shared/**').build();
 		// This file is two levels deep — should NOT match './src/domain/*'
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/user/service.ts', specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makePathImport({ file: 'src/domain/user/service.ts', specifier: 'uuid' })]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('* glob matches direct child', () => {
 		const rule = layer('./src/domain/*').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/service.ts', specifier: 'uuid' })],
-		});
+		const findings = rule.evaluate(makeFacts([makePathImport({ file: 'src/domain/service.ts', specifier: 'uuid' })]));
 		expect(findings).toHaveLength(1);
 	});
 });
@@ -377,46 +371,46 @@ describe('PathLayerRule — file target matching', () => {
 describe('PathLayerRule — relative specifier resolution', () => {
 	test('./  imports are always allowed (same-directory)', () => {
 		const rule = layer('./src/domain/**').allows().build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/user/service.ts', specifier: './utils' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makePathImport({ file: 'src/domain/user/service.ts', specifier: './utils' })]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('../ import that stays within the target layer → no finding', () => {
 		// src/domain/user/service.ts + ../auth → src/domain/auth (still in ./src/domain/**)
 		const rule = layer('./src/domain/**').allows('./src/domain/**').build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/user/service.ts', specifier: '../auth' })],
-		});
+		const findings = rule.evaluate(
+			makeFacts([makePathImport({ file: 'src/domain/user/service.ts', specifier: '../auth' })]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('../ import resolved to an allowed path glob → no finding', () => {
 		// src/domain/user/service.ts dirname=src/domain/user → ../../shared/helpers → src/shared/helpers
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/user/service.ts',
 					specifier: '../../shared/helpers',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('../ import resolved to a disallowed path → finding', () => {
 		// src/domain/user/service.ts + ../../../infrastructure/db → src/infrastructure/db (not in allows)
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/user/service.ts',
 					specifier: '../../../infrastructure/db',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: '../../../infrastructure/db' });
 	});
@@ -427,8 +421,8 @@ describe('PathLayerRule — relative specifier resolution', () => {
 		// src/domain/user/service.ts   → dirname=src/domain/user   → ../../shared/helpers → src/shared/helpers
 		// src/domain/user/auth/service.ts → dirname=src/domain/user/auth → ../../../shared/helpers → src/shared/helpers
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/service.ts',
 					specifier: '../shared/helpers',
@@ -441,21 +435,21 @@ describe('PathLayerRule — relative specifier resolution', () => {
 					file: 'src/domain/user/auth/service.ts',
 					specifier: '../../../shared/helpers',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 
 	test('finding message includes the file and original specifier', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/user/service.ts',
 					specifier: '../../../infrastructure/db',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings[0]?.message).toContain('src/domain/user/service.ts');
 		expect(findings[0]?.message).toContain('../../../infrastructure/db');
 	});
@@ -464,17 +458,13 @@ describe('PathLayerRule — relative specifier resolution', () => {
 describe('PathLayerRule — package specifiers in path mode', () => {
 	test('package specifier in allows → no finding', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**', 'react').build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/feature.ts', specifier: 'react' })],
-		});
+		const findings = rule.evaluate(makeFacts([makePathImport({ file: 'src/domain/feature.ts', specifier: 'react' })]));
 		expect(findings).toHaveLength(0);
 	});
 
 	test('package specifier not in allows → finding', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [makePathImport({ file: 'src/domain/feature.ts', specifier: 'lodash' })],
-		});
+		const findings = rule.evaluate(makeFacts([makePathImport({ file: 'src/domain/feature.ts', specifier: 'lodash' })]));
 		expect(findings).toHaveLength(1);
 	});
 
@@ -482,12 +472,12 @@ describe('PathLayerRule — package specifiers in path mode', () => {
 		const rule = layer('./src/domain/**')
 			.allows(/^@company\//)
 			.build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({ file: 'src/domain/feature.ts', specifier: '@company/ui' }),
 				makePathImport({ file: 'src/domain/feature.ts', specifier: 'lodash' }),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: 'lodash' });
 	});
@@ -501,27 +491,27 @@ describe('PathLayerRule — Pure role', () => {
 
 	test('Pure path mode: finding message includes role name', () => {
 		const rule = layer('./src/domain/**').is(Pure).allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/service.ts',
 					specifier: '../../../infrastructure/db',
 				}),
-			],
-		});
+			]),
+		);
 		expect(findings[0]?.message).toContain('Pure');
 	});
 
 	test('Pure path mode: allowed imports produce no findings', () => {
 		const rule = layer('./src/domain/**').is(Pure).allows('./src/shared/**', 'react').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				// src/domain/service.ts → dirname=src/domain → ../shared/utils → src/shared/utils
 				makePathImport({ file: 'src/domain/service.ts', specifier: '../shared/utils' }),
 				makePathImport({ file: 'src/domain/service.ts', specifier: 'react' }),
 				makePathImport({ file: 'src/domain/service.ts', specifier: './local' }),
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(0);
 	});
 });
@@ -529,15 +519,15 @@ describe('PathLayerRule — Pure role', () => {
 describe('PathLayerRule — mixed imports', () => {
 	test('only files in target layer are policed', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				// in target → should be checked
 				makePathImport({ file: 'src/domain/service.ts', specifier: 'uuid' }),
 				// outside target → ignored
 				makePathImport({ file: 'src/infrastructure/db.ts', specifier: 'uuid' }),
 				makePathImport({ file: 'src/shared/utils.ts', specifier: 'uuid' }),
-			],
-		});
+			]),
+		);
 		// Only the domain file produces a finding
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('src/domain/service.ts');
@@ -545,16 +535,129 @@ describe('PathLayerRule — mixed imports', () => {
 
 	test('multiple violations in the same layer all produce findings', () => {
 		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
-		const findings = rule.evaluate({
-			imports: [
+		const findings = rule.evaluate(
+			makeFacts([
 				makePathImport({
 					file: 'src/domain/a.ts',
 					specifier: '../../../infrastructure/repo.ts',
 				}),
 				makePathImport({ file: 'src/domain/b.ts', specifier: 'node:fs' }),
 				makePathImport({ file: 'src/domain/c.ts', specifier: '../shared/helpers' }), // ok — src/domain + ../shared/helpers → src/shared/helpers
-			],
-		});
+			]),
+		);
 		expect(findings).toHaveLength(2);
+	});
+});
+
+// ─── Runtime Coupling via Call Graph ──────────────────────────────────────────
+
+describe('LayerRule — runtime coupling detection', () => {
+	test('call graph edge to disallowed package → runtime coupling finding', () => {
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate(
+			makeFacts(
+				[makeImport({ specifier: '@maat-tools/contracts' })],
+				makeCallGraph({
+					edges: [
+						makeCallEdge({
+							callerId: '/repo/node_modules/@maat-tools/kernel/src/index.ts:10:1',
+							calleeId: '/repo/node_modules/@maat-tools/core/src/index.ts:5:1',
+							location: { file: '/repo/node_modules/@maat-tools/kernel/src/index.ts', line: 10 },
+						}),
+					],
+				}),
+			),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: '@maat-tools/core', runtime: true });
+		expect(findings[0]?.message).toContain('runtime coupling');
+	});
+
+	test('call graph edge to allowed package → no runtime finding', () => {
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts', '@maat-tools/core').build();
+		const findings = rule.evaluate(
+			makeFacts(
+				[makeImport({ specifier: '@maat-tools/contracts' })],
+				makeCallGraph({
+					edges: [
+						makeCallEdge({
+							callerId: '/repo/node_modules/@maat-tools/kernel/src/index.ts:10:1',
+							calleeId: '/repo/node_modules/@maat-tools/core/src/index.ts:5:1',
+							location: { file: '/repo/node_modules/@maat-tools/kernel/src/index.ts', line: 10 },
+						}),
+					],
+				}),
+			),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	test('runtime finding not duplicated when import also violates', () => {
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate(
+			makeFacts(
+				[makeImport({ specifier: '@maat-tools/core' })],
+				makeCallGraph({
+					edges: [
+						makeCallEdge({
+							callerId: '/repo/node_modules/@maat-tools/kernel/src/index.ts:10:1',
+							calleeId: '/repo/node_modules/@maat-tools/core/src/index.ts:5:1',
+							location: { file: '/repo/node_modules/@maat-tools/kernel/src/index.ts', line: 10 },
+						}),
+					],
+				}),
+			),
+		);
+		// Only one finding — the import violation, not a duplicate runtime finding
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier.runtime).not.toBe(true);
+	});
+
+	test('no call graph edges → only import violations', () => {
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
+		const findings = rule.evaluate(makeFacts([makeImport({ specifier: '@maat-tools/contracts' })], makeCallGraph()));
+		expect(findings).toHaveLength(0);
+	});
+});
+
+describe('PathLayerRule — runtime coupling detection', () => {
+	test('call graph edge to disallowed package → runtime coupling finding', () => {
+		const rule = layer('./src/domain/**').allows('./src/shared/**').build();
+		const findings = rule.evaluate(
+			makeFacts(
+				[makePathImport({ file: 'src/domain/service.ts', specifier: '../shared/utils' })],
+				makeCallGraph({
+					edges: [
+						makeCallEdge({
+							callerId: 'src/domain/service.ts:10:1',
+							calleeId: '/repo/node_modules/lodash/src/index.ts:5:1',
+							location: { file: 'src/domain/service.ts', line: 10 },
+						}),
+					],
+				}),
+			),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ specifier: 'lodash', runtime: true });
+		expect(findings[0]?.message).toContain('runtime coupling');
+	});
+
+	test('call graph edge to allowed package → no runtime finding', () => {
+		const rule = layer('./src/domain/**').allows('./src/shared/**', 'lodash').build();
+		const findings = rule.evaluate(
+			makeFacts(
+				[makePathImport({ file: 'src/domain/service.ts', specifier: '../shared/utils' })],
+				makeCallGraph({
+					edges: [
+						makeCallEdge({
+							callerId: 'src/domain/service.ts:10:1',
+							calleeId: '/repo/node_modules/lodash/src/index.ts:5:1',
+							location: { file: 'src/domain/service.ts', line: 10 },
+						}),
+					],
+				}),
+			),
+		);
+		expect(findings).toHaveLength(0);
 	});
 });

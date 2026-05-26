@@ -1,6 +1,6 @@
 import { dirname, join, normalize } from 'node:path';
 import { type Artifact, defineRuleBuilder, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
-import { IMPORTS_CAPABILITY, type Import } from '@maat-tools/vocabulary';
+import { CALL_GRAPH_CAPABILITY, type CallGraph, IMPORTS_CAPABILITY, type Import } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';
 
 export type PureRoleOptions = {
@@ -57,9 +57,9 @@ function packageForSpecifier(specifier: string, packages: ReadonlySet<string>): 
 	return match;
 }
 
-class PathLayerRule implements Rule<'imports'> {
+class PathLayerRule implements Rule<'imports' | 'callGraph'> {
 	public readonly id: string;
-	public readonly needFacts = [IMPORTS_CAPABILITY] as const;
+	public readonly needFacts = [IMPORTS_CAPABILITY, CALL_GRAPH_CAPABILITY] as const;
 
 	public constructor(
 		private readonly target: string,
@@ -70,7 +70,35 @@ class PathLayerRule implements Rule<'imports'> {
 		this.id = `${prefix}:${target}@v1`;
 	}
 
-	public evaluate(facts: { imports: Import[] }): FindingRuleOutput[] {
+	private buildCallGraphPackages(callGraph: CallGraph): Map<string, Set<string>> {
+		const packageCalls = new Map<string, Set<string>>();
+
+		for (const edge of callGraph.edges) {
+			const callerFile = edge.location.file;
+
+			const calleeId = edge.calleeId;
+			const calleeParts = calleeId.split('/node_modules/');
+			let calleePkg: string | null = null;
+			if (calleeParts.length > 1) {
+				const pkgPath = calleeParts[1];
+				calleePkg = pkgPath?.split('/')[0] ?? null;
+			}
+
+			if (calleePkg) {
+				if (!packageCalls.has(callerFile)) {
+					packageCalls.set(callerFile, new Set());
+				}
+				const callers = packageCalls.get(callerFile);
+				if (callers) {
+					callers.add(calleePkg);
+				}
+			}
+		}
+
+		return packageCalls;
+	}
+
+	public evaluate(facts: { imports: Import[]; callGraph: CallGraph }): FindingRuleOutput[] {
 		const findings: FindingRuleOutput[] = [];
 
 		for (const imp of facts.imports) {
@@ -92,6 +120,40 @@ class PathLayerRule implements Rule<'imports'> {
 				message: `"${imp.file}" imports "${imp.specifier}" — not declared in allowed imports${this.role ? ` for ${this.role.name} layer` : ''}`,
 				artifacts: [{ kind: 'import', data: imp }],
 			});
+		}
+
+		const packageCalls = this.buildCallGraphPackages(facts.callGraph);
+
+		for (const imp of facts.imports) {
+			if (!matchGlob(imp.file, this.target)) {
+				continue;
+			}
+
+			const runtimePackages = packageCalls.get(imp.file);
+			if (!runtimePackages) {
+				continue;
+			}
+
+			for (const pkg of runtimePackages) {
+				if (matchesAny(pkg, this.allowed)) {
+					continue;
+				}
+
+				const alreadyReported = findings.some((f) => {
+					const spec = f.ruleIdentifier.specifier as string | undefined;
+					return spec === pkg || spec?.startsWith(`${pkg}/`);
+				});
+				if (alreadyReported) {
+					continue;
+				}
+
+				findings.push({
+					ruleId: this.id,
+					ruleIdentifier: { target: this.target, specifier: pkg, runtime: true },
+					message: `"${imp.file}" has runtime coupling to "${pkg}" via call graph — not declared in allowed imports`,
+					artifacts: [{ kind: 'import', data: imp }],
+				});
+			}
 		}
 
 		return findings;
@@ -237,9 +299,9 @@ class PureLayerRule implements Rule<'imports'> {
 	}
 }
 
-class LayerRule implements Rule<'imports'> {
+class LayerRule implements Rule<'imports' | 'callGraph'> {
 	public readonly id: string;
-	public readonly needFacts = [IMPORTS_CAPABILITY] as const;
+	public readonly needFacts = [IMPORTS_CAPABILITY, CALL_GRAPH_CAPABILITY] as const;
 
 	public constructor(
 		private readonly target: string,
@@ -249,7 +311,50 @@ class LayerRule implements Rule<'imports'> {
 		this.id = `coupling/layer-imports:${target}@v1`;
 	}
 
-	public evaluate(facts: { imports: Import[] }): FindingRuleOutput[] {
+	private buildCallGraphPackages(callGraph: CallGraph, targetPackage: string): Set<string> {
+		const runtimeDeps = new Set<string>();
+
+		for (const edge of callGraph.edges) {
+			const callerFile = edge.location.file;
+			const calleeFile = edge.calleeId.split(':')[0];
+			if (!calleeFile) {
+				continue;
+			}
+
+			const callerPkg = this.extractPackage(callerFile);
+			const calleePkg = this.extractPackage(calleeFile);
+
+			if (callerPkg === targetPackage && calleePkg && calleePkg !== targetPackage) {
+				runtimeDeps.add(calleePkg);
+			}
+		}
+
+		return runtimeDeps;
+	}
+
+	private extractPackage(filePath: string): string | null {
+		const parts = filePath.split('/node_modules/');
+		if (parts.length > 1) {
+			const pkgPath = parts[1];
+			if (!pkgPath) {
+				return null;
+			}
+			const firstSegment = pkgPath.split('/')[0];
+			if (!firstSegment) {
+				return null;
+			}
+			if (firstSegment.startsWith('@')) {
+				const secondSegment = pkgPath.split('/')[1];
+				if (secondSegment) {
+					return `${firstSegment}/${secondSegment}`;
+				}
+			}
+			return firstSegment;
+		}
+		return null;
+	}
+
+	public evaluate(facts: { imports: Import[]; callGraph: CallGraph }): FindingRuleOutput[] {
 		const findings: FindingRuleOutput[] = [];
 
 		for (const imp of facts.imports) {
@@ -269,6 +374,29 @@ class LayerRule implements Rule<'imports'> {
 				message: `"${this.target}" imports "${imp.specifier}" — not declared in allowed imports${this.role ? ` for ${this.role.name} layer` : ''}`,
 
 				artifacts: [{ kind: 'import', data: imp }],
+			});
+		}
+
+		const runtimeDeps = this.buildCallGraphPackages(facts.callGraph, this.target);
+
+		for (const pkg of runtimeDeps) {
+			if (matchesAny(pkg, this.allowed)) {
+				continue;
+			}
+
+			const alreadyReported = findings.some((f) => {
+				const spec = f.ruleIdentifier.specifier as string | undefined;
+				return spec === pkg || spec?.startsWith(`${pkg}/`);
+			});
+			if (alreadyReported) {
+				continue;
+			}
+
+			findings.push({
+				ruleId: this.id,
+				ruleIdentifier: { target: this.target, specifier: pkg, runtime: true },
+				message: `"${this.target}" has runtime coupling to "${pkg}" via call graph — not declared in allowed imports`,
+				artifacts: [],
 			});
 		}
 
@@ -297,7 +425,7 @@ class LayerBuilderState {
 		}
 	}
 
-	public build(): Rule<'imports'> {
+	public build(): Rule<'imports' | 'callGraph'> {
 		if (isPathMode(this.target)) {
 			return new PathLayerRule(this.target, this.role, this.allowed);
 		}
@@ -310,7 +438,7 @@ class LayerBuilderState {
 }
 
 export interface LayerReadyBuilder {
-	build(): Rule<'imports'>;
+	build(): Rule<'imports' | 'callGraph'>;
 	allows(...patterns: (string | RegExp)[]): LayerReadyBuilder;
 }
 

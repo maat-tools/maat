@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { Constant } from '@maat-tools/vocabulary';
+import type { CallGraph, Constant } from '@maat-tools/vocabulary';
 import { ConnascenceOfMeaningRule } from './com';
 
 function makeConstant(overrides: Partial<Constant> = {}): Constant {
@@ -17,6 +17,23 @@ function makeOccurrences(files: string[], value = 'ADMIN'): Constant[] {
 	return files.map((file) => makeConstant({ value, raw: `"${value}"`, location: { file, line: 1 } }));
 }
 
+function makeCallGraph(overrides: Partial<CallGraph> = {}): CallGraph {
+	return {
+		nodes: [],
+		edges: [],
+		...overrides,
+	};
+}
+
+function makeCallEdge(overrides: Partial<CallGraph['edges'][number]> = {}): CallGraph['edges'][number] {
+	return {
+		callerId: '/src/a.ts:1:1',
+		calleeId: '/src/b.ts:1:1',
+		location: { file: '/src/a.ts', line: 1, column: 1 },
+		...overrides,
+	};
+}
+
 // ── evaluate ─────────────────────────────────────────────────────────────────
 
 describe('ConnascenceOfMeaningRule.evaluate()', () => {
@@ -24,6 +41,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts']),
+			callGraph: makeCallGraph(),
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -32,6 +50,12 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph({
+				edges: [
+					makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } }),
+					makeCallEdge({ callerId: '/b.ts:1:1', calleeId: '/c.ts:1:1', location: { file: '/b.ts', line: 1 } }),
+				],
+			}),
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('com@v1');
@@ -42,6 +66,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		// same file repeated 5 times — still only 1 distinct file
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/a.ts', '/a.ts', '/a.ts', '/a.ts']),
+			callGraph: makeCallGraph(),
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -50,6 +75,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts'], 'true'),
+			callGraph: makeCallGraph(),
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -59,6 +85,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		for (const noise of ['', ' ', 'true', 'false', 'null']) {
 			const findings = rule.evaluate({
 				constants: makeOccurrences(['/a.ts', '/b.ts'], noise),
+				callGraph: makeCallGraph(),
 			});
 			expect(findings, `expected "${noise}" to be filtered`).toHaveLength(0);
 		}
@@ -68,15 +95,23 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts'], 'undefined'),
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
 		});
 		expect(findings).toHaveLength(1);
 	});
 
 	test('default threshold is 2', () => {
 		const rule = new ConnascenceOfMeaningRule();
-		const belowDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts']) });
+		const belowDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts']), callGraph: makeCallGraph() });
 		expect(belowDefault).toHaveLength(0);
-		const atDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
+		const atDefault = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts']),
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
+		});
 		expect(atDefault).toHaveLength(1);
 	});
 
@@ -86,7 +121,15 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 			...c,
 			context: 'import' as const,
 		}));
-		const findings = rule.evaluate({ constants });
+		const findings = rule.evaluate({
+			constants,
+			callGraph: makeCallGraph({
+				edges: [
+					makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } }),
+					makeCallEdge({ callerId: '/b.ts:1:1', calleeId: '/c.ts:1:1', location: { file: '/b.ts', line: 1 } }),
+				],
+			}),
+		});
 		expect(findings).toHaveLength(1);
 	});
 
@@ -97,6 +140,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		});
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph(),
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -105,6 +149,12 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph({
+				edges: [
+					makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } }),
+					makeCallEdge({ callerId: '/b.ts:1:1', calleeId: '/c.ts:1:1', location: { file: '/b.ts', line: 1 } }),
+				],
+			}),
 		});
 		expect(findings[0]?.message).toContain('3 files');
 	});
@@ -113,6 +163,9 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts']),
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
 		});
 		expect(findings[0]?.ruleIdentifier).toEqual({ value: 'ADMIN', kind: 'string' });
 	});
@@ -125,7 +178,12 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 			makeConstant({ kind: 'number', value: '42', raw: '42', location: { file: '/a.ts', line: 2 } }),
 			makeConstant({ kind: 'number', value: '42', raw: '42', location: { file: '/b.ts', line: 2 } }),
 		];
-		const findings = rule.evaluate({ constants });
+		const findings = rule.evaluate({
+			constants,
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
+		});
 		expect(findings).toHaveLength(2);
 		const kinds = findings.map((f) => (f.ruleIdentifier as { kind: string }).kind).sort();
 		expect(kinds).toEqual(['number', 'string']);
@@ -135,8 +193,67 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
 		const findings = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph({
+				edges: [
+					makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } }),
+					makeCallEdge({ callerId: '/b.ts:1:1', calleeId: '/c.ts:1:1', location: { file: '/b.ts', line: 1 } }),
+				],
+			}),
 		});
 		expect(findings[0]?.artifacts).toHaveLength(3);
+	});
+
+	test('no call graph connection → finding still produced without flow path info', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts']),
+			callGraph: makeCallGraph(),
+		});
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).not.toContain('flow paths');
+	});
+
+	test('call graph connection → finding includes flow path info', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts']),
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
+		});
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toContain('flow paths');
+		expect(findings[0]?.message).toContain('/a.ts → /b.ts');
+	});
+
+	test('multi-hop flow path is traced correctly', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph({
+				edges: [
+					makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } }),
+					makeCallEdge({ callerId: '/b.ts:1:1', calleeId: '/c.ts:1:1', location: { file: '/b.ts', line: 1 } }),
+				],
+			}),
+		});
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toContain('/a.ts → /b.ts');
+		expect(findings[0]?.message).toContain('/b.ts → /c.ts');
+	});
+
+	test('partial connection — only connected pairs show flow paths', () => {
+		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
+		const findings = rule.evaluate({
+			constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']),
+			callGraph: makeCallGraph({
+				edges: [makeCallEdge({ callerId: '/a.ts:1:1', calleeId: '/b.ts:1:1', location: { file: '/a.ts', line: 1 } })],
+			}),
+		});
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toContain('flow paths');
+		expect(findings[0]?.message).toContain('/a.ts → /b.ts');
+		expect(findings[0]?.message).not.toContain('/c.ts');
 	});
 });
 

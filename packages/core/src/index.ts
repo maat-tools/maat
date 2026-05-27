@@ -1,4 +1,5 @@
 import {
+	type AnyCollector,
 	type AxiomRecord,
 	type CollectorRegistry,
 	type EnricherRegistry,
@@ -25,29 +26,15 @@ type OptionalConfigTuple<
 > = /* biome-ignore lint/complexity/noBannedTypes: empty object check */ {} extends R[K] ? [K] | [K, R[K]] : [K, R[K]];
 type RuleConfigTuples<R> = { [K in keyof R]: OptionalConfigTuple<R, K> }[keyof R];
 
-export type CollectorEntry =
-	| keyof CollectorRegistry
-	| RegistryTuples<CollectorRegistry>
-	| (string & {})
-	| [string & {}, Record<string, unknown>];
+export type CollectorEntry = keyof CollectorRegistry | RegistryTuples<CollectorRegistry> | AnyCollector;
 
-export type RuleEntry =
-	| keyof RuleRegistry
-	| RuleConfigTuples<RuleRegistry>
-	| (string & {})
-	| [string & {}, Record<string, unknown>]
-	| Rule
-	| RuleBuilder;
+export type RuleEntry = keyof RuleRegistry | RuleConfigTuples<RuleRegistry> | Rule | RuleBuilder;
 
 export type EnricherEntry = keyof EnricherRegistry | RegistryTuples<EnricherRegistry>;
 
 export type InsightEntry = (string & {}) | [string & {}, Record<string, unknown>] | Insight;
 
-export type LedgerEntry =
-	| keyof LedgerBackendRegistry
-	| RegistryTuples<LedgerBackendRegistry>
-	| (string & {})
-	| [string & {}, Record<string, unknown>];
+export type LedgerEntry = keyof LedgerBackendRegistry | RegistryTuples<LedgerBackendRegistry> | LedgerBackend;
 
 export type MaatConfig = {
 	check?: { strict: boolean };
@@ -79,8 +66,13 @@ export abstract class RuleBase {
 export abstract class LedgerBackendBase implements LedgerBackend {
 	private readonly runId = ulid();
 
+	public abstract initialize(): Promise<void>;
 	public abstract append(event: LedgerEventInput): Promise<void>;
-	public abstract getState(): Promise<LedgerSnapshot>;
+	public abstract getAllAxioms(): Promise<AxiomRecord[]>;
+	public abstract getAllFindings(): Promise<FindingRecord[]>;
+	public abstract getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null>;
+	public abstract getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null>;
+	public abstract getNotBaselinedFindings(): Promise<FindingRecord[]>;
 
 	protected stampEvent(input: LedgerEventInput): LedgerEvent {
 		return { entry_id: ulid(), run_id: this.runId, ...input } as LedgerEvent;

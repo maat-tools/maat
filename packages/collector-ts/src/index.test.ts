@@ -11,7 +11,7 @@ import {
 } from '@maat-tools/vocabulary';
 import { TSCollector } from './index';
 
-const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../fixtures/sample-project/tsconfig.json');
+const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/sample-project/tsconfig.json');
 
 describe('TSCollector.collect() — imports fact', () => {
 	test('provides imports in provideFacts', () => {
@@ -50,7 +50,10 @@ describe('TSCollector.collect() — imports fact', () => {
 		const files = [...imports.map((imp) => imp.file), ...constants.map((constant) => constant.location.file)];
 
 		expect(files).toContain(
-			relative(process.cwd(), resolve(import.meta.dir, '../fixtures/sample-project/src/index.ts')).replace(/\\/g, '/'),
+			relative(process.cwd(), resolve(import.meta.dir, '../../../tests/fixtures/sample-project/src/index.ts')).replace(
+				/\\/g,
+				'/',
+			),
 		);
 		for (const file of files) {
 			expect(isAbsolute(file)).toBe(false);
@@ -89,7 +92,7 @@ describe('TSCollector.collect() — imports fact', () => {
 	});
 });
 
-const MULTI_PROJECT_ROOT = resolve(import.meta.dir, '../fixtures/multi-project');
+const MULTI_PROJECT_ROOT = resolve(import.meta.dir, '../../../tests/fixtures/multi-project');
 const MULTI_PKG_A_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-a/tsconfig.json');
 const MULTI_PKG_B_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-b/tsconfig.json');
 
@@ -156,7 +159,7 @@ describe('TSCollector — glob in tsConfigFilePath', () => {
 	});
 });
 
-const CROSS_PACKAGE_TSCONFIG = resolve(import.meta.dir, '../fixtures/cross-package/pkg-a/tsconfig.json');
+const CROSS_PACKAGE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/cross-package/pkg-a/tsconfig.json');
 
 describe('TSCollector.collect() — cross-package specifier normalization', () => {
 	test('same-package relative import keeps its original specifier', async () => {
@@ -181,10 +184,10 @@ describe('TSCollector.collect() — cross-package specifier normalization', () =
 		const { imports } = await collector.collect();
 		const imp = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
 		expect(imp?.file).toBe(
-			relative(process.cwd(), resolve(import.meta.dir, '../fixtures/cross-package/pkg-a/src/index.ts')).replace(
-				/\\/g,
-				'/',
-			),
+			relative(
+				process.cwd(),
+				resolve(import.meta.dir, '../../../tests/fixtures/cross-package/pkg-a/src/index.ts'),
+			).replace(/\\/g, '/'),
 		);
 		expect(imp?.location.line).toBeGreaterThan(0);
 	});
@@ -586,15 +589,18 @@ describe('TSCollector.collect() — algorithmicBindings fact', () => {
 	});
 
 	test('does not emit bindings for whitespace-only prefix/suffix in template literals', async () => {
-		const tmpDir = resolve(import.meta.dir, '../fixtures/template-whitespace-test');
+		const tmpDir = resolve(import.meta.dir, '../../../tests/fixtures/template-whitespace-test');
 		const srcDir = resolve(tmpDir, 'src');
 		await mkdir(srcDir, { recursive: true });
 		const tsConfigPath = resolve(tmpDir, 'tsconfig.json');
 
 		await writeFile(tsConfigPath, JSON.stringify({ compilerOptions: {} }));
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: writing TS source code as string literals
 		await writeFile(resolve(srcDir, 'prefix.ts'), 'console.log(`\\n${heading}`);\n');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: writing TS source code as string literals
 		await writeFile(resolve(srcDir, 'suffix.ts'), 'proc.write(`${text}\\n`);\n');
 		await writeFile(resolve(srcDir, 'split.ts'), 'const lines = buffer.split("\\n");\n');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: writing TS source code as string literals
 		await writeFile(resolve(srcDir, 'sep.ts'), 'const msg = `${header}\\n${body}`;\n');
 
 		const collector = new TSCollector({

@@ -23,9 +23,9 @@ const LIFECYCLE_VERBS: Record<AxiomLifecycleStatus, string> = {
 	[FindingStatus.AXIOM_SUPERSEDED]: 'superseded',
 };
 
-function parseFingerprints(value: string | undefined): string[] | undefined {
+function parseFingerprints(value: string | undefined): string[] {
 	if (!value) {
-		return undefined;
+		return [];
 	}
 
 	return value
@@ -70,21 +70,39 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 
 	private async declare(options: DeclareOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. An axiom cannot be recorded without a ledger.');
+			this.printer.error('No ledger configured. An axiom cannot be recorded without a ledger.\n');
 			process.exit(1);
 		}
 
 		if (!options.force) {
-			const snapshot = await this.ledger.getState();
-			const existing = snapshot.axioms[options.id];
+			const existing = await this.ledger.getAxiomByFingerprint(options.id);
 
 			if (existing?.active) {
-				this.printer.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.`);
+				this.printer.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.\n`);
 				process.exit(1);
 			}
 		}
 
 		const fingerprints = parseFingerprints(options.fingerprints);
+
+		if (fingerprints.length > 0) {
+			const invalidFingerprints: string[] = [];
+
+			for (const fingerprint of fingerprints) {
+				const finding = await this.ledger.getFindingByFingerprint(fingerprint);
+				if (!finding) {
+					invalidFingerprints.push(fingerprint);
+				}
+			}
+
+			if (invalidFingerprints.length > 0) {
+				this.printer.error(
+					`The following fingerprints do not correspond to any known findings in the ledger: ${invalidFingerprints.join(', ')}. ` +
+						`Please verify the fingerprints or omit them if you want to declare the axiom without linking it to specific findings.\n`,
+				);
+				process.exit(1);
+			}
+		}
 
 		await this.ledger.append({
 			type: FindingStatus.AXIOM_DECLARED,
@@ -93,36 +111,35 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			scope: options.scope,
 			claim: options.claim,
 			...(options.note === undefined ? {} : { note: options.note }),
-			...(fingerprints === undefined ? {} : { fingerprints }),
+			...(fingerprints.length === 0 ? {} : { fingerprints }),
 		});
 
-		this.printer.success(`Axiom "${options.id}" declared.`);
+		this.printer.success(`Axiom "${options.id}" declared.\n`);
 		this.printer.detail('scope:', options.scope);
-		this.printer.detail('claim:', options.claim);
+		this.printer.detail('\nclaim:', options.claim);
 		if (options.note) {
 			this.printer.detail('note:', options.note);
 		}
-		if (fingerprints && fingerprints.length > 0) {
+		if (fingerprints.length > 0) {
 			this.printer.detail('fingerprints:', fingerprints.join(', '));
 		}
 	}
 
 	private async lifecycle(type: AxiomLifecycleStatus, options: LifecycleOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Axiom lifecycle commands require a ledger.');
+			this.printer.error('No ledger configured. Axiom lifecycle commands require a ledger.\n');
 			process.exit(1);
 		}
 
-		const snapshot = await this.ledger.getState();
-		const axiom = snapshot.axioms[options.id];
+		const axiom = await this.ledger.getAxiomByFingerprint(options.id);
 
-		if (axiom === undefined) {
-			this.printer.error(`Axiom "${options.id}" not found in the ledger.`);
+		if (!axiom) {
+			this.printer.error(`Axiom "${options.id}" not found in the ledger.\n`);
 			process.exit(1);
 		}
 
 		if (!axiom.active) {
-			this.printer.error(`Axiom "${options.id}" is already inactive.`);
+			this.printer.error(`Axiom "${options.id}" is already inactive.\n`);
 			process.exit(1);
 		}
 
@@ -133,7 +150,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 
-		this.printer.warn(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.`);
+		this.printer.warn(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.\n`);
 		if (options.reason) {
 			this.printer.detail('reason:', options.reason);
 		}

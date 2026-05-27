@@ -1,6 +1,3 @@
-import { createRequire } from 'node:module';
-import { pathToFileURL } from 'node:url';
-
 import {
 	type Insight,
 	isCollector,
@@ -19,6 +16,7 @@ import {
 } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
+import { getFileURL, requireFile, resolveModule } from '@maat-tools/utils';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
 import { Axiom } from './commands/axiom';
@@ -30,8 +28,7 @@ import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
 import { Printer } from './printer';
 
-const require = createRequire(import.meta.url);
-const { version } = require('../package.json') as { version: string };
+const { version } = requireFile('../package.json') as { version: string };
 
 type PluginEntry = string | [string, Record<string, unknown>];
 
@@ -43,6 +40,8 @@ function isHelpOrVersionRequest(argv: string[]): boolean {
 	return argv.includes('--help') || argv.includes('-h') || argv.includes('--version') || argv.includes('-V');
 }
 
+const defaultStrictness = { strict: true };
+
 class MaatCLI {
 	private program: Command = new Command();
 	private kernel: Kernel = new Kernel();
@@ -50,6 +49,7 @@ class MaatCLI {
 	private insights: Insight[] = [];
 	private printer: Printer = new Printer();
 	private configFilePath = '';
+	private resolvedPluginPaths = new Set<string>();
 
 	public constructor() {
 		this.program
@@ -61,16 +61,18 @@ class MaatCLI {
 
 	public async run(argv = process.argv) {
 		if (isHelpOrVersionRequest(argv)) {
-			this.registerCommands({ collectors: [], rules: [] }, { warnMissingLedger: false });
+			this.registerNoopCommands();
 			await this.program.parseAsync(argv);
 			return;
 		}
+		const cliArguments = argv.slice(2);
 
 		const loadedConfig = await loadMaatConfig({
-			argv: argv.slice(2),
+			argv: cliArguments,
 			cwd: process.cwd(),
 			env: process.env,
 		});
+
 		this.configFilePath = loadedConfig.filePath;
 		process.chdir(loadedConfig.rootDir);
 
@@ -79,26 +81,37 @@ class MaatCLI {
 		await this.registerRules(loadedConfig.config);
 		await this.configureInsights(loadedConfig.config);
 		await this.configureLedger(loadedConfig.config);
+
+		if (!this.ledger) {
+			this.printer.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.\n');
+		}
+
 		this.registerCommands(loadedConfig.config);
 
-		const commandName = argv.slice(2).find((a) => !a.startsWith('-'));
+		const commandName = cliArguments.find((a) => !a.startsWith('-'));
 		if (commandName && !argv.includes('--silent')) {
-			const start = performance.now();
-			process.on('exit', () => {
-				const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-				process.stderr.write(`${commandName} took ${elapsed}s\n`);
-			});
+			this.trackPerformance(commandName);
 		}
+
 		await this.program.parseAsync(argv);
 	}
 
-	private registerCommands(maatConfig: MaatConfig, options: { warnMissingLedger?: boolean } = {}) {
-		if (!this.ledger && (options.warnMissingLedger ?? true)) {
-			this.printer.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.');
-		}
+	private trackPerformance(commandName: string) {
+		const start = performance.now();
+		process.on('exit', () => {
+			const elapsed = ((performance.now() - start) / 1000).toFixed(2);
+			process.stderr.write(`${commandName} took ${elapsed}s\n`);
+		});
+	}
 
-		const config = { ...maatConfig, check: maatConfig.check ?? { strict: true } };
+	private registerNoopCommands() {
+		this.registerCommands({ collectors: [], rules: [] });
+	}
+
+	private registerCommands(maatConfig: MaatConfig) {
+		const config = { ...maatConfig, check: maatConfig.check ?? defaultStrictness };
 		const args = [this.program, config, this.kernel, this.insights, this.printer, this.ledger] as const;
+
 		const commands: MaatCommand[] = [
 			new Check(...args),
 			new Axiom(...args),
@@ -114,13 +127,24 @@ class MaatCLI {
 	}
 
 	private resolvePlugin(id: string): string {
-		const resolved = createRequire(this.configFilePath).resolve(id);
-		return pathToFileURL(resolved).href;
+		const resolved = resolveModule(this.configFilePath, id);
+		const fileUrl = getFileURL(resolved);
+		if (this.resolvedPluginPaths.has(fileUrl)) {
+			throw new Error(`Plugin "${id}" is already registered`);
+		}
+		this.resolvedPluginPaths.add(fileUrl);
+
+		return fileUrl;
 	}
 
 	private async registerCollectors(maatConfig: MaatConfig) {
 		for (const entry of maatConfig.collectors) {
-			const [collectorId, options] = resolveEntry(entry as PluginEntry);
+			if (isCollector(entry)) {
+				this.kernel.registerCollector(entry);
+				continue;
+			}
+
+			const [collectorId, options] = resolveEntry(entry as unknown as PluginEntry);
 			const factory = (await import(this.resolvePlugin(collectorId))).default;
 
 			if (!isCollectorFactory(factory)) {
@@ -158,11 +182,14 @@ class MaatCLI {
 			const [ruleId, options] = resolveEntry(ruleEntry as PluginEntry);
 			const exported = (await import(this.resolvePlugin(ruleId))).default;
 
-			if (isRuleSet(exported)) {
-				for (const factory of exported.factories) {
-					this.kernel.registerRule(factory(options));
-				}
-			} else if (isRuleFactory(exported)) {
+			if (!isRuleFactory(exported) && !isRuleSet(exported)) {
+				throw new Error(
+					`Plugin "${ruleId}" default export is not a valid RuleFactory or RuleSet. ` +
+						`Use defineRule() or defineRuleSet() from @maat-tools/contracts to define it.`,
+				);
+			}
+
+			if (isRuleFactory(exported)) {
 				const rule = exported(options);
 				if (!isRule(rule)) {
 					throw new Error(
@@ -170,18 +197,25 @@ class MaatCLI {
 							`Ensure the returned object has id, needs, and evaluate().`,
 					);
 				}
+
 				this.kernel.registerRule(rule);
-			} else {
-				throw new Error(
-					`Plugin "${ruleId}" default export is not a valid RuleFactory or RuleSet. ` +
-						`Use defineRule() or defineRuleSet() from @maat-tools/contracts to define it.`,
-				);
+			}
+
+			if (isRuleSet(exported)) {
+				for (const factory of exported.factories) {
+					this.kernel.registerRule(factory(options));
+				}
 			}
 		}
 	}
 
 	private async registerEnrichers(maatConfig: MaatConfig) {
 		for (const entry of maatConfig.enrichers ?? []) {
+			if (isEnricher(entry)) {
+				this.kernel.registerEnricher(entry);
+				continue;
+			}
+
 			const [enricherId, options] = resolveEntry(entry as PluginEntry);
 			const factory = (await import(this.resolvePlugin(enricherId))).default;
 
@@ -222,11 +256,19 @@ class MaatCLI {
 			const [insightId, options] = resolveEntry(entry as PluginEntry);
 			const exported = (await import(this.resolvePlugin(insightId))).default;
 
+			if (!isInsightFactory(exported) && !isInsightSet(exported)) {
+				throw new Error(
+					`Plugin "${insightId}" default export is not a valid InsightFactory or InsightSet. ` +
+						`Use defineInsight() or defineInsightSet() from @maat-tools/contracts to define it.`,
+				);
+			}
 			if (isInsightSet(exported)) {
 				for (const factory of exported.factories) {
 					this.registerInsight(factory(options));
 				}
-			} else if (isInsightFactory(exported)) {
+			}
+
+			if (isInsightFactory(exported)) {
 				const insight = exported(options as Record<string, never>);
 
 				if (!isInsight(insight)) {
@@ -237,11 +279,6 @@ class MaatCLI {
 				}
 
 				this.registerInsight(insight);
-			} else {
-				throw new Error(
-					`Insight "${insightId}" default export is not a valid InsightFactory or InsightSet. ` +
-						`Use defineInsight() or defineInsightSet() from @maat-tools/contracts to define it.`,
-				);
 			}
 		}
 	}
@@ -251,7 +288,7 @@ class MaatCLI {
 			return;
 		}
 
-		const [backendId, options] = resolveEntry(maatConfig.ledger as PluginEntry);
+		const [backendId, options] = resolveEntry(maatConfig.ledger as unknown as PluginEntry);
 		const factory = (await import(this.resolvePlugin(backendId))).default;
 
 		if (!isLedgerBackendFactory(factory)) {
@@ -262,6 +299,7 @@ class MaatCLI {
 		}
 
 		this.ledger = factory(options);
+		await this.ledger.initialize();
 	}
 }
 

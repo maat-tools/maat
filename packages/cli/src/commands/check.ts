@@ -1,4 +1,10 @@
-import { type Finding, FindingStatus, type LedgerBackend, type LedgerSnapshot } from '@maat-tools/contracts';
+import {
+	type AxiomRecord,
+	type Finding,
+	type FindingRecord,
+	FindingStatus,
+	type LedgerBackend,
+} from '@maat-tools/contracts';
 import type { KernelProgressEvent } from '@maat-tools/kernel';
 import type { Printer } from '../printer';
 import { createSpinner } from '../spinner';
@@ -31,13 +37,13 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		if (options.ledger === true && !this.isLedgerProvided()) {
 			printer.error(
-				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to use this feature.',
+				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to use this feature.\n',
 			);
 			process.exit(1);
 		}
 
 		if (options.showBaselined && !this.isLedgerProvided()) {
-			printer.error('--show-baselined requires a ledger to be configured.');
+			printer.error('--show-baselined requires a ledger to be configured.\n');
 			process.exit(1);
 		}
 
@@ -54,8 +60,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				},
 			})
 			.finally(() => spinner?.stop());
-		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 
+		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
 		const actionableFindings = currentFindings.filter((f) => !f.requiresVerification);
 
 		if (!this.isLedgerProvided()) {
@@ -69,20 +75,24 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
 			}
 			if (this.config.check?.strict && actionableFindings.length > 0) {
+				printer.error(
+					'One or more findings that require verification detected. Please address these issues to comply with the defined architecture.\n',
+				);
 				process.exit(1);
 			}
 			return;
 		}
 
-		const snapshot = await this.ledger.getState();
-		const analysis = this.analyzeLedgerState(snapshot, currentFingerprints);
+		const axioms = await this.ledger.getAllAxioms();
+		const findings = await this.ledger.getAllFindings();
+		const analysis = await this.analyzeLedgerState(axioms, findings, currentFingerprints);
 
-		const currentFindingsWithVerification = this.clearVerificationForApprovedFindings(currentFindings, snapshot);
+		const currentFindingsWithVerification = await this.clearVerificationForApprovedFindings(currentFindings);
 
 		if (options.ledger === true) {
 			await this.syncLedgerEvents(
 				this.ledger,
-				snapshot.findings,
+				findings,
 				currentFindingsWithVerification,
 				currentFingerprints,
 				analysis,
@@ -104,12 +114,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				showBaselined: options.showBaselined === true,
 			});
 		}
+
 		if (displayMode === 'all' || displayMode === 'findings') {
 			printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
 		}
+
 		if (displayMode === 'all' || displayMode === 'insights') {
 			await this.printInsights(currentFindingsWithVerification, printer, { warnAboutScope: displayMode === 'all' });
 		}
+
 		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
 	}
 
@@ -130,11 +143,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			return mode as CheckDisplayMode;
 		}
 
-		printer.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.`);
+		printer.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.\n`);
 		process.exit(1);
 	}
 
-	private analyzeLedgerState(snapshot: LedgerSnapshot, currentFingerprints: Set<string>): LedgerAnalysis {
+	private async analyzeLedgerState(
+		axioms: AxiomRecord[],
+		findings: FindingRecord[],
+		currentFingerprints: Set<string>,
+	): Promise<LedgerAnalysis> {
 		const baselinedFingerprints = new Set<string>();
 		const axiomExceptedFingerprints = new Set<string>();
 		let hasRegressions = false;
@@ -142,7 +159,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		let activeAxiomCount = 0;
 		const now = Date.now();
 
-		for (const axiom of Object.values(snapshot.axioms)) {
+		for (const axiom of axioms) {
 			if (axiom.active) {
 				activeAxiomCount++;
 				if (axiom.fingerprints) {
@@ -153,7 +170,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			}
 		}
 
-		for (const record of Object.values(snapshot.findings)) {
+		for (const record of findings) {
 			if (record.baselined) {
 				const expired =
 					record.baseline_expires_at !== undefined && new Date(record.baseline_expires_at).getTime() <= now;
@@ -179,14 +196,17 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private async syncLedgerEvents(
 		ledger: LedgerBackend,
-		findingsSnapshot: LedgerSnapshot['findings'],
+		findings: FindingRecord[],
 		currentFindings: Finding[],
 		currentFingerprints: Set<string>,
 		analysis: LedgerAnalysis,
 	): Promise<void> {
+		if (!this.isLedgerProvided()) {
+			throw new Error('Ledger is not configured');
+		}
 		const timestamp = new Date().toISOString();
 
-		for (const record of Object.values(findingsSnapshot)) {
+		for (const record of findings) {
 			if (currentFingerprints.has(record.fingerprint)) {
 				continue;
 			}
@@ -205,9 +225,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			analysis.axiomExceptedFingerprints,
 		)) {
 			if (finding.requiresVerification) {
-				continue;
-			}
-			if (findingsSnapshot[finding.fingerprint] !== undefined) {
 				continue;
 			}
 			await ledger.append({
@@ -257,7 +274,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	): Promise<void> {
 		if (options.warnAboutScope && this.insights.length > 0) {
 			printer.warn(
-				'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.',
+				'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.\n',
 			);
 		}
 
@@ -282,12 +299,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		if (hasRegressions || hasExpiredBaselines) {
 			if (hasRegressions) {
 				printer.error(
-					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.',
+					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.\n',
 				);
 			}
 			if (hasExpiredBaselines) {
 				printer.error(
-					"One or more baselined findings have expired. Please revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.",
+					"One or more baselined findings have expired. Please revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.\n",
 				);
 			}
 			process.exit(1);
@@ -297,7 +314,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		if (this.config.check?.strict && actionableFindings.length > 0) {
 			printer.error(
-				'One or more findings detected. Please address these issues to comply with the defined architecture.',
+				'One or more findings detected. Please address these issues to comply with the defined architecture.\n',
 			);
 			process.exit(1);
 		}
@@ -309,31 +326,37 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		if (visibleFindings.length === 0) {
 			const summary =
 				activeAxiomCount > 0
-					? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!`
+					? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!\n`
 					: 'No findings detected. Great job!';
 			printer.log(summary);
 		} else {
 			const summary =
 				activeAxiomCount > 0
-					? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.`
-					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.`;
+					? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.\n`
+					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.\n`;
 			printer.log(summary);
 		}
 	}
 
-	private clearVerificationForApprovedFindings(findings: Finding[], snapshot: LedgerSnapshot): Finding[] {
-		return findings.map((finding) => {
-			const record = snapshot.findings[finding.fingerprint];
-			if (!finding.requiresVerification || !record?.verified) {
-				return finding;
-			}
+	private async clearVerificationForApprovedFindings(currentFindings: Finding[]): Promise<Finding[]> {
+		if (!this.isLedgerProvided()) {
+			throw new Error('Ledger is not configured');
+		}
 
-			return {
-				...finding,
-				requiresVerification: false,
-				artifacts: finding.artifacts.filter((a) => a.kind !== 'finding.provenance'),
-			};
-		});
+		return Promise.all(
+			currentFindings.map(async (finding) => {
+				const record = await this.ledger.getFindingByFingerprint(finding.fingerprint);
+				if (!finding.requiresVerification || !record?.verified) {
+					return finding;
+				}
+
+				return {
+					...finding,
+					requiresVerification: false,
+					artifacts: finding.artifacts.filter((a) => a.kind !== 'finding.provenance'),
+				};
+			}),
+		);
 	}
 
 	private getActiveFindings(

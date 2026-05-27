@@ -28,6 +28,7 @@
 
 		// Workspace package resolution
 		"paths": {
+			"@maat-tools/testing": ["./packages/testing/src/index.ts"],
 			"@maat-tools/contracts": ["./packages/contracts/src/index.ts"],
 			"@maat-tools/vocabulary": ["./packages/vocabulary/src/index.ts"],
 			"@maat-tools/core": ["./packages/core/src/index.ts"],
@@ -49,5 +50,12 @@
 			"@maat-tools/cli": ["./packages/cli/src/index.ts"]
 		}
 	},
-	"exclude": ["packages/*/fixtures", "packages/*/dist"]
+	"exclude": [
+		"packages/*/fixtures",
+		"packages/*/dist",
+		"tests/fixtures",
+		"tests/e2e/tsconfig.json",
+		"tests/workflow/tsconfig.json",
+		"tests/integration/tsconfig.json"
+	]
 }

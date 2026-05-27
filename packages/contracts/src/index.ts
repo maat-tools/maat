@@ -169,6 +169,11 @@ export interface Collector<TKeys extends keyof FactRegistry = keyof FactRegistry
 	collect(): Promise<Pick<FactRegistry, TKeys>>;
 }
 
+export type AnyCollector = Omit<Collector<never>, 'provideFacts' | 'collect'> & {
+	readonly provideFacts: readonly string[];
+	collect(): Promise<unknown>;
+};
+
 export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
@@ -197,8 +202,13 @@ export interface Insight {
 }
 
 export interface LedgerBackend {
+	initialize(): Promise<void>;
 	append(event: LedgerEventInput): Promise<void>;
-	getState(): Promise<LedgerSnapshot>;
+	getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null>;
+	getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null>;
+	getNotBaselinedFindings(): Promise<FindingRecord[]>;
+	getAllAxioms(): Promise<AxiomRecord[]>;
+	getAllFindings(): Promise<FindingRecord[]>;
 }
 
 export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (

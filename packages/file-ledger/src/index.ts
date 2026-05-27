@@ -1,6 +1,9 @@
-import { access, appendFile, readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { access, appendFile } from 'node:fs/promises';
 import {
+	type AxiomRecord,
 	defineLedgerBackend,
+	type FindingRecord,
 	type LedgerBackend,
 	type LedgerEvent,
 	type LedgerEventInput,
@@ -29,6 +32,9 @@ const EMPTY_SNAPSHOT: LedgerSnapshot = {
 };
 
 export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBackend {
+	private initialized = false;
+	private cache: LedgerSnapshot | null = null;
+
 	public constructor(private readonly options: FilePathLedgerOptions) {
 		super();
 		if (!options.path.endsWith('.ndjson')) {
@@ -36,13 +42,71 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		}
 	}
 
-	public async append(input: LedgerEventInput): Promise<void> {
-		const event = this.stampEvent(input);
-		await appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8');
+	public async initialize(): Promise<void> {
+		if (this.initialized) {
+			throw new Error('FilePathLedgerBackend: already initialized');
+		}
+		this.cache = await this.getState();
+		this.initialized = true;
 	}
 
-	public async getState(): Promise<LedgerSnapshot> {
+	public async append(input: LedgerEventInput): Promise<void> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		try {
+			const event = this.stampEvent(input);
+			await appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8');
+			this.cache = this.applyEvent(this.cache, event);
+		} catch (err) {
+			throw new Error(`FilePathLedgerBackend: failed to append event: ${(err as Error).message}`);
+		}
+	}
+
+	public async getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		return this.cache.axioms[fingerprint] ?? null;
+	}
+
+	public async getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		return this.cache.findings[fingerprint] ?? null;
+	}
+
+	public async getNotBaselinedFindings(): Promise<FindingRecord[]> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		return Object.values(this.cache.findings).filter((f) => !f.baselined);
+	}
+
+	public async getAllAxioms(): Promise<AxiomRecord[]> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		return Object.values(this.cache.axioms);
+	}
+
+	public async getAllFindings(): Promise<FindingRecord[]> {
+		if (!this.initialized || this.cache === null) {
+			throw new Error('FilePathLedgerBackend: not initialized');
+		}
+
+		return Object.values(this.cache.findings);
+	}
+
+	private async getState(): Promise<LedgerSnapshot> {
 		const events = await this.readLog();
+
 		return events.reduce((snapshot, event) => this.applyEvent(snapshot, event), EMPTY_SNAPSHOT as LedgerSnapshot);
 	}
 
@@ -55,7 +119,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 			return [];
 		}
 
-		const text = await readFile(this.options.path, 'utf-8');
+		const text = readFileSync(this.options.path, 'utf-8');
 		return text.trim().length === 0
 			? []
 			: text
@@ -67,7 +131,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 
 declare module '@maat-tools/contracts' {
 	interface LedgerBackendRegistry {
-		'@maat-tools/ledger': FilePathLedgerOptions;
+		'@maat-tools/file-ledger': FilePathLedgerOptions;
 	}
 }
 

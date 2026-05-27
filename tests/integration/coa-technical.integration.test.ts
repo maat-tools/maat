@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { resolve } from 'node:path';
 import { TSCollector } from '@maat-tools/collector-ts';
+import { coaTechnical } from '@maat-tools/connascence-rules';
 import type { Finding } from '@maat-tools/contracts';
 import { Kernel } from '@maat-tools/kernel';
 import { tsAlgorithmicPatterns } from '@maat-tools/presets-ts';
-import coaTechnical from './technical';
 
-const FIXTURE_DIR = resolve(import.meta.dir, '../../fixtures/coa');
+const FIXTURE_DIR = resolve(import.meta.dir, '../fixtures/coa');
 const FIXTURE_TSCONFIG = resolve(FIXTURE_DIR, 'tsconfig.json');
 
 let findings: Finding[];
@@ -67,12 +67,16 @@ describe('connascence-rules e2e — coa-technical with dedicated fixture', () =>
 		const prefixFinding = findings.find(
 			(f) =>
 				f.ruleId === COA_RULE &&
-				f.artifacts.some((a) => a.kind === 'algorithmicBinding' && (a.data as any).file.includes('prefix')),
+				f.artifacts.some(
+					(a) => a.kind === 'algorithmicBinding' && (a.data as { file: string }).file.includes('prefix'),
+				),
 		);
 		const suffixFinding = findings.find(
 			(f) =>
 				f.ruleId === COA_RULE &&
-				f.artifacts.some((a) => a.kind === 'algorithmicBinding' && (a.data as any).file.includes('suffix')),
+				f.artifacts.some(
+					(a) => a.kind === 'algorithmicBinding' && (a.data as { file: string }).file.includes('suffix'),
+				),
 		);
 		expect(prefixFinding).toBeUndefined();
 		expect(suffixFinding).toBeUndefined();

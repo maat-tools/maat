@@ -5,9 +5,10 @@ function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
 	const described = rule?.describeArtifact(artifact) ?? {
 		[artifact.kind]: String(artifact.data),
 	};
+
 	return Object.entries(described)
 		.map(([k, v]) => `${k}: ${v}`)
-		.join('  ');
+		.join(' ');
 }
 
 export class Printer {
@@ -25,29 +26,29 @@ export class Printer {
 		if (this.silent) {
 			return;
 		}
-		console.log(message);
+		process.stdout.write(message);
 	}
 
 	public warn(message: string): void {
 		if (this.silent) {
 			return;
 		}
-		console.warn(chalk.yellow(message));
+		process.stderr.write(chalk.yellow(message));
 	}
 
 	public error(message: string): void {
 		if (this.silent) {
 			return;
 		}
-		console.error(chalk.red(message));
+		process.stderr.write(chalk.red(message));
 	}
 
 	public section(heading: string): void {
 		if (this.silent) {
 			return;
 		}
-		console.log(`\n${chalk.bold(heading)}`);
-		console.log(chalk.dim('─'.repeat(heading.length)));
+		process.stdout.write(`\n${chalk.bold(heading)}\n`);
+		process.stdout.write(`${chalk.dim('─'.repeat(heading.length))}\n`);
 	}
 
 	public findings(findings: Finding[], getRule: (id: string) => Rule | undefined): void {
@@ -66,12 +67,12 @@ export class Printer {
 
 		for (const [ruleId, group] of byRule) {
 			const rule = getRule(ruleId);
-			console.log(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)`);
+			process.stdout.write(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)\n`);
 			for (const f of group) {
 				const badge = f.requiresVerification ? chalk.yellow('[Verify] ') : '';
-				console.log(`    ${chalk.dim(f.fingerprint.slice(0, 8))}  ${badge}${f.message}`);
+				process.stdout.write(`    ${chalk.dim(f.fingerprint.slice(0, 8))}  ${badge}${f.message}\n`);
 				for (const artifact of f.artifacts) {
-					console.log(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}`);
+					process.stdout.write(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}\n`);
 				}
 			}
 		}
@@ -83,7 +84,7 @@ export class Printer {
 		}
 		this.section('RUN CONTEXT');
 		for (const line of lines) {
-			console.log(`  ${chalk.dim('-')} ${line}`);
+			process.stdout.write(`  ${chalk.dim('-')} ${line}\n`);
 		}
 	}
 
@@ -91,24 +92,38 @@ export class Printer {
 		if (this.silent) {
 			return;
 		}
-		console.log(`  ${chalk.magenta(`[${result.insightId}]`)} ${result.message}`);
+		process.stdout.write(`  ${chalk.magenta(`[${result.insightId}]`)} ${result.message}\n`);
 	}
 
 	public json(data: unknown): void {
-		console.log(JSON.stringify(data, null, 2));
+		process.stdout.write(JSON.stringify(data, null, 2));
 	}
 
 	public success(message: string): void {
 		if (this.silent) {
 			return;
 		}
-		console.log(chalk.green(message));
+		process.stdout.write(chalk.green(message));
 	}
 
 	public detail(label: string, value: string): void {
 		if (this.silent) {
 			return;
 		}
-		console.log(`  ${chalk.bold(label)} ${value}`);
+		process.stdout.write(`  ${chalk.bold(label)} ${value}`);
+	}
+
+	public bold(message: string): void {
+		if (this.silent) {
+			return;
+		}
+		process.stdout.write(chalk.bold(message));
+	}
+
+	public info(message: string): void {
+		if (this.silent) {
+			return;
+		}
+		process.stdout.write(chalk.cyanBright(message));
 	}
 }

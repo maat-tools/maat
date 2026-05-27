@@ -1,48 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Collector, Enricher, Rule } from '@maat-tools/contracts';
+import { makeCollector, makeEnricher, makeRule } from '@maat-tools/testing';
 import { Kernel } from './index';
-
-declare module '@maat-tools/contracts' {
-	interface FactRegistry {
-		testFacts: string[];
-		otherFacts: string[];
-		enrichedFacts: string[];
-	}
-}
-
-function makeCollector(items: string[], id = 'test-collector'): Collector<'testFacts'> {
-	return {
-		id,
-		provideFacts: ['testFacts'] as const,
-		collect: async () => ({ testFacts: items }),
-	};
-}
-
-function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
-	return {
-		id,
-		needFacts: ['testFacts'] as const,
-		evaluate: ({ testFacts }) =>
-			testFacts.map((value, i) => ({
-				ruleId: id,
-				ruleIdentifier: { value, i },
-				message: `finding: ${value}`,
-				artifacts: [],
-			})),
-		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
-	};
-}
-
-function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
-	return {
-		id: 'test-enricher',
-		needFacts: ['testFacts'] as const,
-		provideFacts: ['enrichedFacts'] as const,
-		enrich: async ({ testFacts }) => ({
-			enrichedFacts: testFacts.map((v) => `enriched:${v}`),
-		}),
-	};
-}
 
 function makeRuleConsumingEnriched(id = 'rule-enriched@v1'): Rule<'enrichedFacts'> {
 	return {
@@ -66,7 +25,6 @@ function deferred<T>() {
 		resolve = res;
 		reject = rej;
 	});
-
 	return { promise, resolve, reject };
 }
 
@@ -82,7 +40,6 @@ describe('Kernel.run', () => {
 
 	test('collector provides facts, rule consumes them → findings produced', async () => {
 		const kernel = new Kernel().registerCollector(makeCollector(['x'])).registerRule(makeRule());
-
 		const { findings } = await kernel.run();
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('rule@v1');
@@ -99,7 +56,6 @@ describe('Kernel.run', () => {
 			.registerCollector(makeCollector(['a'], 'collector-a'))
 			.registerCollector(makeCollector(['b'], 'collector-b'))
 			.registerRule(makeRule());
-
 		const { findings } = await kernel.run();
 		expect(findings).toHaveLength(2);
 	});
@@ -124,7 +80,6 @@ describe('Kernel.run', () => {
 			.registerCollector(makeCollector(['visible']))
 			.registerCollector(otherCollector)
 			.registerRule(inspectingRule);
-
 		await kernel.run();
 		expect(seenKeys).toEqual([['testFacts']]);
 	});
@@ -154,9 +109,8 @@ describe('Kernel.run', () => {
 			.registerCollector(firstCollector)
 			.registerCollector(secondCollector)
 			.registerRule(makeRule());
-
 		const { findings } = await Promise.race([kernel.run(), timeout(100)]);
-		expect(findings.map((finding) => finding.message)).toEqual(['finding: first', 'finding: second']);
+		expect(findings.map((f) => f.message)).toEqual(['finding: first', 'finding: second']);
 	});
 
 	test('same input across two runs produces identical fingerprints', async () => {
@@ -165,7 +119,6 @@ describe('Kernel.run', () => {
 				.registerCollector(makeCollector(['stable']))
 				.registerRule(makeRule())
 				.run();
-
 		const [r1, r2] = await Promise.all([build(), build()]);
 		expect(r1.findings.map((f) => f.fingerprint)).toEqual(r2.findings.map((f) => f.fingerprint));
 	});
@@ -177,7 +130,6 @@ describe('Kernel.run with enrichers', () => {
 			.registerCollector(makeCollector(['x']))
 			.registerEnricher(makeEnricher())
 			.registerRule(makeRuleConsumingEnriched());
-
 		const { findings } = await kernel.run();
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toBe('finding: enriched:x');
@@ -188,19 +140,14 @@ describe('Kernel.run with enrichers', () => {
 			.registerCollector(makeCollector(['x']))
 			.registerEnricher(makeEnricher())
 			.registerRule(makeRuleConsumingEnriched());
-
 		const { findings } = await kernel.run();
-		expect(findings).toHaveLength(1);
 		expect(findings[0]?.requiresVerification).toBe(true);
-		const provenanceArtifacts = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
-		expect(provenanceArtifacts).toHaveLength(1);
-		expect(provenanceArtifacts?.[0]?.data).toEqual({
-			requiresVerification: true,
-			sources: ['enrichedFacts'],
-		});
+		const provenance = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
+		expect(provenance).toHaveLength(1);
+		expect(provenance?.[0]?.data).toEqual({ requiresVerification: true, sources: ['enrichedFacts'] });
 	});
 
-	test('rule consuming both collector and enriched facts gets requiresVerification true and provenance injected', async () => {
+	test('rule consuming both collector and enriched facts gets requiresVerification and provenance', async () => {
 		const mixedRule: Rule<'testFacts' | 'enrichedFacts'> = {
 			id: 'mixed@v1',
 			needFacts: ['testFacts', 'enrichedFacts'] as const,
@@ -214,22 +161,17 @@ describe('Kernel.run with enrichers', () => {
 			],
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
-
 		const kernel = new Kernel()
 			.registerCollector(makeCollector(['a']))
 			.registerEnricher(makeEnricher())
 			.registerRule(mixedRule);
-
 		const { findings } = await kernel.run();
-		expect(findings).toHaveLength(1);
 		expect(findings[0]?.requiresVerification).toBe(true);
-		const provenanceArtifacts = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
-		expect(provenanceArtifacts).toHaveLength(1);
+		expect(findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance')).toHaveLength(1);
 	});
 
 	test('enricher skipped when required facts are missing', async () => {
 		const kernel = new Kernel().registerEnricher(makeEnricher()).registerRule(makeRuleConsumingEnriched());
-
 		const { findings } = await kernel.run();
 		expect(findings).toEqual([]);
 	});
@@ -239,7 +181,6 @@ describe('Kernel.run with enrichers', () => {
 			.registerCollector(makeCollector(['a']))
 			.registerEnricher(makeEnricher())
 			.registerRule(makeRule());
-
 		const { findings } = await kernel.run();
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toBe('finding: a');
@@ -265,40 +206,24 @@ describe('Kernel fluent interface', () => {
 
 describe('Kernel.registerCollector validation', () => {
 	test('throws if collector id is empty', () => {
-		const collector = {
-			id: '',
-			provideFacts: ['testFacts'] as const,
-			collect: async () => ({ testFacts: [] }),
-		};
+		const collector = { id: '', provideFacts: ['testFacts'] as const, collect: async () => ({ testFacts: [] }) };
 		expect(() => new Kernel().registerCollector(collector)).toThrow('non-empty id');
 	});
 
 	test('throws if collector id is whitespace', () => {
-		const collector = {
-			id: '   ',
-			provideFacts: ['testFacts'] as const,
-			collect: async () => ({ testFacts: [] }),
-		};
+		const collector = { id: '   ', provideFacts: ['testFacts'] as const, collect: async () => ({ testFacts: [] }) };
 		expect(() => new Kernel().registerCollector(collector)).toThrow('non-empty id');
 	});
 
 	test('throws if provideFacts is empty', () => {
-		const collector = {
-			id: 'c',
-			provideFacts: [] as const,
-			collect: async () => ({}),
-		};
+		const collector = { id: 'c', provideFacts: [] as const, collect: async () => ({}) };
 		expect(() => new Kernel().registerCollector(collector as unknown as Collector<'testFacts'>)).toThrow(
 			'provideFacts',
 		);
 	});
 
 	test('throws if collect is not a function', () => {
-		const collector = {
-			id: 'c',
-			provideFacts: ['testFacts'] as const,
-			collect: 'bad',
-		};
+		const collector = { id: 'c', provideFacts: ['testFacts'] as const, collect: 'bad' };
 		expect(() => new Kernel().registerCollector(collector as unknown as Collector<'testFacts'>)).toThrow('collect');
 	});
 });
@@ -318,11 +243,7 @@ describe('Kernel.registerRule validation', () => {
 	});
 
 	test('throws if evaluate is not a function', () => {
-		const rule = {
-			id: 'r@v1',
-			needFacts: ['testFacts'] as const,
-			evaluate: 'bad',
-		};
+		const rule = { id: 'r@v1', needFacts: ['testFacts'] as const, evaluate: 'bad' };
 		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('evaluate');
 	});
 });

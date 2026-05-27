@@ -55,10 +55,9 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 		];
 		const findings = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
-		const finding = findings[0]!;
-		expect(finding.message).toContain('pack-unpack');
-		expect(finding.message).toContain(':');
-		expect(finding.artifacts).toHaveLength(2);
+		expect(findings[0]?.message).toContain('pack-unpack');
+		expect(findings[0]?.message).toContain(':');
+		expect(findings[0]?.artifacts).toHaveLength(2);
 	});
 
 	test('patterns option filters unrelated pattern ids', () => {
@@ -71,8 +70,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 		];
 		const findings = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
-		const finding = findings[0]!;
-		expect(finding.message).toContain('pack-unpack');
+		expect(findings[0]?.message).toContain('pack-unpack');
 	});
 
 	test('requireCompletePair=false allows single-role findings across files', () => {
@@ -83,8 +81,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 		];
 		const findings = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
-		const finding = findings[0]!;
-		expect(finding.message).toContain('sha256');
+		expect(findings[0]?.message).toContain('sha256');
 	});
 
 	test('bindingKey containing delimiter "::" is preserved correctly', () => {
@@ -95,10 +92,9 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 		];
 		const findings = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
-		const finding = findings[0]!;
-		expect(finding.message).toContain('pack-unpack');
-		expect(finding.message).toContain('::');
-		expect(finding.message).not.toContain('""');
+		expect(findings[0]?.message).toContain('pack-unpack');
+		expect(findings[0]?.message).toContain('::');
+		expect(findings[0]?.message).not.toContain('""');
 	});
 
 	test('requireSameContainer=true suppresses finding when roles are in different containers', () => {

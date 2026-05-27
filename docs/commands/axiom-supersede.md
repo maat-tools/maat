@@ -4,6 +4,7 @@ Marks an active axiom as replaced by a newer decision.
 
 ```bash
 maat axiom supersede --id stable-boundary --reason "Replaced by package-boundary-rule"
+maat --config ./path/to/maat.config.ts axiom supersede --id stable-boundary --reason "Replaced by package-boundary-rule"
 ```
 
 ## What superseding means

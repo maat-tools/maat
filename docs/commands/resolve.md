@@ -4,6 +4,7 @@ Marks a finding fingerprint as intentionally fixed.
 
 ```bash
 maat resolve --fingerprint <fingerprint>
+maat --config ./path/to/maat.config.ts resolve --fingerprint <fingerprint>
 ```
 
 ## Why resolution is explicit

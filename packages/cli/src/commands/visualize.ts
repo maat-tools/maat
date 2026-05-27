@@ -34,13 +34,12 @@ function toFinding(record: FindingRecord): Finding {
 export class Visualize extends MaatCommandBase implements MaatCommand {
 	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot visualize without a ledger.');
+			this.printer.error('No ledger configured. Cannot visualize without a ledger.\n');
 			process.exit(1);
 		}
 
-		const snapshot = await this.ledger.getState();
-		const allFindings = Object.values(snapshot.findings);
-		const allAxioms = Object.values(snapshot.axioms);
+		const allFindings = await this.ledger.getAllFindings();
+		const allAxioms = await this.ledger.getAllAxioms();
 
 		const activeGroups = filter ? new Set(filter.split(',').map((s) => s.trim() as Group)) : new Set(GROUP_ORDER);
 
@@ -75,21 +74,26 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			if (records.length === 0) {
 				continue;
 			}
+
 			hasOutput = true;
 			const heading = `${group.toUpperCase()} (${records.length})`;
 			this.printer.section(heading);
 			for (const r of records) {
-				this.printer.log(`  ${r.fingerprint.slice(0, 8)}  [${r.rule_id}] ${r.message}`);
+				this.printer.log(`  ${r.fingerprint.slice(0, 8)}`);
+				this.printer.info(` [${r.rule_id}]`);
+				this.printer.log(` ${r.message}`);
 			}
 		}
 
 		if (axioms !== false && allAxioms.length > 0) {
 			hasOutput = true;
-			const heading = `AXIOMS (${allAxioms.length})`;
+			const heading = `\nAXIOMS (${allAxioms.length})`;
 			this.printer.section(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				this.printer.log(`  ${axiom.axiom_id}  [${axiom.scope}] ${axiom.claim}${note}`);
+				this.printer.info(`\n${axiom.axiom_id}`);
+				this.printer.bold(` [${axiom.scope}]`);
+				this.printer.log(` ${axiom.claim}${note}`);
 			}
 		}
 

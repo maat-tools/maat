@@ -197,8 +197,13 @@ export interface Insight {
 }
 
 export interface LedgerBackend {
+	initialize(): Promise<void>;
 	append(event: LedgerEventInput): Promise<void>;
-	getState(): Promise<LedgerSnapshot>;
+	getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null>;
+	getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null>;
+	getNotBaselinedFindings(): Promise<FindingRecord[]>;
+	getAllAxioms(): Promise<AxiomRecord[]>;
+	getAllFindings(): Promise<FindingRecord[]>;
 }
 
 export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (

@@ -12,7 +12,7 @@ type BaselineOptions = {
 export class Baseline extends MaatCommandBase implements MaatCommand {
 	public async action(options: BaselineOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot baseline without a ledger.');
+			this.printer.error('No ledger configured. Cannot baseline without a ledger.\n');
 			process.exit(1);
 		}
 
@@ -23,11 +23,10 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 
 		const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
 
-		const snapshot = await this.ledger.getState();
-		const toBaseline = Object.values(snapshot.findings).filter((r) => !r.baselined);
+		const toBaseline = await this.ledger.getNotBaselinedFindings();
 
 		if (toBaseline.length === 0) {
-			this.printer.log('Nothing to baseline. All observed findings are already baselined.');
+			this.printer.log('Nothing to baseline. All observed findings are already baselined.\n');
 			return;
 		}
 
@@ -41,7 +40,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		}
 
 		this.printer.log(
-			`Baselined ${toBaseline.length} finding(s). Baseline expires in ${expiresInDays} day(s) on ${expiresAt.slice(0, 10)}.`,
+			`Baselined ${toBaseline.length} finding(s). Baseline expires in ${expiresInDays} day(s) on ${expiresAt.slice(0, 10)}.\n`,
 		);
 	}
 
@@ -52,17 +51,17 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 
 		const days = Number(raw);
 		if (!Number.isInteger(days) || Number.isNaN(days)) {
-			this.printer.error(`--expires-in must be an integer number of days.`);
+			this.printer.error(`--expires-in must be an integer number of days.\n`);
 
 			return null;
 		}
 		if (days < 1) {
-			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.`);
+			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.\n`);
 
 			return null;
 		}
 		if (days > BASELINE_MAX_DAYS) {
-			this.printer.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.`);
+			this.printer.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.\n`);
 
 			return null;
 		}

@@ -9,20 +9,19 @@ type ResolveOptions = {
 export class Resolve extends MaatCommandBase implements MaatCommand {
 	public async action({ fingerprint }: ResolveOptions) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot resolve without a ledger.');
+			this.printer.error('No ledger configured. Cannot resolve without a ledger.\n');
 			process.exit(1);
 		}
 
-		const snapshot = await this.ledger.getState();
-		const record = snapshot.findings[fingerprint];
+		const record = await this.ledger.getFindingByFingerprint(fingerprint);
 
-		if (record === undefined) {
-			this.printer.error(`No finding with fingerprint "${fingerprint}" found in the ledger.`);
+		if (!record) {
+			this.printer.error(`No finding with fingerprint "${fingerprint}" found in the ledger.\n`);
 			process.exit(1);
 		}
 
 		if (record.state === FindingStatus.RESOLVED) {
-			this.printer.warn(`Finding "${fingerprint}" is already resolved. Nothing to do.`);
+			this.printer.warn(`Finding "${fingerprint}" is already resolved. Nothing to do.\n`);
 
 			return;
 		}
@@ -33,7 +32,7 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 			fingerprint,
 		});
 
-		this.printer.log(`Finding "${fingerprint}" resolved.`);
+		this.printer.log(`Finding "${fingerprint}" resolved.\n`);
 	}
 
 	public register(): void {

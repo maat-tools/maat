@@ -1,6 +1,6 @@
 import {
+	type AnyCollector,
 	type AxiomRecord,
-	type Collector,
 	type CollectorRegistry,
 	type EnricherRegistry,
 	type FindingRecord,
@@ -26,8 +26,7 @@ type OptionalConfigTuple<
 > = /* biome-ignore lint/complexity/noBannedTypes: empty object check */ {} extends R[K] ? [K] | [K, R[K]] : [K, R[K]];
 type RuleConfigTuples<R> = { [K in keyof R]: OptionalConfigTuple<R, K> }[keyof R];
 
-// biome-ignore lint/suspicious/noExplicitAny: collector accepts any config
-export type CollectorEntry = keyof CollectorRegistry | RegistryTuples<CollectorRegistry> | Collector<any>;
+export type CollectorEntry = keyof CollectorRegistry | RegistryTuples<CollectorRegistry> | AnyCollector;
 
 export type RuleEntry = keyof RuleRegistry | RuleConfigTuples<RuleRegistry> | Rule | RuleBuilder;
 

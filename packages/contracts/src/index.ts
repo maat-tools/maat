@@ -169,6 +169,11 @@ export interface Collector<TKeys extends keyof FactRegistry = keyof FactRegistry
 	collect(): Promise<Pick<FactRegistry, TKeys>>;
 }
 
+export type AnyCollector = Omit<Collector<never>, 'provideFacts' | 'collect'> & {
+	readonly provideFacts: readonly string[];
+	collect(): Promise<unknown>;
+};
+
 export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];

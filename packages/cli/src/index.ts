@@ -144,7 +144,7 @@ class MaatCLI {
 				continue;
 			}
 
-			const [collectorId, options] = resolveEntry(entry as PluginEntry);
+			const [collectorId, options] = resolveEntry(entry as unknown as PluginEntry);
 			const factory = (await import(this.resolvePlugin(collectorId))).default;
 
 			if (!isCollectorFactory(factory)) {
@@ -288,7 +288,7 @@ class MaatCLI {
 			return;
 		}
 
-		const [backendId, options] = resolveEntry(maatConfig.ledger as PluginEntry);
+		const [backendId, options] = resolveEntry(maatConfig.ledger as unknown as PluginEntry);
 		const factory = (await import(this.resolvePlugin(backendId))).default;
 
 		if (!isLedgerBackendFactory(factory)) {

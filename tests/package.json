@@ -1,0 +1,24 @@
+{
+  "name": "@maat-tools/tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14"
+  },
+  "dependencies": {
+    "@maat-tools/collector-ts": "workspace:*",
+    "@maat-tools/connascence-rules": "workspace:*",
+    "@maat-tools/contracts": "workspace:*",
+    "@maat-tools/core": "workspace:*",
+    "@maat-tools/coupling-rules": "workspace:*",
+    "@maat-tools/file-ledger": "workspace:*",
+    "@maat-tools/kernel": "workspace:*",
+    "@maat-tools/presets-ts": "workspace:*",
+    "@maat-tools/testing": "workspace:*",
+    "commander": "14.0.3"
+  }
+}

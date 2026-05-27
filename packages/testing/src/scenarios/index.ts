@@ -1,5 +1,5 @@
-import { FindingStatus, generateFingerprint } from '@maat-tools/contracts';
 import type { FindingRuleOutput } from '@maat-tools/contracts';
+import { FindingStatus, generateFingerprint } from '@maat-tools/contracts';
 import type { LedgerHarness } from '../harness/ledger';
 
 export async function scenarioObserved(harness: LedgerHarness, output: FindingRuleOutput): Promise<string> {

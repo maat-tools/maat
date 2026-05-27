@@ -2,7 +2,6 @@ import type { Collector, Enricher, FindingRuleOutput, Rule } from '@maat-tools/c
 import { Kernel } from '@maat-tools/kernel';
 import '../facts';
 
-
 export function makeCollector(items: string[], id = 'test-collector'): Collector<'testFacts'> {
 	return {
 		id,
@@ -10,7 +9,6 @@ export function makeCollector(items: string[], id = 'test-collector'): Collector
 		collect: async () => ({ testFacts: items }),
 	};
 }
-
 
 export function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
 	return {

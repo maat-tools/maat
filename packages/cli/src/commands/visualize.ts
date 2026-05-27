@@ -13,13 +13,14 @@ type Group = 'resolved' | 'observed' | 'baselined';
 
 const GROUP_ORDER: Group[] = ['resolved', 'observed', 'baselined'];
 
-const STATUS_TO_GROUP: Partial<Record<FindingStatus, Group>> = {
-	[FindingStatus.BASELINED]: 'baselined',
-	[FindingStatus.RESOLVED]: 'resolved',
-};
-
 function classify(record: FindingRecord): Group {
-	return STATUS_TO_GROUP[record.state] ?? 'observed';
+	if (record.state === FindingStatus.RESOLVED) {
+		return 'resolved';
+	}
+	if (record.baselined) {
+		return 'baselined';
+	}
+	return 'observed';
 }
 
 function toFinding(record: FindingRecord): Finding {

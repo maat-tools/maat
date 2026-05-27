@@ -8,41 +8,37 @@ export class ConsoleCapture {
 	private outSpy?: WriteSpy;
 	private errSpy?: WriteSpy;
 
-	setup(): void {
+	public setup(): void {
 		this._stdout = [];
 		this._stderr = [];
-		this.outSpy = spyOn(process.stdout, 'write').mockImplementation(
-			((chunk: Uint8Array | string) => {
-				this._stdout.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
-				return true;
-			}) as typeof process.stdout.write,
-		);
-		this.errSpy = spyOn(process.stderr, 'write').mockImplementation(
-			((chunk: Uint8Array | string) => {
-				this._stderr.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
-				return true;
-			}) as typeof process.stderr.write,
-		);
+		this.outSpy = spyOn(process.stdout, 'write').mockImplementation(((chunk: Uint8Array | string) => {
+			this._stdout.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
+			return true;
+		}) as typeof process.stdout.write);
+		this.errSpy = spyOn(process.stderr, 'write').mockImplementation(((chunk: Uint8Array | string) => {
+			this._stderr.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString());
+			return true;
+		}) as typeof process.stderr.write);
 	}
 
-	teardown(): void {
+	public teardown(): void {
 		this.outSpy?.mockRestore();
 		this.errSpy?.mockRestore();
 	}
 
-	get stdout(): string {
+	public get stdout(): string {
 		return this._stdout.join('');
 	}
 
-	get stderr(): string {
+	public get stderr(): string {
 		return this._stderr.join('');
 	}
 
-	lines(): string[] {
+	public lines(): string[] {
 		return this.stdout.split('\n').filter(Boolean);
 	}
 
-	plainText(): string {
+	public plainText(): string {
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape stripping
 		return this.stdout.replace(/\x1b\[[0-9;]*m/g, '');
 	}

@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { FilePathLedgerBackend } from '@maat-tools/file-ledger';
 
 export class LedgerHarness {
-	dir!: string;
-	path!: string;
-	backend!: FilePathLedgerBackend;
+	public dir!: string;
+	public path!: string;
+	public backend!: FilePathLedgerBackend;
 
-	async setup(): Promise<void> {
+	public async setup(): Promise<void> {
 		this.dir = join(tmpdir(), `maat-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 		await mkdir(this.dir, { recursive: true });
 		this.path = join(this.dir, 'ledger.ndjson');
@@ -16,7 +16,7 @@ export class LedgerHarness {
 		await this.backend.initialize();
 	}
 
-	async teardown(): Promise<void> {
+	public async teardown(): Promise<void> {
 		await rm(this.dir, { recursive: true, force: true });
 	}
 }

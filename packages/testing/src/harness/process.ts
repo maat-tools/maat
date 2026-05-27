@@ -1,11 +1,11 @@
 import { spyOn } from 'bun:test';
 
 export class ExitCapture {
-	code: number | undefined;
-	called = false;
+	public code: number | undefined;
+	public called = false;
 	private spy?: ReturnType<typeof spyOn<typeof process, 'exit'>>;
 
-	setup(): void {
+	public setup(): void {
 		this.code = undefined;
 		this.called = false;
 		this.spy = spyOn(process, 'exit').mockImplementation(((code?: number) => {
@@ -15,11 +15,11 @@ export class ExitCapture {
 		}) as never);
 	}
 
-	teardown(): void {
+	public teardown(): void {
 		this.spy?.mockRestore();
 	}
 
-	assertExitedWith(expectedCode: number): void {
+	public assertExitedWith(expectedCode: number): void {
 		if (!this.called) {
 			throw new Error(`Expected process.exit(${expectedCode}) to be called, but it was not.`);
 		}
@@ -28,7 +28,7 @@ export class ExitCapture {
 		}
 	}
 
-	assertNotExited(): void {
+	public assertNotExited(): void {
 		if (this.called) {
 			throw new Error(`Expected process.exit not to be called, but it was called with code ${this.code}.`);
 		}

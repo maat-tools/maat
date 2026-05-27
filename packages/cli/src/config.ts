@@ -74,7 +74,7 @@ async function validateConfig(value: unknown, filePath: string) {
 }
 
 export async function loadMaatConfig(options: LoadMaatConfigOptions = {}): Promise<LoadedMaatConfig> {
-	const cwd = getCurrentDir();
+	const cwd = options.cwd ?? getCurrentDir();
 	const argv = options.argv ?? process.argv.slice(2);
 	const env = options.env ?? process.env;
 

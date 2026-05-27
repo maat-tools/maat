@@ -43,6 +43,9 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	public async initialize(): Promise<void> {
+		if (this.initialized) {
+			throw new Error('FilePathLedgerBackend: already initialized');
+		}
 		this.cache = await this.getState();
 		this.initialized = true;
 	}

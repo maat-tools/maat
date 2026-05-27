@@ -6,6 +6,7 @@ Marks all unbaselined findings currently stored in the ledger as temporarily acc
 maat check --ledger
 maat baseline
 maat baseline --expires-in 14
+maat --config ./path/to/maat.config.ts baseline --expires-in 14
 ```
 
 ## What a baseline means

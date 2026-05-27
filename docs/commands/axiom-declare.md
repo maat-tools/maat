@@ -7,6 +7,10 @@ maat axiom declare \
   --id stable-boundary \
   --scope packages/core \
   --claim "Core must not import CLI code"
+maat --config ./path/to/maat.config.ts axiom declare \
+  --id stable-boundary \
+  --scope packages/core \
+  --claim "Core must not import CLI code"
 ```
 
 ## What an axiom is

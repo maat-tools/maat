@@ -9,6 +9,10 @@ maat check --show insights
 maat check --show findings
 maat check --show-baselined
 maat check --silent
+
+# With a custom config file:
+maat --config ./path/to/maat.config.ts check
+maat -c ./maat.config.ts check --ledger
 ```
 
 ## What it does

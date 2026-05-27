@@ -6,6 +6,7 @@ Verify or revoke a probabilistic finding that was flagged with `[Verify]`.
 maat verify --fingerprint <fingerprint>
 maat verify --fingerprint <fingerprint> --revoke
 maat verify --fingerprint <fingerprint> --reason "Confirmed by architecture review"
+maat --config ./path/to/maat.config.ts verify --fingerprint <fingerprint>
 ```
 
 ## What it does

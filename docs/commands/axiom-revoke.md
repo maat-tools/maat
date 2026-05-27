@@ -4,6 +4,7 @@ Marks an active axiom as no longer applicable.
 
 ```bash
 maat axiom revoke --id stable-boundary --reason "Boundary no longer exists"
+maat --config ./path/to/maat.config.ts axiom revoke --id stable-boundary --reason "Boundary no longer exists"
 ```
 
 ## What revoking means

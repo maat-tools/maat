@@ -7,6 +7,7 @@ maat visualize
 maat visualize --filter observed,resolved
 maat visualize --insights
 maat visualize --json
+maat --config ./path/to/maat.config.ts visualize
 ```
 
 ## What it shows

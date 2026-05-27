@@ -54,6 +54,7 @@
 		"packages/*/fixtures",
 		"packages/*/dist",
 		"tests/fixtures",
+		"tests/e2e/tsconfig.json",
 		"tests/workflow/tsconfig.json",
 		"tests/integration/tsconfig.json"
 	]

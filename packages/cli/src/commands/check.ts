@@ -227,9 +227,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			if (finding.requiresVerification) {
 				continue;
 			}
-			if ((await this.ledger.getFindingByFingerprint(finding.fingerprint)) === null) {
-				continue;
-			}
 			await ledger.append({
 				type: FindingStatus.OBSERVED,
 				timestamp,

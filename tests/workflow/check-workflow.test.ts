@@ -120,6 +120,18 @@ describe('check — no ledger', () => {
 });
 
 describe('check — with ledger', () => {
+	test('check --ledger writes new findings as OBSERVED to the ledger', async () => {
+		await expect(
+			buildCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({ ledger: true, silent: true }),
+		).rejects.toThrow('process.exit');
+
+		const record = await ledger.backend.getFindingByFingerprint(
+			generateFingerprint(RULE_OUTPUT.ruleId, RULE_OUTPUT.ruleIdentifier),
+		);
+		expect(record).not.toBeNull();
+		expect(record?.state).toBe('finding.observed');
+	});
+
 	test('active baselined finding → hidden, strict mode does not exit', async () => {
 		await scenarioBaselined(ledger, RULE_OUTPUT);
 		await buildCheck([RULE_OUTPUT], ledger, STRICT_CONFIG).action({ silent: true });

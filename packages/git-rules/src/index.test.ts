@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { type GitCommit, type GitFileChange, GitFileStatus } from '@maat-tools/collector-git';
+import { type GitCommit, type GitFileChange, GitHumanReadableFileStatus } from '@maat-tools/collector-git';
 import { ChurnRule } from './churn';
 
 const DAYS = 24 * 60 * 60 * 1000;
@@ -15,7 +15,7 @@ function makeCommit(hash: string, daysBack: number): GitCommit {
 function makeChange(
 	hash: string,
 	path: string,
-	status: GitFileChange['status'] = GitFileStatus.Modified,
+	status: GitHumanReadableFileStatus = GitHumanReadableFileStatus.Modified,
 ): GitFileChange {
 	return { hash, path, status };
 }
@@ -38,7 +38,7 @@ describe('ChurnRule.evaluate()', () => {
 
 		const findings = rule.evaluate({ git_commits: commits, git_file_changes: fileChanges });
 		expect(findings).toHaveLength(1);
-		expect(findings[0]?.ruleId).toBe('git/churn@v1');
+		expect(findings[0]?.ruleId).toBe('maat-tools/git-rules/churn@v1');
 	});
 
 	test('commits outside window are excluded', () => {

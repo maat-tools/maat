@@ -22,7 +22,7 @@ export type ChurnOptions = {
 };
 
 export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
-	public readonly id = 'git/churn@v1';
+	public readonly id = 'maat-tools/git-rules/churn@v1';
 	public readonly needFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
 
 	private readonly threshold: number;

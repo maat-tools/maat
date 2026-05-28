@@ -28,9 +28,10 @@ const STRICT_CONFIG: MaatConfig = { collectors: [], rules: [], check: { strict: 
 
 function buildKernel(findings: FindingRuleOutput[] = []) {
 	const kernel = new Kernel();
+	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({
 		id: 'test@v1',
-		needFacts: [] as const,
+		needFacts: ['testFacts'] as const,
 		evaluate: () => findings,
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	});

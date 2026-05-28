@@ -12,6 +12,7 @@ export default defineConfig({
 				exclude: ['**/node_modules/**', '**/.maat/**', '**/dist/**', '**/*.test.ts', '**/fixtures/**'],
 			},
 		],
+		['@maat-tools/collector-git', {}],
 	],
 	rules: [
 		rule('@maat-tools/connascence-rules/cop-args', {

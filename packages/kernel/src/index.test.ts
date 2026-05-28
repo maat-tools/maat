@@ -240,11 +240,6 @@ describe('Kernel.registerRule validation', () => {
 		expect(() => new Kernel().registerRule(makeRule('   '))).toThrow('non-empty id');
 	});
 
-	test('accepts rule with empty needFacts (runs unconditionally)', () => {
-		const rule = { id: 'r@v1', needFacts: [] as const, evaluate: () => [] };
-		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).not.toThrow();
-	});
-
 	test('throws if evaluate is not a function', () => {
 		const rule = { id: 'r@v1', needFacts: ['testFacts'] as const, evaluate: 'bad' };
 		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('evaluate');

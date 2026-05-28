@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { GitFileStatus, parseGitLog } from './index';
+import { GitHumanReadableFileStatus, parseGitLog } from './index';
 
 const SEP = '\x01';
 
@@ -33,8 +33,16 @@ describe('parseGitLog()', () => {
 			subject: 'Add feature',
 		});
 		expect(fileChanges).toHaveLength(2);
-		expect(fileChanges[0]).toMatchObject({ hash: 'abc123', path: 'src/new.ts', status: GitFileStatus.Added });
-		expect(fileChanges[1]).toMatchObject({ hash: 'abc123', path: 'src/existing.ts', status: GitFileStatus.Modified });
+		expect(fileChanges[0]).toMatchObject({
+			hash: 'abc123',
+			path: 'src/new.ts',
+			status: GitHumanReadableFileStatus.Added,
+		});
+		expect(fileChanges[1]).toMatchObject({
+			hash: 'abc123',
+			path: 'src/existing.ts',
+			status: GitHumanReadableFileStatus.Modified,
+		});
 	});
 
 	test('deleted file', () => {
@@ -45,7 +53,11 @@ describe('parseGitLog()', () => {
 		].join('\n');
 
 		const { fileChanges } = parseGitLog(output);
-		expect(fileChanges[0]).toMatchObject({ hash: 'def456', path: 'src/old.ts', status: GitFileStatus.Deleted });
+		expect(fileChanges[0]).toMatchObject({
+			hash: 'def456',
+			path: 'src/old.ts',
+			status: GitHumanReadableFileStatus.Deleted,
+		});
 	});
 
 	test('renamed file carries oldPath', () => {
@@ -59,7 +71,7 @@ describe('parseGitLog()', () => {
 		expect(fileChanges[0]).toMatchObject({
 			hash: 'ghi789',
 			path: 'src/signin.ts',
-			status: GitFileStatus.Renamed,
+			status: GitHumanReadableFileStatus.Renamed,
 			oldPath: 'src/login.ts',
 		});
 	});

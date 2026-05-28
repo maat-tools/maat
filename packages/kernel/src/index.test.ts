@@ -144,7 +144,10 @@ describe('Kernel.run with enrichers', () => {
 		expect(findings[0]?.requiresVerification).toBe(true);
 		const provenance = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
 		expect(provenance).toHaveLength(1);
-		expect(provenance?.[0]?.data).toEqual({ requiresVerification: true, sources: ['enrichedFacts'] });
+		expect(provenance?.[0]?.data).toEqual({
+			requiresVerification: true,
+			verificationReason: 'Facts provided by enrichers [test-enricher]',
+		});
 	});
 
 	test('rule consuming both collector and enriched facts gets requiresVerification and provenance', async () => {
@@ -235,11 +238,6 @@ describe('Kernel.registerRule validation', () => {
 
 	test('throws if rule id is whitespace', () => {
 		expect(() => new Kernel().registerRule(makeRule('   '))).toThrow('non-empty id');
-	});
-
-	test('accepts rule with empty needFacts (runs unconditionally)', () => {
-		const rule = { id: 'r@v1', needFacts: [] as const, evaluate: () => [] };
-		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).not.toThrow();
 	});
 
 	test('throws if evaluate is not a function', () => {

@@ -30,7 +30,7 @@ export function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
 		id: 'test-enricher',
 		needFacts: ['testFacts'] as const,
 		provideFacts: ['enrichedFacts'] as const,
-		enrich: async ({ testFacts }) => ({
+		enrich: async ({ testFacts }: { testFacts: string[] } = { testFacts: [] }) => ({
 			enrichedFacts: testFacts.map((v) => `enriched:${v}`),
 		}),
 	};
@@ -38,9 +38,10 @@ export function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
 
 export function makeKernel(findings: FindingRuleOutput[] = []): Kernel {
 	const kernel = new Kernel();
+	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({
 		id: 'test@v1',
-		needFacts: [] as const,
+		needFacts: ['testFacts'] as const,
 		evaluate: () => findings,
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	});

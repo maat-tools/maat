@@ -192,7 +192,7 @@ export interface Enricher<
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
 	readonly provideFacts: readonly TProduces[];
-	enrich(facts: { [K in TNeeds]: FactRegistry[K] }): Promise<{ [K in TProduces]: FactRegistry[K] }>;
+	enrich(facts?: { [K in TNeeds]: FactRegistry[K] }): Promise<{ [K in TProduces]: FactRegistry[K] }>;
 }
 
 export interface Insight {

@@ -17,7 +17,7 @@ type StoredEnricher = {
 	readonly id: string;
 	readonly needFacts: readonly (keyof FactRegistry)[];
 	readonly provideFacts: readonly (keyof FactRegistry)[];
-	enrich(facts: Partial<FactRegistry>): Promise<Partial<FactRegistry>>;
+	enrich(facts?: Partial<FactRegistry>): Promise<Partial<FactRegistry>>;
 };
 
 export type KernelResult = {
@@ -86,6 +86,9 @@ export class Kernel {
 		if (!Array.isArray(rule.needFacts)) {
 			throw new Error(`Rule "${rule.id}" must have a needFacts array`);
 		}
+		if (rule.needFacts.length === 0) {
+			throw new Error(`Rule "${rule.id}" must declare at least one fact in needFacts`);
+		}
 		if (typeof rule.evaluate !== 'function') {
 			throw new Error(`Rule "${rule.id}" must implement evaluate()`);
 		}
@@ -99,8 +102,8 @@ export class Kernel {
 	}
 
 	public async run(options?: { onProgress?: (event: KernelProgressEvent) => void }): Promise<KernelResult> {
-		const facts: Partial<FactRegistry> = {};
-		const factsRequiringVerification = new Set<string>();
+		let facts: Partial<FactRegistry> = {};
+		const factsRequiringVerification = new Map<string, string[]>();
 		const onProgress = options?.onProgress;
 
 		if (this.collectors.length === 0) {
@@ -121,81 +124,81 @@ export class Kernel {
 		);
 
 		for (const collected of collectedResults) {
-			for (const [key, value] of Object.entries(collected)) {
-				const existing = (facts as Record<string, unknown>)[key];
-				if (Array.isArray(existing) && Array.isArray(value)) {
-					(facts as Record<string, unknown>)[key] = [...existing, ...value];
-				} else {
-					(facts as Record<string, unknown>)[key] = value;
-				}
-			}
+			facts = this.mergeFacts(facts, collected);
 		}
 
 		const enricherResults = await Promise.all(
 			this.enrichers.map(async (enricher, i) => {
 				onProgress?.({ type: 'enricher:start', enricherId: enricher.id, index: i, total: this.enrichers.length });
-				const hasFacts = enricher.needFacts.every((key) => Object.keys(facts).includes(key));
+
+				if (enricher.needFacts.length === 0) {
+					const enriched = await enricher.enrich();
+					factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
+
+					onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
+
+					return { enriched, enricher };
+				}
+
+				const hasFacts = enricher.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
 					console.warn(`Enricher "${enricher.id}" skipped. Required facts are missing.`);
 					onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
-					return null;
+
+					return { enriched: {}, enricher };
 				}
-				const enriched = await enricher.enrich(facts);
+
+				const enriched = await enricher.enrich(Object.fromEntries(enricher.needFacts.map((key) => [key, facts[key]])));
+				factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
+
 				onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
+
 				return { enriched, enricher };
 			}),
 		);
 
-		for (const result of enricherResults) {
-			if (!result) {
-				continue;
-			}
-			const { enriched, enricher } = result;
-			for (const [key, value] of Object.entries(enriched)) {
-				const existing = (facts as Record<string, unknown>)[key];
-				if (Array.isArray(existing) && Array.isArray(value)) {
-					(facts as Record<string, unknown>)[key] = [...existing, ...value];
-				} else {
-					(facts as Record<string, unknown>)[key] = value;
-				}
-			}
-			for (const factKey of enricher.provideFacts) {
-				factsRequiringVerification.add(factKey);
-			}
+		for (const { enriched } of enricherResults) {
+			facts = this.mergeFacts(facts, enriched);
 		}
 
-		const factsKeys = Object.keys(facts);
+		const factsRequiringVerificationEntries = [...factsRequiringVerification.entries()];
 		const findingsByRule = await Promise.all(
 			this.rules.map(async (rule) => {
-				const hasFacts = rule.needFacts.every((key) => factsKeys.includes(key));
+				const hasFacts = rule.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
 					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
+
 					return [];
 				}
 
-				const ruleFacts = Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]]));
-				if (!ruleFacts) {
-					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
-					return [];
-				}
-				const fromRule = rule.evaluate(ruleFacts as unknown as FactRegistry);
+				const ruleResult = rule.evaluate(
+					Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]])) as unknown as FactRegistry,
+				);
 
-				const ruleNeedsVerification = rule.needFacts.some((key) => factsRequiringVerification.has(key));
+				const ruleNeedsVerification = rule.needFacts.flatMap((key) =>
+					factsRequiringVerificationEntries
+						.filter(([_, providedFacts]) => providedFacts.includes(key))
+						.map(([enricherId]) => enricherId),
+				);
 
-				return fromRule.map(({ ruleIdentifier, ...rest }) => {
+				return ruleResult.map(({ ruleIdentifier, ...rest }) => {
 					const finding: Finding = {
 						...rest,
 						fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
-						requiresVerification: ruleNeedsVerification,
-						artifacts: ruleNeedsVerification
-							? [
-									...rest.artifacts,
-									{
-										kind: 'finding.provenance',
-										data: { requiresVerification: true, sources: Array.from(factsRequiringVerification) },
-									},
-								]
-							: rest.artifacts,
+						requiresVerification: ruleNeedsVerification.length > 0,
+						artifacts:
+							ruleNeedsVerification.length > 0
+								? [
+										...rest.artifacts,
+										{
+											kind: 'finding.provenance',
+											data: {
+												requiresVerification: true,
+												verificationReason: `Facts provided by enrichers [${ruleNeedsVerification.join(', ')}]`,
+											},
+										},
+									]
+								: rest.artifacts,
 					};
 					return finding;
 				});
@@ -203,5 +206,20 @@ export class Kernel {
 		);
 
 		return { findings: findingsByRule.flat() };
+	}
+
+	private mergeFacts(target: Partial<FactRegistry>, source: Partial<FactRegistry>): Partial<FactRegistry> {
+		const result = { ...target };
+
+		for (const [key, value] of Object.entries(source)) {
+			const existing = (result as Record<string, unknown>)[key];
+			if (Array.isArray(existing) && Array.isArray(value)) {
+				(result as Record<string, unknown>)[key] = [...existing, ...value];
+			} else {
+				(result as Record<string, unknown>)[key] = value;
+			}
+		}
+
+		return result;
 	}
 }

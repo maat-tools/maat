@@ -135,7 +135,7 @@ describe('Kernel.run with enrichers', () => {
 		expect(findings[0]?.message).toBe('finding: enriched:x');
 	});
 
-	test.only('enricher sets finding.requiresVerification and injects provenance artifact', async () => {
+	test('enricher sets finding.requiresVerification and injects provenance artifact', async () => {
 		const kernel = new Kernel()
 			.registerCollector(makeCollector(['x']))
 			.registerEnricher(makeEnricher())

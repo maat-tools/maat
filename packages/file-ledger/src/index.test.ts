@@ -8,6 +8,7 @@ const OBSERVED = {
 	timestamp: new Date().toISOString(),
 	fingerprint: 'fp1',
 	rule_id: 'rule@v1',
+	instance_id: 'rule@v1',
 	message: 'test finding',
 	artifacts: [],
 } as const;
@@ -17,6 +18,7 @@ const OBSERVED_2 = {
 	timestamp: new Date().toISOString(),
 	fingerprint: 'fp2',
 	rule_id: 'rule@v1',
+	instance_id: 'rule@v1',
 	message: 'second finding',
 	artifacts: [],
 } as const;

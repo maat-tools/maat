@@ -30,6 +30,7 @@ function buildKernel(findings: FindingRuleOutput[] = []) {
 	const kernel = new Kernel();
 	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({
+		instanceId: 'test@v1',
 		id: 'test@v1',
 		needFacts: ['testFacts'] as const,
 		evaluate: () => findings,
@@ -43,6 +44,7 @@ function buildProbabilisticKernel() {
 	kernel.registerCollector(makeCollector(['x']));
 	kernel.registerEnricher(makeEnricher());
 	kernel.registerRule({
+		instanceId: 'prob@v1',
 		id: 'prob@v1',
 		needFacts: ['enrichedFacts'] as const,
 		evaluate: ({ enrichedFacts }) =>

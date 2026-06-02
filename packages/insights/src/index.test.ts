@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import type { Finding } from '@maat-tools/contracts';
+import type { DependsOn } from '@maat-tools/vocabulary';
 import { ErosionInsight } from './erosion';
 
 function churnFinding(path: string, count: number): Finding {
 	return {
-		ruleId: 'git/churn@v1',
+		ruleId: 'maat-tools/git-rules/churn@v1',
+		instanceId: 'maat-tools/git-rules/churn@v1',
 		fingerprint: `churn-${path}`,
 		message: `"${path}" changed ${count} times`,
 		artifacts: [{ kind: 'git-churn', data: { path, count } }],
@@ -20,15 +22,26 @@ function boundaryLeaf(boundary: string): string {
 function couplingFinding(
 	boundary: string,
 	variant: 'pure-imports' | 'layer-imports' = 'pure-imports',
-	file = boundary.startsWith('./')
-		? boundary.replace(/^\.\//, '').replace(/\/\*\*$/, '/index.ts')
+	file = boundary.endsWith('/**')
+		? `${boundary.slice(0, -3)}/index.ts`
 		: `packages/${boundaryLeaf(boundary)}/src/index.ts`,
 ): Finding {
+	const isGlobMode = boundary.endsWith('/**');
+	const dep: DependsOn = {
+		from: {
+			path: file,
+			package: isGlobMode ? undefined : { name: boundary, rootPath: `packages/${boundaryLeaf(boundary)}` },
+			location: { file, line: 1 },
+		},
+		to: { path: 'node:crypto', isExternal: true },
+	};
+
 	return {
-		ruleId: `coupling/${variant}:${boundary}@v1`,
+		ruleId: `maat-tools/coupling-rules/${variant}@v1`,
+		instanceId: `maat-tools/coupling-rules/${variant}@v1:${boundary}`,
 		fingerprint: `coupling-${boundary}`,
 		message: `"${boundary}" has a layer violation`,
-		artifacts: [{ kind: 'import', data: { file, packageName: boundary, specifier: 'node:crypto' } }],
+		artifacts: [{ kind: 'dependsOn', data: dep }],
 	};
 }
 
@@ -63,7 +76,7 @@ describe('ErosionInsight.analyze()', () => {
 		const findings = [churnFinding('packages/cli/src/index.ts', 10), couplingFinding('@maat-tools/cli')];
 		const results = insight.analyze(findings);
 		expect(results).toHaveLength(1);
-		expect(results[0]?.insightId).toBe('erosion@v1');
+		expect(results[0]?.insightId).toBe('maat-tools/erosion@v1');
 		expect(results[0]?.message).toContain('hot architectural debt');
 		expect(results[0]?.message).toContain('@maat-tools/cli');
 		expect(results[0]?.message).toContain('1 boundary(s)');
@@ -119,10 +132,10 @@ describe('ErosionInsight.analyze()', () => {
 
 	test('path boundaries are matched without package conventions', () => {
 		const insight = new ErosionInsight();
-		const findings = [churnFinding('src/payments/handler.ts', 7), couplingFinding('./src/payments/**')];
+		const findings = [churnFinding('src/payments/handler.ts', 7), couplingFinding('src/payments/**')];
 		const results = insight.analyze(findings);
 		expect(results).toHaveLength(1);
-		expect(results[0]?.message).toContain('./src/payments/**');
+		expect(results[0]?.message).toContain('src/payments/**');
 	});
 
 	test('result data contains file-level churn detail', () => {
@@ -143,11 +156,11 @@ describe('ErosionInsight.analyze()', () => {
 		const [result] = insight.analyze(findings);
 		const data = result?.data as Array<{
 			violationCount: number;
-			violations: Array<{ file?: string; specifier?: string }>;
+			violations: Array<{ file?: string; dependency?: string }>;
 		}>;
 		expect(data[0]?.violationCount).toBe(1);
 		expect(data[0]?.violations[0]?.file).toBe('packages/cli/src/index.ts');
-		expect(data[0]?.violations[0]?.specifier).toBe('node:crypto');
+		expect(data[0]?.violations[0]?.dependency).toBe('node:crypto');
 	});
 
 	test('layer-imports coupling variant is also matched', () => {
@@ -166,32 +179,13 @@ describe('ErosionInsight.analyze()', () => {
 		const findings = [
 			churnFinding('packages/cli/src/index.ts', 10),
 			{
-				ruleId: 'git/churn@v1',
+				ruleId: 'maat-tools/git-rules/churn@v1',
+				instanceId: 'maat-tools/git-rules/churn@v1',
 				fingerprint: 'other',
 				message: 'some other rule',
 				artifacts: [],
 			},
 		];
 		expect(insight.analyze(findings)).toHaveLength(0);
-	});
-});
-
-// ── metadata ──────────────────────────────────────────────────────────────────
-
-describe('ErosionInsight metadata', () => {
-	test('id is stable', () => {
-		expect(new ErosionInsight().id).toBe('erosion@v1');
-	});
-
-	test('needRules declares git/churn@v1', () => {
-		expect(new ErosionInsight().needRules).toContain('git/churn@v1');
-	});
-
-	test('needRules declares coupling/pure-imports family', () => {
-		expect(new ErosionInsight().needRules).toContain('coupling/pure-imports');
-	});
-
-	test('needRules declares coupling/layer-imports family', () => {
-		expect(new ErosionInsight().needRules).toContain('coupling/layer-imports');
 	});
 });

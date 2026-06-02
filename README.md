@@ -64,15 +64,14 @@ npm install -D @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-ru
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
-import { layer } from '@maat-tools/coupling-rules'
-import { Pure } from '@maat-tools/coupling-rules/roles'
+import { layer, Pure } from '@maat-tools/coupling-rules'
 
 export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   rules: [
-    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
-    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+    layer('@myapp/domain').is(Pure).build(),
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts').build(),
   ],
 })
 ```
@@ -107,8 +106,8 @@ export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   rules: [
-    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
-    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+    layer('@myapp/domain').is(Pure).build(),
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts').build(),
   ],
 })
 ```
@@ -176,6 +175,8 @@ Maat records decision state, not user identity. For decisions such as baselining
 | `@maat-tools/coupling-rules` | Rules for structural and import boundaries |
 | `@maat-tools/connascence-rules` | Rules for semantic coupling and connascence |
 | `@maat-tools/git-rules` | Rules for churn and temporal patterns |
+| `@maat-tools/presets-ts` | Pre-configured algorithmic pattern definitions for TypeScript |
+| `@maat-tools/enricher-llm` | LLM-assisted fact enrichment for walkers |
 | `@maat-tools/insights` | Cross-rule analysis and pattern detection |
 | `@maat-tools/file-ledger` | Append-only ledger backend for version control |
 

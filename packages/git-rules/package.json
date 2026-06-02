@@ -40,8 +40,7 @@
   "dependencies": {
     "@maat-tools/contracts": "workspace:*",
     "@maat-tools/collector-git": "workspace:*",
-    "@types/micromatch": "4.0.10",
-    "micromatch": "4.0.8"
+    "@maat-tools/utils": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

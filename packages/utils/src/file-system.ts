@@ -41,6 +41,10 @@ export function getCurrentDir(): string {
 	return resolve(process.cwd());
 }
 
+export function resolveSymbol(symbol: string): string {
+	return resolve(symbol);
+}
+
 export function getFilepathFromCurrentDir(relativePath: string): string {
 	return resolve(getCurrentDir(), relativePath);
 }

@@ -12,7 +12,8 @@ export type CoATechnicalOptions = {
 };
 
 export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBindings'> {
-	public readonly id = 'coa-technical@v1';
+	public readonly id = 'maat-tools/coa-technical@v1';
+	public readonly instanceId = this.id;
 	public readonly needFacts = [ALGORITHMIC_BINDINGS_CAPABILITY] as const;
 
 	private readonly patterns: Set<string> | null;

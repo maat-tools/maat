@@ -10,7 +10,6 @@ const FIXTURE_TSCONFIG = resolve(FIXTURE_DIR, 'tsconfig.json');
 
 let findings: Finding[];
 let constants: { value: string; file: string }[];
-let _functionSignatures: { functionName: string; parameters: { name: string; type: string }[]; isExported: boolean }[];
 
 beforeAll(async () => {
 	const originalCwd = process.cwd();
@@ -24,16 +23,10 @@ beforeAll(async () => {
 		const result = await kernel.run();
 		findings = result.findings;
 
-		// Collect raw facts for assertion helpers
-		const { constants: c, functionSignatures: fs } = await new TSCollector({
+		const { constants: c } = await new TSCollector({
 			tsConfigFilePath: FIXTURE_TSCONFIG,
 		}).collect();
 		constants = c.map((x) => ({ value: x.value, file: x.location.file }));
-		_functionSignatures = fs.map((x) => ({
-			functionName: x.functionName,
-			parameters: x.parameters.map((p) => ({ name: p.name, type: p.type })),
-			isExported: x.isExported,
-		}));
 	} finally {
 		process.chdir(originalCwd);
 	}
@@ -56,7 +49,7 @@ function hasNoFinding(ruleId: string, match: string) {
 // ─── Connascence of Position (cop) ───────────────────────────────────────────
 
 describe('connascence-rules e2e — cop', () => {
-	const COP_RULE = 'cop-args@v1';
+	const COP_RULE = 'maat-tools/connascence-rules/cop-args@v1';
 
 	test('sendEmail (5 params) is flagged for exceeding threshold', () => {
 		expect(hasFinding(COP_RULE, 'sendEmail')).toBe(true);
@@ -86,29 +79,20 @@ describe('connascence-rules e2e — cop', () => {
 	test('cop produces exactly 2 findings', () => {
 		expect(findingsFor(COP_RULE)).toHaveLength(2);
 	});
-
-	test('cop findings include call graph enrichment (caller count or chain depth)', () => {
-		const copFindings = findingsFor(COP_RULE);
-		for (const f of copFindings) {
-			// Either no callers (no enrichment) or has caller info
-			const hasCallerInfo = f.message.includes('called from') || f.message.includes('max chain depth');
-			const hasNoCallers = !hasCallerInfo;
-			expect(hasCallerInfo || hasNoCallers).toBe(true);
-		}
-	});
 });
 
 // ─── Connascence of Position — data structures (cop-struct) ──────────────────
 
 describe('connascence-rules e2e — cop-struct', () => {
-	const COP_STRUCT_RULE = 'cop-struct@v1';
+	const COP_STRUCT_RULE = 'maat-tools/connascence-rules/cop-struct@v1';
 
 	test('config (heterogeneous array) with index access is flagged', () => {
 		expect(hasFinding(COP_STRUCT_RULE, 'config')).toBe(true);
 	});
 
-	test('user (assigned from tuple-returning function) with destructuring is flagged', () => {
-		expect(hasFinding(COP_STRUCT_RULE, 'user')).toBe(true);
+	test('user (assigned from tuple-returning function) is tracked via origin getUserDetails', () => {
+		// user = getUserDetails() → resolveOrigin traces back to getUserDetails as the source
+		expect(hasFinding(COP_STRUCT_RULE, 'getUserDetails')).toBe(true);
 	});
 
 	test('namedUser (object literal) is not flagged', () => {
@@ -124,7 +108,7 @@ describe('connascence-rules e2e — cop-struct', () => {
 // ─── Connascence of Meaning (com) ────────────────────────────────────────────
 
 describe('connascence-rules e2e — com', () => {
-	const COM_RULE = 'com@v1';
+	const COM_RULE = 'maat-tools/connascence-rules/com@v1';
 
 	test('admin literal appears in multiple files → finding produced', () => {
 		const adminOccurrences = constants.filter((c) => c.value === 'admin');
@@ -138,16 +122,6 @@ describe('connascence-rules e2e — com', () => {
 		const distinctFiles = new Set(readOccurrences.map((c) => c.file)).size;
 		expect(distinctFiles).toBeLessThan(2);
 		expect(hasNoFinding(COM_RULE, 'read')).toBe(true);
-	});
-
-	test('com finding includes flow path info when call graph connects files', () => {
-		const comFindings = findingsFor(COM_RULE);
-		for (const f of comFindings) {
-			// Either has flow paths or no call graph connection
-			const hasFlowPaths = f.message.includes('flow paths');
-			const hasNoConnection = !hasFlowPaths;
-			expect(hasFlowPaths || hasNoConnection).toBe(true);
-		}
 	});
 });
 

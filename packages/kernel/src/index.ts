@@ -77,11 +77,14 @@ export class Kernel {
 	}
 
 	public registerRule(rule: Rule): this {
+		if (!rule.instanceId || rule.instanceId.trim() === '') {
+			throw new Error('Rule must have a non-empty instanceId');
+		}
 		if (!rule.id || rule.id.trim() === '') {
 			throw new Error('Rule must have a non-empty id');
 		}
-		if (this.rules.some((r) => r.id === rule.id)) {
-			throw new Error(`Rule with id "${rule.id}" is already registered`);
+		if (this.rules.some((r) => r.instanceId === rule.instanceId)) {
+			throw new Error(`Rule with instanceId "${rule.instanceId}" is already registered`);
 		}
 		if (!Array.isArray(rule.needFacts)) {
 			throw new Error(`Rule "${rule.id}" must have a needFacts array`);
@@ -184,6 +187,7 @@ export class Kernel {
 				return ruleResult.map(({ ruleIdentifier, ...rest }) => {
 					const finding: Finding = {
 						...rest,
+						instanceId: rule.instanceId,
 						fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
 						requiresVerification: ruleNeedsVerification.length > 0,
 						artifacts:

@@ -3,9 +3,10 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
+	CALL_GRAPH_CAPABILITY,
 	CONSTANTS_CAPABILITY,
+	DEPENDS_ON_CAPABILITY,
 	FUNCTION_SIGNATURES_CAPABILITY,
-	IMPORTS_CAPABILITY,
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
 } from '@maat-tools/vocabulary';
@@ -13,10 +14,10 @@ import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/sample-project/tsconfig.json');
 
-describe('TSCollector.collect() — imports fact', () => {
-	test('provides imports in provideFacts', () => {
+describe('TSCollector.collect() — dependsOn fact', () => {
+	test('provides dependsOn in provideFacts', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		expect(collector.provideFacts).toContain(IMPORTS_CAPABILITY);
+		expect(collector.provideFacts).toContain(DEPENDS_ON_CAPABILITY);
 	});
 
 	test('provides constants in provideFacts', () => {
@@ -24,30 +25,30 @@ describe('TSCollector.collect() — imports fact', () => {
 		expect(collector.provideFacts).toContain(CONSTANTS_CAPABILITY);
 	});
 
-	test('emits imports from source files', async () => {
+	test('emits dependsOn from source files', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { imports } = await collector.collect();
-		expect(imports.length).toBeGreaterThan(0);
+		const { dependsOn } = await collector.collect();
+		expect(dependsOn.length).toBeGreaterThan(0);
 	});
 
-	test('each import has file, specifier, and location', async () => {
+	test('each dependsOn has from.path, to.path, and location', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { imports } = await collector.collect();
-		for (const imp of imports) {
-			expect(typeof imp.file).toBe('string');
-			expect(isAbsolute(imp.file)).toBe(false);
-			expect(imp.file).not.toContain('\\');
-			expect(typeof imp.specifier).toBe('string');
-			expect(imp.location.file).toBe(imp.file);
-			expect(typeof imp.location.line).toBe('number');
+		const { dependsOn } = await collector.collect();
+		for (const dep of dependsOn) {
+			expect(typeof dep.from.path).toBe('string');
+			expect(isAbsolute(dep.from.path)).toBe(false);
+			expect(dep.from.path).not.toContain('\\');
+			expect(typeof dep.to.path).toBe('string');
+			expect(dep.from.location.file).toBe(dep.from.path);
+			expect(typeof dep.from.location.line).toBe('number');
 		}
 	});
 
 	test('emits source locations relative to process.cwd()', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { constants, imports } = await collector.collect();
+		const { constants, dependsOn } = await collector.collect();
 
-		const files = [...imports.map((imp) => imp.file), ...constants.map((constant) => constant.location.file)];
+		const files = [...dependsOn.map((dep) => dep.from.path), ...constants.map((constant) => constant.location.file)];
 
 		expect(files).toContain(
 			relative(process.cwd(), resolve(import.meta.dir, '../../../tests/fixtures/sample-project/src/index.ts')).replace(
@@ -61,31 +62,32 @@ describe('TSCollector.collect() — imports fact', () => {
 		}
 	});
 
-	test('captures import from index.ts → ./user', async () => {
+	test('captures dependsOn from index.ts → user (resolved path)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { imports } = await collector.collect();
-		const found = imports.find((i) => i.file.endsWith('index.ts') && i.specifier === './user');
+		const { dependsOn } = await collector.collect();
+		// Relative imports are stored as resolved paths (specifier without extension → path without extension)
+		const found = dependsOn.find((dep) => dep.from.path.endsWith('index.ts') && dep.to.path.match(/\/user(\.ts)?$/));
 		expect(found).toBeDefined();
 	});
 
-	test('captures import from permissions.ts → ./user', async () => {
+	test('captures dependsOn from permissions.ts → user (resolved path)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { imports } = await collector.collect();
-		const found = imports.find((i) => i.file.endsWith('permissions.ts') && i.specifier === './user');
+		const { dependsOn } = await collector.collect();
+		const found = dependsOn.find(
+			(dep) => dep.from.path.endsWith('permissions.ts') && dep.to.path.match(/\/user(\.ts)?$/),
+		);
 		expect(found).toBeDefined();
 	});
 
-	test('packageName is null when no package.json is found above the file', async () => {
+	test('from.package is null or defined when package.json is found', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { imports } = await collector.collect();
-		// fixture project has no package.json, so packageName should be null
-		// (or the monorepo root package.json has no name — either way it's consistent)
-		for (const imp of imports) {
-			expect(imp.packageName === null || typeof imp.packageName === 'string').toBe(true);
+		const { dependsOn } = await collector.collect();
+		for (const dep of dependsOn) {
+			expect(dep.from.package === undefined || typeof dep.from.package.name === 'string').toBe(true);
 		}
 	});
 
-	test('still emits constants alongside imports', async () => {
+	test('still emits constants alongside dependsOn', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { constants } = await collector.collect();
 		expect(constants.length).toBeGreaterThan(0);
@@ -162,42 +164,48 @@ describe('TSCollector — glob in tsConfigFilePath', () => {
 const CROSS_PACKAGE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/cross-package/pkg-a/tsconfig.json');
 
 describe('TSCollector.collect() — cross-package specifier normalization', () => {
-	test('same-package relative import keeps its original specifier', async () => {
+	test('same-package relative import is stored as resolved path', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
-		const { imports } = await collector.collect();
-		const found = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === './helper');
+		const { dependsOn } = await collector.collect();
+		// Relative imports are resolved to actual file paths (without extension if specifier had none)
+		const found = dependsOn.find(
+			(dep) => dep.from.package?.name === '@fixture/pkg-a' && dep.to.path.match(/\/helper(\.ts)?$/),
+		);
 		expect(found).toBeDefined();
 	});
 
-	test('cross-package relative import is rewritten to the destination package name', async () => {
+	test('cross-package relative import is stored as resolved file path (no original ../ specifier)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
-		const { imports } = await collector.collect();
-		const raw = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier.startsWith('../'));
-		expect(raw).toBeUndefined(); // the raw ../ form must not survive
+		const { dependsOn } = await collector.collect();
+		// The raw ../ form does not appear — it is resolved to the actual file path
+		const raw = dependsOn.find((dep) => dep.from.package?.name === '@fixture/pkg-a' && dep.to.path.startsWith('../'));
+		expect(raw).toBeUndefined();
 
-		const normalized = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
-		expect(normalized).toBeDefined();
+		// The cross-package dep is stored as a resolved path into pkg-b
+		const resolved = dependsOn.find(
+			(dep) => dep.from.package?.name === '@fixture/pkg-a' && dep.to.path.includes('pkg-b'),
+		);
+		expect(resolved).toBeDefined();
 	});
 
-	test('normalized specifier still carries the correct file and location', async () => {
+	test('cross-package dep carries correct source file and location', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
-		const { imports } = await collector.collect();
-		const imp = imports.find((i) => i.packageName === '@fixture/pkg-a' && i.specifier === '@fixture/pkg-b');
-		expect(imp?.file).toBe(
+		const { dependsOn } = await collector.collect();
+		const dep = dependsOn.find((d) => d.from.package?.name === '@fixture/pkg-a' && d.to.path.includes('pkg-b'));
+		expect(dep?.from.path).toBe(
 			relative(
 				process.cwd(),
 				resolve(import.meta.dir, '../../../tests/fixtures/cross-package/pkg-a/src/index.ts'),
 			).replace(/\\/g, '/'),
 		);
-		expect(imp?.location.line).toBeGreaterThan(0);
+		expect(dep?.from.location.line).toBeGreaterThan(0);
 	});
 
 	test('pkg-b own files are not affected', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: CROSS_PACKAGE_TSCONFIG });
-		const { imports } = await collector.collect();
-		// pkg-b/src/index.ts has no imports at all
-		const pkgBImports = imports.filter((i) => i.packageName === '@fixture/pkg-b');
-		expect(pkgBImports).toHaveLength(0);
+		const { dependsOn } = await collector.collect();
+		const pkgBDeps = dependsOn.filter((dep) => dep.from.package?.name === '@fixture/pkg-b');
+		expect(pkgBDeps).toHaveLength(0);
 	});
 });
 
@@ -210,7 +218,7 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 	test('detects functions with 5 params', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { functionSignatures } = await collector.collect();
-		const fn = functionSignatures.find((f) => f.functionName === 'sendEmail');
+		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
 		expect(fn).toBeDefined();
 		expect(fn?.parameters).toHaveLength(5);
 		expect(fn?.parameters[0]).toEqual({ name: 'firstName', type: 'string', position: 0 });
@@ -223,22 +231,22 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 	test('flags homogeneous types (all same type)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { functionSignatures } = await collector.collect();
-		const fn = functionSignatures.find((f) => f.functionName === 'sendEmail');
-		expect(fn?.heterogeneousTypes).toBe(false);
+		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
+		expect(fn?.heterogeneous).toBe(false);
 	});
 
 	test('flags heterogeneous types (mixed types)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { functionSignatures } = await collector.collect();
-		const fn = functionSignatures.find((f) => f.functionName === 'createUser');
+		const fn = functionSignatures.find((f) => f.name === 'createUser');
 		expect(fn).toBeDefined();
-		expect(fn?.heterogeneousTypes).toBe(true);
+		expect(fn?.heterogeneous).toBe(true);
 	});
 
 	test('collects functions with fewer than 3 params', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { functionSignatures } = await collector.collect();
-		const shortFn = functionSignatures.find((f) => f.functionName === 'greet');
+		const shortFn = functionSignatures.find((f) => f.name === 'greet');
 		expect(shortFn).toBeDefined();
 	});
 
@@ -248,9 +256,9 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 		for (const fn of functionSignatures) {
 			expect(typeof fn.file).toBe('string');
 			expect(isAbsolute(fn.file)).toBe(false);
-			expect(typeof fn.functionName).toBe('string');
+			expect(typeof fn.name).toBe('string');
 			expect(fn.location.line).toBeGreaterThan(0);
-			expect(typeof fn.isExported).toBe('boolean');
+			expect(typeof fn.exported).toBe('boolean');
 		}
 	});
 });
@@ -264,7 +272,7 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('detects function returning tuple as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserDetails');
+		const source = positionalSources.find((s) => s.name === 'getUserDetails');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 		expect(source?.positions).toHaveLength(4);
@@ -275,7 +283,7 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('detects array literal variable as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'config');
+		const source = positionalSources.find((s) => s.name === 'config');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 	});
@@ -283,7 +291,7 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('propagates tuple source to variable assigned from function call', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'user');
+		const source = positionalSources.find((s) => s.name === 'user');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 		expect(source?.positions).toHaveLength(4);
@@ -292,14 +300,14 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('does not flag named object returns as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserObject');
+		const source = positionalSources.find((s) => s.name === 'getUserObject');
 		expect(source).toBeUndefined();
 	});
 
 	test('detects function returning array literal WITHOUT explicit return type', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'getUserDetailsImplicit');
+		const source = positionalSources.find((s) => s.name === 'getUserDetailsImplicit');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 		expect(source?.positions).toHaveLength(4);
@@ -308,7 +316,7 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('detects type-asserted array as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'typedTuple');
+		const source = positionalSources.find((s) => s.name === 'typedTuple');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 		expect(source?.positions).toHaveLength(3);
@@ -322,7 +330,7 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 	test('widens literal types to base types for homogeneous check', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'homogeneousStrings');
+		const source = positionalSources.find((s) => s.name === 'homogeneousStrings');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(false);
 		expect(source?.positions).toEqual([
@@ -332,13 +340,13 @@ describe('TSCollector.collect() — positionalSources fact', () => {
 		]);
 	});
 
-	test('each source has file, variableName, positions, and location', async () => {
+	test('each source has file, name, positions, and location', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
 		for (const src of positionalSources) {
 			expect(typeof src.file).toBe('string');
 			expect(isAbsolute(src.file)).toBe(false);
-			expect(typeof src.variableName).toBe('string');
+			expect(typeof src.name).toBe('string');
 			expect(Array.isArray(src.positions)).toBe(true);
 			expect(src.location.line).toBeGreaterThan(0);
 		}
@@ -355,7 +363,7 @@ describe('TSCollector.collect() — positionalAccesses fact', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
 		const access = positionalAccesses.find(
-			(a) => a.variableName === 'user' && a.accessedIndex === 3 && a.accessKind === 'index',
+			(a) => a.name === 'user' && a.accessedIndex === 3 && a.accessKind === 'index',
 		);
 		expect(access).toBeDefined();
 	});
@@ -363,33 +371,31 @@ describe('TSCollector.collect() — positionalAccesses fact', () => {
 	test('detects array destructuring access', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find(
-			(a) => a.variableName === 'getUserDetails' && a.accessKind === 'destructuring',
-		);
+		const access = positionalAccesses.find((a) => a.name === 'getUserDetails' && a.accessKind === 'destructuring');
 		expect(access).toBeDefined();
 	});
 
 	test('detects destructuring from variable (config)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'config' && a.accessKind === 'destructuring');
+		const access = positionalAccesses.find((a) => a.name === 'config' && a.accessKind === 'destructuring');
 		expect(access).toBeDefined();
 	});
 
 	test('does not flag named property access', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'namedUser');
+		const access = positionalAccesses.find((a) => a.name === 'namedUser');
 		expect(access).toBeUndefined();
 	});
 
-	test('each access has file, variableName, accessedIndex, and location', async () => {
+	test('each access has file, name, accessedIndex, and location', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
 		for (const acc of positionalAccesses) {
 			expect(typeof acc.file).toBe('string');
 			expect(isAbsolute(acc.file)).toBe(false);
-			expect(typeof acc.variableName).toBe('string');
+			expect(typeof acc.name).toBe('string');
 			expect(typeof acc.accessedIndex === 'number' || typeof acc.accessedIndex === 'string').toBe(true);
 			expect(acc.location.line).toBeGreaterThan(0);
 		}
@@ -400,77 +406,77 @@ describe('TSCollector.collect() — known positional APIs', () => {
 	test('detects split() result as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'dateParts');
+		const source = positionalSources.find((s) => s.name === 'dateParts');
 		expect(source).toBeDefined();
 	});
 
 	test('detects Object.values() result as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'values');
+		const source = positionalSources.find((s) => s.name === 'values');
 		expect(source).toBeDefined();
 	});
 
 	test('detects match() result as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'matchResult');
+		const source = positionalSources.find((s) => s.name === 'matchResult');
 		expect(source).toBeDefined();
 	});
 
 	test('index access on split result is detected', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'dateParts' && a.accessedIndex === 0);
+		const access = positionalAccesses.find((a) => a.name === 'dateParts' && a.accessedIndex === 0);
 		expect(access).toBeDefined();
 	});
 
 	test('index access on Object.values result is detected', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'values' && a.accessedIndex === 0);
+		const access = positionalAccesses.find((a) => a.name === 'values' && a.accessedIndex === 0);
 		expect(access).toBeDefined();
 	});
 
 	test('detects Object.entries() result as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'entries');
+		const source = positionalSources.find((s) => s.name === 'entries');
 		expect(source).toBeDefined();
 	});
 
 	test('index access on Object.entries result is detected', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'entries' && a.accessedIndex === 0);
+		const access = positionalAccesses.find((a) => a.name === 'entries' && a.accessedIndex === 0);
 		expect(access).toBeDefined();
 	});
 
 	test('index access on type-asserted array is detected', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'typedTuple' && a.accessedIndex === 0);
+		const access = positionalAccesses.find((a) => a.name === 'typedTuple' && a.accessedIndex === 0);
 		expect(access).toBeDefined();
 	});
 
 	test('detects computed index access with variable', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'config' && a.accessedIndex === 'idx');
+		const access = positionalAccesses.find((a) => a.name === 'config' && a.accessedIndex === 'idx');
 		expect(access).toBeDefined();
 	});
 
 	test('detects computed index access with expression', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'config' && a.accessedIndex === 'idx + 1');
+		const access = positionalAccesses.find((a) => a.name === 'config' && a.accessedIndex === 'idx + 1');
 		expect(access).toBeDefined();
 	});
 
 	test('detects computed index access with function call', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
-		const access = positionalAccesses.find((a) => a.variableName === 'config' && a.accessedIndex === 'getIndex()');
+		const access = positionalAccesses.find((a) => a.name === 'config' && a.accessedIndex === 'getIndex()');
 		expect(access).toBeDefined();
 	});
 });
@@ -479,7 +485,7 @@ describe('TSCollector.collect() — positionalSources: class method tuple return
 	test('detects class method with explicit tuple return type as positional source', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalSources } = await collector.collect();
-		const source = positionalSources.find((s) => s.variableName === 'DataParser.parse');
+		const source = positionalSources.find((s) => s.name === 'DataParser.parse');
 		expect(source).toBeDefined();
 		expect(source?.isHeterogeneous).toBe(true);
 		expect(source?.positions).toHaveLength(3);
@@ -494,7 +500,7 @@ describe('TSCollector.collect() — cross-file positionalAccesses in remote.ts',
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
 		const access = positionalAccesses.find(
-			(a) => a.variableName === 'remoteUser' && a.accessedIndex === 3 && a.file.endsWith('remote.ts'),
+			(a) => a.name === 'remoteUser' && a.accessedIndex === 3 && a.file.endsWith('remote.ts'),
 		);
 		expect(access).toBeDefined();
 		expect(access?.accessKind).toBe('index');
@@ -504,7 +510,7 @@ describe('TSCollector.collect() — cross-file positionalAccesses in remote.ts',
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { positionalAccesses } = await collector.collect();
 		const accesses = positionalAccesses.filter(
-			(a) => a.variableName === 'getUserDetails' && a.accessKind === 'destructuring' && a.file.endsWith('remote.ts'),
+			(a) => a.name === 'getUserDetails' && a.accessKind === 'destructuring' && a.file.endsWith('remote.ts'),
 		);
 		expect(accesses.length).toBeGreaterThan(0);
 	});
@@ -623,26 +629,16 @@ describe('TSCollector.collect() — algorithmicBindings fact', () => {
 		const splitBinding = algorithmicBindings.find((b) => b.file.includes('split'));
 		const sepBinding = algorithmicBindings.find((b) => b.file.includes('sep'));
 
-		// Prefix whitespace (\n${heading}) should NOT be extracted
 		expect(prefixBinding).toBeUndefined();
-
-		// Suffix whitespace (${text}\n) should NOT be extracted
 		expect(suffixBinding).toBeUndefined();
-
-		// Separator between expressions (${header}\n${body}) SHOULD be extracted
 		expect(sepBinding).toBeDefined();
 		expect(sepBinding?.bindingKey).toBe('\\n');
-
-		// Unpacker (.split) should still be extracted
 		expect(splitBinding).toBeDefined();
 		expect(splitBinding?.bindingKey).toBe('\\n');
 
-		// Cleanup
 		await rm(tmpDir, { recursive: true });
 	});
 });
-
-import { CALL_GRAPH_CAPABILITY } from '@maat-tools/vocabulary';
 
 describe('TSCollector.collect() — callGraph fact', () => {
 	test('provides callGraph in provideFacts', () => {

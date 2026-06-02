@@ -22,6 +22,7 @@ import {
 describe('defineRule', () => {
 	test('returns function with brand symbol', () => {
 		const factory = defineRule(() => ({
+			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
@@ -35,6 +36,7 @@ describe('defineRule', () => {
 describe('defineRuleSet', () => {
 	test('returns object with brand symbol and factories array', () => {
 		const f = defineRule(() => ({
+			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
@@ -62,6 +64,7 @@ describe('defineCollector', () => {
 describe('isRuleFactory', () => {
 	test('true for branded function', () => {
 		const factory = defineRule(() => ({
+			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
@@ -83,6 +86,7 @@ describe('isRuleFactory', () => {
 describe('isRuleSet', () => {
 	test('true for branded object', () => {
 		const f = defineRule(() => ({
+			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
 			evaluate: () => [],
@@ -151,6 +155,7 @@ describe('defineRuleBuilder', () => {
 	test('returns the same object (identity)', () => {
 		const original = {
 			build: () => ({
+				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
 				evaluate: () => [],
@@ -164,6 +169,7 @@ describe('defineRuleBuilder', () => {
 	test('preserves all original methods on the builder', () => {
 		const original = {
 			build: () => ({
+				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
 				evaluate: () => [],
@@ -180,6 +186,7 @@ describe('isRuleBuilder', () => {
 	test('true for any object with build()', () => {
 		const builder = defineRuleBuilder({
 			build: () => ({
+				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
 				evaluate: () => [],

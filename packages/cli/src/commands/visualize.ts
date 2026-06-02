@@ -26,6 +26,7 @@ function classify(record: FindingRecord): Group {
 function toFinding(record: FindingRecord): Finding {
 	return {
 		ruleId: record.rule_id,
+		instanceId: record.instance_id,
 		message: record.message,
 		fingerprint: record.fingerprint,
 		artifacts: [...record.artifacts],

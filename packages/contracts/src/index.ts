@@ -24,6 +24,7 @@ export type Artifact = {
 
 export type Finding = {
 	ruleId: string;
+	instanceId: string;
 	fingerprint: string;
 	message: string;
 	artifacts: Artifact[];
@@ -68,6 +69,7 @@ export type FindingObservedEvent = LedgerEntryBase & {
 	readonly type: typeof FindingStatus.OBSERVED;
 	readonly fingerprint: string;
 	readonly rule_id: string;
+	readonly instance_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
 };
@@ -143,6 +145,7 @@ export type FindingRecord = {
 	baselined: boolean;
 	readonly baseline_expires_at?: string;
 	readonly rule_id: string;
+	readonly instance_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
 	verified: boolean;
@@ -175,6 +178,7 @@ export type AnyCollector = Omit<Collector<never>, 'provideFacts' | 'collect'> & 
 };
 
 export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
+	readonly instanceId: string;
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
 	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): FindingRuleOutput[];

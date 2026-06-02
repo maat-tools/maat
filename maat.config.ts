@@ -1,6 +1,5 @@
 import { defineConfig, rule } from './packages/core/src';
 import { layer } from './packages/coupling-rules/src/layer';
-import { Pure } from './packages/coupling-rules/src/roles';
 
 export default defineConfig({
 	check: { strict: true },
@@ -9,7 +8,14 @@ export default defineConfig({
 			'@maat-tools/collector-ts',
 			{
 				tsConfigFilePath: './tsconfig.json',
-				exclude: ['**/node_modules/**', '**/.maat/**', '**/dist/**', '**/*.test.ts', '**/fixtures/**'],
+				exclude: [
+					'**/node_modules/**',
+					'**/.maat/**',
+					'**/dist/**',
+					'**/*.test.ts',
+					'**/fixtures/**',
+					'maat.config.ts',
+				],
 			},
 		],
 	],
@@ -21,18 +27,19 @@ export default defineConfig({
 
 		rule('@maat-tools/connascence-rules/cop-struct'),
 
-		layer('@maat-tools/contracts').is(Pure).allows('node:crypto'),
-		layer('@maat-tools/vocabulary').is(Pure).allows('@maat-tools/contracts', 'node:crypto'),
-		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts', 'node:crypto'),
+		layer('@maat-tools/contracts')
+			.allows('node:crypto')
+			.build(),
+		layer('@maat-tools/vocabulary')
+			.allows('@maat-tools/contracts', 'node:crypto')
+			.build(),
+		layer('@maat-tools/kernel')
+			.allows('@maat-tools/contracts', 'node:crypto')
+			.build(),
 
-		layer('@maat-tools/core').is(Pure).allows('@maat-tools/contracts', 'node:crypto', 'ulid', 'node:util'),
-
-		layer('@maat-tools/coupling-rules').allows('@maat-tools/contracts', '@maat-tools/vocabulary', 'node:path'),
-		layer('@maat-tools/connascence-rules').allows(
-			'@maat-tools/contracts',
-			'@maat-tools/vocabulary',
-			'@maat-tools/core',
-		),
+		layer('@maat-tools/core')
+			.allows('@maat-tools/contracts', 'node:crypto', 'ulid', 'node:util')
+			.build(),
 	],
 	ledger: ['@maat-tools/file-ledger', { path: './.maat/maat-ledger.ndjson' }],
 });

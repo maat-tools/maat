@@ -46,6 +46,7 @@
   "dependencies": {
     "@maat-tools/contracts": "workspace:*",
     "@maat-tools/core": "workspace:*",
+    "@maat-tools/utils": "workspace:*",
     "@maat-tools/vocabulary": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",

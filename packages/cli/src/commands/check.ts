@@ -232,6 +232,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				timestamp,
 				fingerprint: finding.fingerprint,
 				rule_id: finding.ruleId,
+				instance_id: finding.instanceId,
 				message: finding.message,
 				artifacts: finding.artifacts,
 			});

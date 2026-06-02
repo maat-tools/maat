@@ -2,13 +2,18 @@ import type { FindingRuleOutput } from '@maat-tools/contracts';
 import { FindingStatus, generateFingerprint } from '@maat-tools/contracts';
 import type { LedgerHarness } from '../harness/ledger';
 
-export async function scenarioObserved(harness: LedgerHarness, output: FindingRuleOutput): Promise<string> {
+export async function scenarioObserved(
+	harness: LedgerHarness,
+	output: FindingRuleOutput,
+	instanceId?: string,
+): Promise<string> {
 	const fingerprint = generateFingerprint(output.ruleId, output.ruleIdentifier);
 	await harness.backend.append({
 		type: FindingStatus.OBSERVED,
 		timestamp: new Date().toISOString(),
 		fingerprint,
 		rule_id: output.ruleId,
+		instance_id: instanceId ?? output.ruleId,
 		message: output.message,
 		artifacts: output.artifacts,
 	});

@@ -5,9 +5,7 @@ import {
 	type GitFileChange,
 } from '@maat-tools/collector-git';
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
-import micromatch from 'micromatch';
-
-const { isMatch: micromatchIsMatch } = micromatch;
+import { isMatch } from '@maat-tools/utils';
 
 declare module '@maat-tools/contracts' {
 	interface RuleRegistry {
@@ -23,6 +21,7 @@ export type ChurnOptions = {
 
 export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 	public readonly id = 'maat-tools/git-rules/churn@v1';
+	public readonly instanceId = this.id;
 	public readonly needFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
 
 	private readonly threshold: number;
@@ -47,7 +46,7 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 			if (!hashesInWindow.has(change.hash)) {
 				continue;
 			}
-			if (this.exclude.length > 0 && micromatchIsMatch(change.path, this.exclude)) {
+			if (this.exclude.length > 0 && isMatch(change.path, this.exclude)) {
 				continue;
 			}
 			changeCount.set(change.path, (changeCount.get(change.path) ?? 0) + 1);

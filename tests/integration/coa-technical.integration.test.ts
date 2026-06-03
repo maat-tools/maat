@@ -44,7 +44,7 @@ function hasFinding(ruleId: string, match: string) {
 }
 
 describe('connascence-rules e2e — coa-technical with dedicated fixture', () => {
-	const COA_RULE = 'coa-technical@v1';
+	const COA_RULE = 'maat-tools/coa-technical@v1';
 
 	test('pack-unpack pattern with ":" is detected in cache.ts', () => {
 		expect(hasFinding(COA_RULE, 'pack-unpack')).toBe(true);

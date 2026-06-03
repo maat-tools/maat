@@ -10,8 +10,9 @@ export function makeCollector(items: string[], id = 'test-collector'): Collector
 	};
 }
 
-export function makeRule(id = 'rule@v1'): Rule<'testFacts'> {
+export function makeRule(id = 'rule@v1', instanceId?: string): Rule<'testFacts'> {
 	return {
+		instanceId: instanceId ?? id,
 		id,
 		needFacts: ['testFacts'] as const,
 		evaluate: ({ testFacts }) =>
@@ -40,6 +41,7 @@ export function makeKernel(findings: FindingRuleOutput[] = []): Kernel {
 	const kernel = new Kernel();
 	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({
+		instanceId: 'test@v1',
 		id: 'test@v1',
 		needFacts: ['testFacts'] as const,
 		evaluate: () => findings,

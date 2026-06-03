@@ -7,7 +7,7 @@ function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
 	};
 
 	return Object.entries(described)
-		.map(([k, v]) => `${k}: ${v}`)
+		.map(([k, v]) => `${chalk.bold(k)}: ${v}`)
 		.join(' ');
 }
 
@@ -92,7 +92,7 @@ export class Printer {
 		if (this.silent) {
 			return;
 		}
-		process.stdout.write(`  ${chalk.magenta(`[${result.insightId}]`)} ${result.message}\n`);
+		process.stdout.write(`  ${chalk.greenBright(`[${result.insightId}]`)} ${result.message}\n`);
 	}
 
 	public json(data: unknown): void {

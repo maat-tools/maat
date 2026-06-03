@@ -1,7 +1,5 @@
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
 import {
-	CALL_GRAPH_CAPABILITY,
-	type CallGraph,
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
 	type PositionalAccess,
@@ -18,13 +16,10 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-export class ConnascenceOfPositionStructRule implements Rule<'positionalSources' | 'positionalAccesses' | 'callGraph'> {
-	public readonly id = 'cop-struct@v1';
-	public readonly needFacts = [
-		POSITIONAL_SOURCES_CAPABILITY,
-		POSITIONAL_ACCESSES_CAPABILITY,
-		CALL_GRAPH_CAPABILITY,
-	] as const;
+export class ConnascenceOfPositionStructRule implements Rule<'positionalSources' | 'positionalAccesses'> {
+	public readonly id = 'maat-tools/connascence-rules/cop-struct@v1';
+	public readonly instanceId = this.id;
+	public readonly needFacts = [POSITIONAL_SOURCES_CAPABILITY, POSITIONAL_ACCESSES_CAPABILITY] as const;
 
 	private readonly onlyHeterogeneous: boolean;
 
@@ -35,18 +30,16 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 	public evaluate(facts: {
 		positionalSources: PositionalSource[];
 		positionalAccesses: PositionalAccess[];
-		callGraph: CallGraph;
 	}): FindingRuleOutput[] {
-		const { positionalSources, positionalAccesses, callGraph } = facts;
-
+		const { positionalSources, positionalAccesses } = facts;
 		const accessMap = new Map<string, PositionalAccess[]>();
+
 		for (const acc of positionalAccesses) {
-			const key = `${acc.file}::${acc.variableName}`;
+			const key = acc.origin ? `${acc.origin.file}::${acc.origin.name}` : `${acc.file}::${acc.name}`;
 			const existing = accessMap.get(key) ?? [];
 			existing.push(acc);
 			accessMap.set(key, existing);
 		}
-
 		const findings: FindingRuleOutput[] = [];
 
 		for (const source of positionalSources) {
@@ -55,41 +48,11 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 			}
 
 			const matchedAccesses: PositionalAccess[] = [];
+			const intraKey = `${source.file}::${source.name}`;
 
-			const intraKey = `${source.file}::${source.variableName}`;
-			const intraAccesses = accessMap.get(intraKey);
-			if (intraAccesses) {
-				matchedAccesses.push(...intraAccesses);
-			}
-
-			const sourceFile = source.file;
-			const sourceLine = source.location.line;
-
-			const callerFilePatterns: string[] = [];
-			for (const edge of callGraph.edges) {
-				const parts = edge.calleeId.split(':');
-				const calleeFile = parts[0];
-				const calleeLine = Number(parts[1]);
-				if (!calleeFile) {
-					continue;
-				}
-
-				const fileMatches = calleeFile.endsWith(sourceFile) || sourceFile.endsWith(calleeFile);
-				const lineMatches = calleeLine === sourceLine;
-
-				if (fileMatches && lineMatches) {
-					callerFilePatterns.push(edge.location.file);
-				}
-			}
-
-			for (const acc of positionalAccesses) {
-				for (const callerPattern of callerFilePatterns) {
-					const accFileMatches = acc.file.endsWith(callerPattern) || callerPattern.endsWith(acc.file);
-					if (accFileMatches) {
-						matchedAccesses.push(acc);
-						break;
-					}
-				}
+			const access = accessMap.get(intraKey);
+			if (access) {
+				matchedAccesses.push(...access);
 			}
 
 			if (matchedAccesses.length === 0) {
@@ -101,12 +64,12 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 				...matchedAccesses.map((acc) => ({ kind: 'access' as const, data: acc })),
 			];
 
-			const accessSummary = matchedAccesses.map((a) => `${a.file}[${a.accessedIndex}]`).join(', ');
+			const accessSummary = matchedAccesses.map((a) => `${a.file}`).join(', ');
 
 			findings.push({
 				ruleId: this.id,
-				ruleIdentifier: { variable: source.variableName, file: source.file },
-				message: `"${source.variableName}" in ${source.file} — positional access at ${accessSummary}`,
+				ruleIdentifier: { name: source.name, file: source.file },
+				message: `"${source.name}" in ${source.file} — positional access at ${accessSummary}`,
 				artifacts,
 			});
 		}
@@ -119,10 +82,11 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 			const src = artifact.data as PositionalSource;
 			const loc = `${src.location.file}:${src.location.line}${src.location.column !== undefined ? `:${src.location.column}` : ''}`;
 			const positions = src.positions.map((p) => `[${p.index}]: ${p.type}`).join(', ');
+
 			return {
+				role: '[Source]',
 				location: loc,
-				variable: src.variableName,
-				role: 'Definition (source)',
+				identifier: src.name,
 				positions,
 			};
 		}
@@ -130,12 +94,13 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 		if (artifact.kind === 'access') {
 			const acc = artifact.data as PositionalAccess;
 			const loc = `${acc.location.file}:${acc.location.line}${acc.location.column !== undefined ? `:${acc.location.column}` : ''}`;
+
 			return {
+				role: '[Access]',
 				location: loc,
-				variable: acc.variableName,
-				role: 'Usage (access)',
-				index: String(acc.accessedIndex),
+				identifier: acc.name,
 				kind: acc.accessKind,
+				index: String(acc.accessedIndex),
 			};
 		}
 

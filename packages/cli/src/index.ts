@@ -9,7 +9,6 @@ import {
 	isInsightSet,
 	isLedgerBackendFactory,
 	isRule,
-	isRuleBuilder,
 	isRuleFactory,
 	isRuleSet,
 	type LedgerBackend,
@@ -171,11 +170,6 @@ class MaatCLI {
 		for (const ruleEntry of maatConfig.rules) {
 			if (isRule(ruleEntry)) {
 				this.kernel.registerRule(ruleEntry);
-				continue;
-			}
-
-			if (isRuleBuilder(ruleEntry)) {
-				this.kernel.registerRule(ruleEntry.build());
 				continue;
 			}
 

@@ -1,7 +1,7 @@
 # `@maat-tools/coupling-rules`
 
 ::: info Needs
-`imports` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides imports
+`dependsOn` — from [`@maat-tools/collector-ts`](/plugins/collector-ts/) or any collector that provides dependency facts
 :::
 
 Rules for enforcing import boundaries between packages and architectural layers.
@@ -19,8 +19,9 @@ import { layer, Pure } from '@maat-tools/coupling-rules';
 
 export default defineConfig({
 	rules: [
-		layer('@maat-tools/kernel').is(Pure).allows('@maat-tools/contracts').build(),
-		layer('./src/domain/**').allows('./src/shared/**', 'react').build(),
+		layer('@maat-tools/contracts').is(Pure).build(),
+		layer('@maat-tools/kernel').allows('@maat-tools/contracts').build(),
+		layer('src/domain/**').allows('src/shared/**', 'react').build(),
 	],
 });
 ```

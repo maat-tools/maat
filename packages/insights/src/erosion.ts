@@ -1,4 +1,6 @@
 import { defineInsight, type Finding, type Insight, type InsightResult } from '@maat-tools/contracts';
+import { isMatch } from '@maat-tools/utils';
+import type { DependsOn } from '@maat-tools/vocabulary';
 
 declare module '@maat-tools/contracts' {
 	interface InsightRegistry {
@@ -17,11 +19,11 @@ type ViolationEntry = {
 	fingerprint: string;
 	message: string;
 	file?: string;
-	packageName?: string;
-	specifier?: string;
+	dependency?: string;
 };
 type ViolatingBoundary = {
 	boundary: string;
+	rootGlob: string;
 	violations: ViolationEntry[];
 };
 type ErodingBoundary = {
@@ -31,16 +33,20 @@ type ErodingBoundary = {
 };
 
 export class ErosionInsight implements Insight {
-	public readonly id = 'erosion@v1';
-	public readonly needRules: readonly string[] = ['git/churn@v1', 'coupling/pure-imports', 'coupling/layer-imports'];
+	public readonly id = 'maat-tools/erosion@v1';
+	public readonly needRules: readonly string[] = [
+		'maat-tools/git-rules/churn@v1',
+		'maat-tools/coupling-rules/pure-imports@v1',
+		'maat-tools/coupling-rules/layer-imports@v1',
+	];
 
 	public analyze(findings: Finding[]): InsightResult[] {
 		const churnEntries = this.collectChurn(findings);
 		const violatingBoundaries = this.collectViolatingBoundaries(findings);
 
 		const eroding = [...violatingBoundaries.values()]
-			.flatMap(({ boundary, violations }): ErodingBoundary[] => {
-				const churn = this.churnForBoundary(boundary, violations, churnEntries);
+			.flatMap(({ boundary, rootGlob, violations }): ErodingBoundary[] => {
+				const churn = this.churnForBoundary(rootGlob, churnEntries);
 				return churn.total === 0 ? [] : [{ boundary, churn, violations }];
 			})
 			.sort((a, b) => b.churn.total - a.churn.total);
@@ -70,7 +76,7 @@ export class ErosionInsight implements Insight {
 		const entries: ChurnEntry[] = [];
 
 		for (const f of findings) {
-			if (f.ruleId !== 'git/churn@v1') {
+			if (f.ruleId !== 'maat-tools/git-rules/churn@v1') {
 				continue;
 			}
 
@@ -90,37 +96,47 @@ export class ErosionInsight implements Insight {
 	}
 
 	private collectViolatingBoundaries(findings: Finding[]): Map<string, ViolatingBoundary> {
-		const violating = new Map<string, ViolationEntry[]>();
+		const violating = new Map<string, ViolatingBoundary>();
 		for (const f of findings) {
-			const boundary = this.boundaryFromCouplingRuleId(f.ruleId);
-			if (!boundary) {
+			if (!this.isCouplingFinding(f.ruleId)) {
 				continue;
 			}
 
-			const entries = violating.get(boundary) ?? [];
-			entries.push(this.violationFromFinding(f));
-			violating.set(boundary, entries);
+			const colonIndex = f.instanceId.indexOf(':');
+			if (colonIndex === -1) {
+				continue;
+			}
+
+			const target = f.instanceId.slice(colonIndex + 1);
+			const dep = f.artifacts.find((a) => a.kind === 'dependsOn')?.data as DependsOn | undefined;
+			const rootGlob = dep?.from.package?.name === target ? `${dep.from.package.rootPath ?? target}/**` : target;
+
+			const existing = violating.get(target);
+			if (existing) {
+				existing.violations.push(this.violationFromFinding(f));
+			} else {
+				violating.set(target, { boundary: target, rootGlob, violations: [this.violationFromFinding(f)] });
+			}
 		}
 
-		return new Map([...violating].map(([boundary, violations]) => [boundary, { boundary, violations }]));
+		return violating;
 	}
 
 	private violationFromFinding(finding: Finding): ViolationEntry {
-		const importArtifact = finding.artifacts.find((artifact) => artifact.kind === 'import');
-		const data = importArtifact?.data as { file?: unknown; packageName?: unknown; specifier?: unknown } | undefined;
+		const dependsOnArtifact = finding.artifacts.find((artifact) => artifact.kind === 'dependsOn');
+		const data = dependsOnArtifact?.data as DependsOn | undefined;
 
 		return {
 			ruleId: finding.ruleId,
 			fingerprint: finding.fingerprint,
 			message: finding.message,
-			file: typeof data?.file === 'string' ? data.file : undefined,
-			packageName: typeof data?.packageName === 'string' ? data.packageName : undefined,
-			specifier: typeof data?.specifier === 'string' ? data.specifier : undefined,
+			file: typeof data?.from.path === 'string' ? data.from.path : undefined,
+			dependency: typeof data?.to.path === 'string' ? data.to.path : undefined,
 		};
 	}
 
-	private churnForBoundary(boundary: string, violations: ViolationEntry[], churnEntries: ChurnEntry[]): BoundaryChurn {
-		const files = churnEntries.filter((entry) => this.fileChurnBelongsToBoundary(entry.path, boundary, violations));
+	private churnForBoundary(rootGlob: string, churnEntries: ChurnEntry[]): BoundaryChurn {
+		const files = churnEntries.filter((entry) => isMatch(entry.path, rootGlob));
 
 		return {
 			files,
@@ -128,28 +144,11 @@ export class ErosionInsight implements Insight {
 		};
 	}
 
-	private fileChurnBelongsToBoundary(filePath: string, boundary: string, violations: ViolationEntry[]): boolean {
-		// Path-mode boundary (e.g. "./src/auth/**"): match directly by glob
-		if (boundary.startsWith('./')) {
-			return this.matchGlob(filePath, boundary);
-		}
-
-		// Package-mode boundary (e.g. "kernel"): boundary name appears as a directory segment in the path
-		if (filePath.split('/').includes(this.lastSegment(boundary))) {
-			return true;
-		}
-
-		// Fallback: infer where the boundary lives on disk from files that had violations, then check if filePath falls inside
-		return this.rootsFromViolationFiles(boundary, violations).some(
-			(root) => filePath === root || filePath.startsWith(`${root}/`),
-		);
-	}
-
 	private formatErodingBoundary({ boundary, churn, violations }: ErodingBoundary): string {
 		const hottestFile = [...churn.files].sort((a, b) => b.count - a.count)[0];
-		const sampleViolation = violations.find((v) => v.specifier !== undefined) ?? violations[0];
+		const sampleViolation = violations.find((v) => v.dependency !== undefined) ?? violations[0];
 		const hotFileText = hottestFile === undefined ? '' : `; hottest ${hottestFile.path} (${hottestFile.count} changes)`;
-		const violationText = sampleViolation?.specifier === undefined ? '' : `; leaking ${sampleViolation.specifier}`;
+		const violationText = sampleViolation?.dependency === undefined ? '' : `; leaking ${sampleViolation.dependency}`;
 
 		return `${boundary} (${churn.total} changes across ${churn.files.length} ${this.plural(
 			churn.files.length,
@@ -162,51 +161,8 @@ export class ErosionInsight implements Insight {
 		)}${hotFileText}${violationText})`;
 	}
 
-	private rootsFromViolationFiles(boundary: string, violations: ViolationEntry[]): string[] {
-		const roots = new Set<string>();
-		const leaf = this.lastSegment(boundary);
-
-		for (const violation of violations) {
-			if (violation.file === undefined) {
-				continue;
-			}
-
-			const segments = violation.file.split('/');
-			const leafIndex = segments.indexOf(leaf);
-			if (leafIndex >= 0) {
-				roots.add(segments.slice(0, leafIndex + 1).join('/'));
-				continue;
-			}
-
-			const parent = segments.slice(0, -1).join('/');
-			if (parent) {
-				roots.add(parent);
-			}
-		}
-
-		return [...roots];
-	}
-
-	private lastSegment(boundary: string): string {
-		const segments = boundary.split('/');
-
-		return segments[segments.length - 1] ?? boundary;
-	}
-
-	private boundaryFromCouplingRuleId(ruleId: string): string | null {
-		const match = ruleId.match(/^coupling\/(?:pure-imports|layer-imports):(.+)@v\d+$/);
-
-		return match?.[1] ?? null;
-	}
-
-	private matchGlob(value: string, pattern: string): boolean {
-		const normalized = pattern.startsWith('./') ? pattern.slice(2) : pattern;
-		const regexStr = normalized
-			.split('**')
-			.map((part) => part.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]+'))
-			.join('.*');
-
-		return new RegExp(`^${regexStr}$`).test(value);
+	private isCouplingFinding(ruleId: string): boolean {
+		return /^maat-tools\/coupling-rules\/(pure-imports|layer-imports)@v\d+$/.test(ruleId);
 	}
 
 	private plural(count: number, singular: string, plural: string): string {

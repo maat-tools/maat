@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
-import { dump, getCurrentDir } from '@maat-tools/utils';
+import { getCurrentDir } from '@maat-tools/utils';
 
 export const GIT_COMMITS_CAPABILITY = 'git_commits' as const;
 export const GIT_FILE_CHANGES_CAPABILITY = 'git_file_changes' as const;
@@ -156,8 +156,6 @@ export class GitCollector implements Collector<'git_commits' | 'git_file_changes
 		});
 
 		const { commits, fileChanges } = parseGitLog(stdout);
-
-		dump({ commits, fileChanges });
 
 		return {
 			git_commits: commits,

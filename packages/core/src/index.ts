@@ -13,7 +13,6 @@ import {
 	type LedgerEventInput,
 	type LedgerSnapshot,
 	type Rule,
-	type RuleBuilder,
 	type RuleRegistry,
 } from '@maat-tools/contracts';
 import { ulid } from 'ulid';
@@ -28,7 +27,7 @@ type RuleConfigTuples<R> = { [K in keyof R]: OptionalConfigTuple<R, K> }[keyof R
 
 export type CollectorEntry = keyof CollectorRegistry | RegistryTuples<CollectorRegistry> | AnyCollector;
 
-export type RuleEntry = keyof RuleRegistry | RuleConfigTuples<RuleRegistry> | Rule | RuleBuilder;
+export type RuleEntry = keyof RuleRegistry | RuleConfigTuples<RuleRegistry> | Rule;
 
 export type EnricherEntry = keyof EnricherRegistry | RegistryTuples<EnricherRegistry>;
 
@@ -90,6 +89,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 					state: this.nextState(existing?.state),
 					baselined: existing?.baselined ?? false,
 					rule_id: event.rule_id,
+					instance_id: event.instance_id,
 					message: event.message,
 					artifacts: event.artifacts,
 					verified: existing?.verified ?? false,

@@ -5,6 +5,7 @@ import { Kernel } from './index';
 
 function makeRuleConsumingEnriched(id = 'rule-enriched@v1'): Rule<'enrichedFacts'> {
 	return {
+		instanceId: id,
 		id,
 		needFacts: ['enrichedFacts'] as const,
 		evaluate: ({ enrichedFacts }) =>
@@ -68,6 +69,7 @@ describe('Kernel.run', () => {
 			collect: async () => ({ otherFacts: ['hidden'] }),
 		};
 		const inspectingRule: Rule<'testFacts'> = {
+			instanceId: 'inspecting-rule@v1',
 			id: 'inspecting-rule@v1',
 			needFacts: ['testFacts'] as const,
 			evaluate: (facts) => {
@@ -122,6 +124,24 @@ describe('Kernel.run', () => {
 		const [r1, r2] = await Promise.all([build(), build()]);
 		expect(r1.findings.map((f) => f.fingerprint)).toEqual(r2.findings.map((f) => f.fingerprint));
 	});
+
+	test('finding.instanceId matches the rule instanceId', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerRule(makeRule('rule@v1', 'my-custom-instance'));
+		const { findings } = await kernel.run();
+		expect(findings[0]?.instanceId).toBe('my-custom-instance');
+	});
+
+	test('two rules with same id but different instanceId produce findings with correct instanceIds', async () => {
+		const kernel = new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerRule(makeRule('rule@v1', 'instance-a'))
+			.registerRule(makeRule('rule@v1', 'instance-b'));
+		const { findings } = await kernel.run();
+		const instanceIds = findings.map((f) => f.instanceId).sort();
+		expect(instanceIds).toEqual(['instance-a', 'instance-b']);
+	});
 });
 
 describe('Kernel.run with enrichers', () => {
@@ -152,6 +172,7 @@ describe('Kernel.run with enrichers', () => {
 
 	test('rule consuming both collector and enriched facts gets requiresVerification and provenance', async () => {
 		const mixedRule: Rule<'testFacts' | 'enrichedFacts'> = {
+			instanceId: 'mixed@v1',
 			id: 'mixed@v1',
 			needFacts: ['testFacts', 'enrichedFacts'] as const,
 			evaluate: ({ testFacts, enrichedFacts }) => [
@@ -232,16 +253,52 @@ describe('Kernel.registerCollector validation', () => {
 });
 
 describe('Kernel.registerRule validation', () => {
+	test('throws if instanceId is empty', () => {
+		const rule = {
+			instanceId: '',
+			id: 'r@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: () => ({}),
+		};
+		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('non-empty instanceId');
+	});
+
+	test('throws if instanceId is whitespace', () => {
+		const rule = {
+			instanceId: '   ',
+			id: 'r@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: () => ({}),
+		};
+		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('non-empty instanceId');
+	});
+
 	test('throws if rule id is empty', () => {
-		expect(() => new Kernel().registerRule(makeRule(''))).toThrow('non-empty id');
+		const rule = {
+			instanceId: 'r@v1',
+			id: '',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: () => ({}),
+		};
+		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('non-empty id');
 	});
 
 	test('throws if rule id is whitespace', () => {
-		expect(() => new Kernel().registerRule(makeRule('   '))).toThrow('non-empty id');
+		const rule = {
+			instanceId: 'r@v1',
+			id: '   ',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: () => ({}),
+		};
+		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('non-empty id');
 	});
 
 	test('throws if evaluate is not a function', () => {
-		const rule = { id: 'r@v1', needFacts: ['testFacts'] as const, evaluate: 'bad' };
+		const rule = { instanceId: 'r@v1', id: 'r@v1', needFacts: ['testFacts'] as const, evaluate: 'bad' };
 		expect(() => new Kernel().registerRule(rule as unknown as Rule<'testFacts'>)).toThrow('evaluate');
 	});
 });
@@ -338,10 +395,18 @@ describe('Kernel duplicate registration', () => {
 		);
 	});
 
-	test('throws if rule id is duplicated', () => {
+	test('throws if rule instanceId is duplicated', () => {
 		const kernel = new Kernel().registerRule(makeRule('dup-rule@v1'));
 		expect(() => kernel.registerRule(makeRule('dup-rule@v1'))).toThrow(
-			'Rule with id "dup-rule@v1" is already registered',
+			'Rule with instanceId "dup-rule@v1" is already registered',
 		);
+	});
+
+	test('allows two rules with same id but different instanceId', () => {
+		const kernel = new Kernel();
+		expect(() => {
+			kernel.registerRule(makeRule('rule@v1', 'instance-a'));
+			kernel.registerRule(makeRule('rule@v1', 'instance-b'));
+		}).not.toThrow();
 	});
 });

@@ -1,7 +1,7 @@
 export type { CoATechnicalOptions } from './coa/technical';
 export { ConnascenceOfAlgorithmTechnicalRule, default as coaTechnical } from './coa/technical';
-export type { CoMRuleOptions } from './com';
-export { ConnascenceOfMeaningRule, default as com } from './com';
+export type { CoMRuleOptions } from './com/com';
+export { ConnascenceOfMeaningRule, default as com } from './com/com';
 export type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
 export {
 	ConnascenceOfPositionArgsRule,
@@ -13,8 +13,8 @@ export {
 import { defineRuleSet } from '@maat-tools/contracts';
 import type { CoATechnicalOptions } from './coa/technical';
 import coaTechnical from './coa/technical';
-import type { CoMRuleOptions } from './com';
-import com from './com';
+import type { CoMRuleOptions } from './com/com';
+import com from './com/com';
 import type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
 import copArgs from './cop/args';
 import copStruct from './cop/struct';

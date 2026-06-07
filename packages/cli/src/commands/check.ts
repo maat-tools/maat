@@ -48,6 +48,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		const spinner = options.silent ? null : createSpinner();
+		let totalLLMCosts = { usedTokens: 0, cost: 0 };
 		const { findings: currentFindings } = await this.kernel
 			.run({
 				onProgress: (event: KernelProgressEvent) => {
@@ -56,6 +57,14 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					}
 					if (event.type === 'enricher:start') {
 						spinner?.update(`Enriching ${event.enricherId} (${event.index + 1}/${event.total})`);
+					}
+					if (event.type === 'enricher:done') {
+						if (event.enriched.usedTokens) {
+							totalLLMCosts.usedTokens += event.enriched.usedTokens;
+						}
+						if (event.enriched.cost) {
+							totalLLMCosts.cost += event.enriched.cost;
+						}
 					}
 				},
 			})
@@ -73,6 +82,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			}
 			if (displayMode === 'all' || displayMode === 'insights') {
 				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+			}
+			if (totalLLMCosts.usedTokens > 0) {
+				printer.info(`\nLLM costs: $${totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`);
 			}
 			if (this.config.check?.strict && actionableFindings.length > 0) {
 				printer.error(
@@ -121,6 +133,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		if (displayMode === 'all' || displayMode === 'insights') {
 			await this.printInsights(currentFindingsWithVerification, printer, { warnAboutScope: displayMode === 'all' });
+		}
+
+		if (totalLLMCosts.usedTokens > 0) {
+			printer.info(`\nLLM costs: $${totalLLMCosts.cost === 0 ? '0.000000' : totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens === 0 ? '0' : totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`);
 		}
 
 		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });

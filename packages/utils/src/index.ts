@@ -12,4 +12,4 @@ export {
 	resolveSymbol,
 } from './file-system';
 export { isMatch } from './glob';
-export { type LLMConfig, LLMInteractor, type LLMModel, type LLMProvider, OpenAIModel } from './llm';
+export { type LLMConfig, type KnownLLMConfig, type ProviderModelRegistry, LLMInteractor, type LLMModel, type LLMProvider, GeminiAIModel } from './llm';

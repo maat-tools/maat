@@ -36,12 +36,15 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 
 	public async call(input: LLMInput): Promise<LLMOutput> {
 		const { prompt } = this.sanitize(input);
-		const generationConfig = input.responseFormat === 'json'
-			? {
-				responseMimeType: 'application/json' as const,
-				responseSchema: input.responseSchema,
-			}
-			: undefined;
+		const generationConfig = {
+			temperature: 0,
+			...(input.responseFormat === 'json'
+				? {
+					responseMimeType: 'application/json' as const,
+					responseSchema: input.responseSchema,
+				}
+				: {}),
+		};
 
 		try {
 			const result = await this.ai.models.generateContent({

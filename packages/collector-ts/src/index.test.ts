@@ -220,19 +220,20 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 		const { functionSignatures } = await collector.collect();
 		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
 		expect(fn).toBeDefined();
-		expect(fn?.parameters).toHaveLength(5);
-		expect(fn?.parameters[0]).toEqual({ name: 'firstName', type: 'string', position: 0 });
-		expect(fn?.parameters[1]).toEqual({ name: 'lastName', type: 'string', position: 1 });
-		expect(fn?.parameters[2]).toEqual({ name: 'email', type: 'string', position: 2 });
-		expect(fn?.parameters[3]).toEqual({ name: 'subject', type: 'string', position: 3 });
-		expect(fn?.parameters[4]).toEqual({ name: 'body', type: 'string', position: 4 });
+		expect(fn?.input.parameters).toHaveLength(5);
+		expect(fn?.input.parameters[0]).toEqual({ name: 'firstName', type: 'string', position: 0 });
+		expect(fn?.input.parameters[1]).toEqual({ name: 'lastName', type: 'string', position: 1 });
+		expect(fn?.input.parameters[2]).toEqual({ name: 'email', type: 'string', position: 2 });
+		expect(fn?.input.parameters[3]).toEqual({ name: 'subject', type: 'string', position: 3 });
+		expect(fn?.input.parameters[4]).toEqual({ name: 'body', type: 'string', position: 4 });
 	});
 
 	test('flags homogeneous types (all same type)', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
 		const { functionSignatures } = await collector.collect();
 		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
-		expect(fn?.heterogeneous).toBe(false);
+		expect(fn).toBeDefined();
+		expect(fn?.input.heterogeneous).toBe(false);
 	});
 
 	test('flags heterogeneous types (mixed types)', async () => {
@@ -240,7 +241,7 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 		const { functionSignatures } = await collector.collect();
 		const fn = functionSignatures.find((f) => f.name === 'createUser');
 		expect(fn).toBeDefined();
-		expect(fn?.heterogeneous).toBe(true);
+		expect(fn?.input.heterogeneous).toBe(true);
 	});
 
 	test('collects functions with fewer than 3 params', async () => {
@@ -260,6 +261,66 @@ describe('TSCollector.collect() — functionSignatures fact', () => {
 			expect(fn.location.line).toBeGreaterThan(0);
 			expect(typeof fn.exported).toBe('boolean');
 		}
+	});
+
+	test('captures output returnType for void function', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
+		expect(fn).toBeDefined();
+		expect(fn?.output.returnType).toBe('void');
+	});
+
+	test('captures output returnType for union type', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'UserService.findById');
+		expect(fn).toBeDefined();
+		expect(fn?.output.returnType).toContain('User | undefined');
+	});
+
+	test('flags output heterogeneous for union return type', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'UserService.findById');
+		expect(fn).toBeDefined();
+		expect(fn?.output.heterogeneous).toBe(true);
+	});
+
+	test('flags output homogeneous for single return type', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'greet');
+		expect(fn).toBeDefined();
+		expect(fn?.output.heterogeneous).toBe(false);
+		expect(fn?.output.returnType).toBe('string');
+	});
+
+	test('collects returnSites for function with return statement', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'greet');
+		expect(fn).toBeDefined();
+		expect(fn?.output.returnSites).toHaveLength(1);
+		expect(fn?.output.returnSites[0]?.value).toContain('Hello,');
+		expect(fn?.output.returnSites[0]?.location.line).toBeGreaterThan(0);
+	});
+
+	test('collects returnSites for method with return statement', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'UserService.findById');
+		expect(fn).toBeDefined();
+		expect(fn?.output.returnSites).toHaveLength(1);
+		expect(fn?.output.returnSites[0]?.location.line).toBeGreaterThan(0);
+	});
+
+	test('void functions have no returnSites', async () => {
+		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
+		const { functionSignatures } = await collector.collect();
+		const fn = functionSignatures.find((f) => f.name === 'sendEmail');
+		expect(fn).toBeDefined();
+		expect(fn?.output.returnSites).toHaveLength(0);
 	});
 });
 

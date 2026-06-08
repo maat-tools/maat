@@ -1,6 +1,19 @@
-import { describe, expect, test } from 'bun:test';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { LLMInteractor, type LLMConfig, type LLMInput, type LLMOutput, type LLMModel } from '.';
 import type { ModelCapabilities } from './base';
+
+let testCacheDir: string;
+beforeEach(() => {
+	testCacheDir = join(tmpdir(), `maat-test-${Math.floor(Math.random() * 1_000_000)}`);
+	process.env.MAAT_ENRICHER_CACHE_DIR = testCacheDir;
+});
+afterEach(() => {
+	delete process.env.MAAT_ENRICHER_CACHE_DIR;
+	try { rmSync(testCacheDir, { recursive: true, force: true }); } catch { /* ignore */ }
+});
 
 type FakeItem = { id: number; payload: string };
 type FakeResult = { score: number };
@@ -25,7 +38,7 @@ function makeFakeModel(capabilities: ModelCapabilities, respond: (batch: FakeIte
 			const count = (input.context?.match(/--- Item \d+ ---/g) ?? []).length;
 			const items = Array.from({ length: count }, (_, i) => ({ id: i, payload: '' }));
 			const results = respond(items).map((r, i) => ({ ...r, _idx: i + 1 }));
-			return { response: JSON.stringify(results), tokensUsed: 0 };
+			return { response: JSON.stringify(results), usedTokens: 0 };
 		},
 	};
 }
@@ -36,13 +49,15 @@ class TestInteractor extends LLMInteractor {
 		this.modelInstance = fakeModel;
 	}
 
-	public runBatchedInteract(items: FakeItem[]): Promise<{ item: FakeItem; result: FakeResult }[]> {
-		return this.batchedInteract<FakeItem, FakeResult>({
+	public async runBatchedInteract(items: FakeItem[]): Promise<{ item: FakeItem; result: FakeResult }[]> {
+		const { items: results } = await this.batchedInteract<FakeItem, FakeResult>({
+			enricherId: 'test',
 			items,
 			instructions: 'Rate each item.',
 			serialize: (item) => `id:${item.id} payload:${item.payload}`,
 			responseSchema: FAKE_ITEM_SCHEMA,
 		});
+		return results;
 	}
 }
 
@@ -188,7 +203,7 @@ describe('batchedInteract — result mapping', () => {
 			call: async (input) => {
 				const { response } = await model.call(input);
 				const results = JSON.parse(response) as { score: number; _idx: number }[];
-				return { response: JSON.stringify(results.toReversed()), tokensUsed: 0 };
+				return { response: JSON.stringify(results.toReversed()), usedTokens: 0 };
 			},
 		};
 
@@ -209,7 +224,7 @@ describe('batchedInteract — result mapping', () => {
 			calculatePromptSize: (p) => Math.ceil(p.length / 4),
 			call: async () => ({
 				response: JSON.stringify([{ score: 0, _idx: 1 }, { score: 1 }]),
-				tokensUsed: 0,
+				usedTokens: 0,
 			}),
 		};
 		const interactor = new TestInteractor(model);

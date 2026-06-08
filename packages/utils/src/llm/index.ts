@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { ModelCapabilities } from './base';
 import { Gemini_3_5_Flash } from './gemini';
 
@@ -15,7 +18,6 @@ export type LLMProvider = (typeof LLMProvider)[keyof typeof LLMProvider];
 
 type CloudLLMConfig = {
 	timeoutMs?: number;
-	cacheDir?: string;
 };
 
 export type VertexLLMExtra = {
@@ -128,6 +130,50 @@ function estimateSchemaTokens(schema: JsonSchema): number {
 	}
 }
 
+function getEnricherCacheDir(): string {
+	return process.env.MAAT_ENRICHER_CACHE_DIR ?? join(process.cwd(), '.maat', 'enricher-cache');
+}
+
+function computeCacheKey(instructions: string, serialized: string, provider: string, model: string): string {
+	return createHash('sha256').update(`${instructions}\n${serialized}\n${provider}/${model}`).digest('hex');
+}
+
+function enricherCacheDir(enricherId: string): string {
+	return join(getEnricherCacheDir(), enricherId);
+}
+
+async function readCacheEntry<T>(enricherId: string, key: string): Promise<T | null> {
+	try {
+		const content = await readFile(join(enricherCacheDir(enricherId), `${key}.json`), 'utf-8');
+		return JSON.parse(content) as T;
+	} catch {
+		return null;
+	}
+}
+
+async function writeCacheEntry<T>(enricherId: string, key: string, value: T): Promise<void> {
+	const dir = enricherCacheDir(enricherId);
+	await mkdir(dir, { recursive: true });
+	await writeFile(join(dir, `${key}.json`), JSON.stringify(value), 'utf-8');
+}
+
+async function pruneStaleEntries(enricherId: string, usedKeys: Set<string>): Promise<void> {
+	const dir = enricherCacheDir(enricherId);
+	let files: string[];
+
+	try {
+		files = await readdir(dir);
+	} catch {
+		return;
+	}
+	
+	await Promise.all(
+		files
+			.filter((f) => f.endsWith('.json') && !usedKeys.has(f.slice(0, -5)))
+			.map((f) => unlink(join(dir, f))),
+	);
+}
+
 export abstract class LLMInteractor<TProvider extends string = string, TModel extends string = string> {
 	protected config: LLMConfig<TProvider, TModel>;
 	protected modelInstance: LLMModel;
@@ -142,27 +188,88 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 	}
 
 	protected async batchedInteract<TItem, TResult>({
+		enricherId,
 		items,
 		instructions,
 		serialize,
+		serializeForCache,
 		responseSchema,
 	}: {
+		enricherId: string;
 		items: TItem[];
 		instructions: string;
 		serialize: (item: TItem) => string;
+		serializeForCache?: (item: TItem) => string;
 		responseSchema: JsonArraySchema;
-	}): Promise<{ result: { item: TItem; result: TResult }[]; cost?: number; usedTokens?: number }> {
-		const budget = this.computeBatchBudget(instructions, responseSchema);
-		const batches = this.packBatches(items, serialize, budget);
-		const batchResults = await Promise.all(
-			batches.map((batch) => this.executeBatch<TItem, TResult>(batch, instructions, serialize, responseSchema)),
+	}): Promise<{ items: { item: TItem; result: TResult }[]; usedTokens: number; cost: number }> {
+		if (items.length === 0) return { items: [], usedTokens: 0, cost: 0 };
+
+		const keyOf = serializeForCache ?? serialize;
+		const provider = this.config.provider as string;
+		const model = this.config.model as string;
+
+		const indexed = await Promise.all(
+			items.map(async (item, originalIndex) => {
+				const cacheKey = computeCacheKey(instructions, keyOf(item), provider, model);
+				const cached = await readCacheEntry<TResult>(enricherId, cacheKey);
+				return { originalIndex, item, cacheKey, cached };
+			}),
 		);
 
-		return {
-			result: batchResults.flatMap((r) => r.result),
-			cost: batchResults.reduce((sum, r) => sum + (r.cost ?? 0), 0),
-			usedTokens: batchResults.reduce((sum, r) => sum + (r.usedTokens ?? 0), 0),
-		};
+		const hits = indexed.filter((e) => e.cached !== null) as (typeof indexed)[number][];
+		const misses = indexed.filter((e) => e.cached === null);
+
+		for (const miss of misses) {
+			process.stderr.write(`[maat:llm] cache miss ${miss.cacheKey.slice(0, 12)} (${model})\n`);
+		}
+
+		const cacheKeyByItem = new Map(misses.map((m) => [m.item, m.cacheKey]));
+		const originalIndexByItem = new Map(misses.map((m) => [m.item, m.originalIndex]));
+
+		const freshEntries: { originalIndex: number; item: TItem; result: TResult }[] = [];
+		const freshKeys: string[] = [];
+		let usedTokens = 0;
+		let cost = 0;
+
+		if (misses.length > 0) {
+			const freshItems = misses.map((m) => m.item);
+			const budget = this.computeBatchBudget(instructions, responseSchema);
+			const batches = this.packBatches(freshItems, serialize, budget);
+			const batchResults = await Promise.all(
+				batches.map((batch) => this.executeBatch<TItem, TResult>(batch, instructions, serialize, responseSchema)),
+			);
+
+			const flatResults = batchResults.flatMap((r) => r.result);
+			usedTokens = batchResults.reduce((sum, r) => sum + (r.usedTokens ?? 0), 0);
+			cost = batchResults.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+
+			await Promise.all(
+				flatResults.map(({ item, result }) => {
+					const cacheKey = cacheKeyByItem.get(item);
+					if (!cacheKey) throw new Error('Cache key not found for item — this is a bug in batchedInteract');
+					freshKeys.push(cacheKey);
+					return writeCacheEntry(enricherId, cacheKey, result);
+				}),
+			);
+
+			for (const { item, result } of flatResults) {
+				const originalIndex = originalIndexByItem.get(item);
+				if (originalIndex === undefined) throw new Error('Original index not found for item — this is a bug in batchedInteract');
+				freshEntries.push({ originalIndex, item, result });
+			}
+		}
+
+		const usedKeys = new Set([...hits.map((h) => h.cacheKey), ...freshKeys]);
+		await pruneStaleEntries(enricherId, usedKeys);
+
+		const sortedItems = [
+			...hits.map(({ originalIndex, item, cached }) => ({ originalIndex, item, result: cached as TResult })),
+			...freshEntries,
+		]
+			.sort((a, b) => a.originalIndex - b.originalIndex)
+			.map(({ item, result }) => ({ item, result }));
+
+		return { items: sortedItems, usedTokens, cost };
 	}
 
 	private computeBatchBudget(instructions: string, responseSchema: JsonArraySchema): { availableInputTokens: number; maxItemsByOutput: number } {

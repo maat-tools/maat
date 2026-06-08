@@ -190,19 +190,7 @@ export class Kernel {
 						instanceId: rule.instanceId,
 						fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
 						requiresVerification: ruleNeedsVerification.length > 0,
-						artifacts:
-							ruleNeedsVerification.length > 0
-								? [
-										...rest.artifacts,
-										{
-											kind: 'finding.provenance',
-											data: {
-												requiresVerification: true,
-												verificationReason: `Facts provided by enrichers [${ruleNeedsVerification.join(', ')}]`,
-											},
-										},
-									]
-								: rest.artifacts,
+						artifacts: rest.artifacts,
 					};
 					return finding;
 				});

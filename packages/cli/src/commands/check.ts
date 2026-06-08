@@ -370,7 +370,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				return {
 					...finding,
 					requiresVerification: false,
-					artifacts: finding.artifacts.filter((a) => a.kind !== 'finding.provenance'),
 				};
 			}),
 		);

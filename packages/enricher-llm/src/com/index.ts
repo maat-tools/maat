@@ -8,6 +8,8 @@ export type CoMCandidate = {
 	reason: string;
 };
 
+export const COM_ENRICHER_FACT_KEY = 'comCandidates' as const;
+
 const COM_BATCH_RESPONSE_SCHEMA = {
 	type: 'array',
 	items: {
@@ -57,10 +59,10 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-export class CoMEnricherLLM extends LLMInteractor implements Enricher<'functionSignatures', 'comCandidates'> {
-	public id = 'com';
+export class CoMEnricherLLM extends LLMInteractor implements Enricher<'functionSignatures', typeof COM_ENRICHER_FACT_KEY> {
+	public id = 'maat-tools/enricher-llm/com@v1';
 	public needFacts = [FUNCTION_SIGNATURES_CAPABILITY] as const;
-	public provideFacts = ['comCandidates'] as const;
+	public provideFacts = [COM_ENRICHER_FACT_KEY] as const;
 
 	public constructor(config: KnownLLMConfig) {
 		super(config as LLMConfig);
@@ -76,21 +78,32 @@ export class CoMEnricherLLM extends LLMInteractor implements Enricher<'functionS
 			(sig) => new Set(sig.output.returnSites.map((site) => site.value)).size !== sig.output.returnSites.length,
 		);
 
-		const { result: results, cost, usedTokens } = await this.batchedInteract<FunctionSignature, CoMAssessment>({
+		const { items, usedTokens, cost } = await this.batchedInteract<FunctionSignature, CoMAssessment>({
+			enricherId: this.id,
 			items: duplicateReturnValueCandidates,
 			instructions: COM_INSTRUCTIONS,
 			serialize: this.serializeSignature.bind(this),
+			serializeForCache: this.serializeForCache.bind(this),
 			responseSchema: COM_BATCH_RESPONSE_SCHEMA,
 		});
 
-		const comCandidates = results
+		const comCandidates = items
+			.filter(({ result }) => result.isCoM)
 			.map(({ item, result }) => ({
 				signature: item,
 				confidence: result.confidence,
 				reason: result.reason,
 			}));
 
-		return { facts: { comCandidates }, cost, usedTokens };
+		return { facts: { comCandidates }, usedTokens, cost };
+	}
+
+	private serializeForCache(sig: FunctionSignature): string {
+		const sites = sig.output.returnSites
+			.map((site) => `${site.value}${site.guardSnippet ? `[${site.guardSnippet}]` : ''}`)
+			.join('|');
+
+		return `${sig.name}|${sig.output.returnType}|${sites}`;
 	}
 
 	private serializeSignature(sig: FunctionSignature): string {

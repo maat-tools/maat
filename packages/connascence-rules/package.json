@@ -41,6 +41,12 @@
       "import": "./dist/coa/technical.js",
       "types": "./dist/coa/technical.d.ts",
       "default": "./dist/coa/technical.js"
+    },
+    "./com-semantic": {
+      "bun": "./src/com/com-semantic.ts",
+      "import": "./dist/com/com-semantic.js",
+      "types": "./dist/com/com-semantic.d.ts",
+      "default": "./dist/com/com-semantic.js"
     }
   },
   "files": [

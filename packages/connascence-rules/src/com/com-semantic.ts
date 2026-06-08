@@ -1,67 +1,56 @@
 import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
-import { CONSTANTS_CAPABILITY, type Constant } from '@maat-tools/vocabulary';
+import { COM_ENRICHER_FACT_KEY, type CoMCandidate } from '@maat-tools/enricher-llm/com';
 
-export type CoMRuleOptions = {
-    threshold?: number;
-    ignoreValues?: string[];
+export type CoMSemanticRuleOptions = {
+    threshold: `0.${string}` | '1';
 };
 
 declare module '@maat-tools/contracts' {
     interface RuleRegistry {
-        '@maat-tools/connascence-rules/com-semantic': CoMRuleOptions;
+        '@maat-tools/connascence-rules/com-semantic': CoMSemanticRuleOptions;
     }
 }
 
-export class ConnascenceOfMeaningSemanticRule implements Rule<'constants'> {
+export class ConnascenceOfMeaningSemanticRule implements Rule<typeof COM_ENRICHER_FACT_KEY> {
     public readonly id = 'maat-tools/connascence-rules/com-semantic@v1';
     public readonly instanceId = this.id;
-    public readonly needFacts = [CONSTANTS_CAPABILITY] as const;
+    public readonly needFacts = [COM_ENRICHER_FACT_KEY] as const;
 
     private readonly threshold: number;
-    private readonly ignoreValues: Set<string>;
 
-    public constructor(options: CoMRuleOptions = {}) {
-        this.threshold = options.threshold ?? 2;
-        this.ignoreValues = new Set(options.ignoreValues ?? []);
+    public constructor(options?: CoMSemanticRuleOptions) {
+        if (!options || !options.threshold) {
+            throw new Error('Threshold option is required for ConnascenceOfMeaningSemanticRule');
+        }
+        this.threshold = Number(options.threshold);
     }
 
-    public evaluate(facts: { constants: Constant[] }): FindingRuleOutput[] {
-        const constants = facts[CONSTANTS_CAPABILITY] ?? [];
-
-        const byValue = new Map<string, Constant[]>();
-
-        for (const constant of constants) {
-            if (this.ignoreValues.has(constant.value)) {
-                continue;
-            }
-
-            const key = `${constant.kind}:${constant.value}`;
-            const group = byValue.get(key) ?? [];
-            group.push(constant);
-            byValue.set(key, group);
-        }
-
+    public evaluate(facts: { comCandidates: CoMCandidate[] }): FindingRuleOutput[] {
+        const comCandidates = facts[COM_ENRICHER_FACT_KEY] ?? [];
         const findings: FindingRuleOutput[] = [];
 
-        for (const [, occurrences] of byValue) {
-            const distinctFiles = new Set(occurrences.map((o) => o.location.file));
-            if (distinctFiles.size < this.threshold) {
+        for (const candidate of comCandidates) {
+            if (candidate.confidence < this.threshold) {
                 continue;
             }
 
-            const first = occurrences.at(0);
-            if (!first) {
-                continue;
-            }
-            const { value, kind } = first;
+            const value = candidate.signature.output.returnSites.reduce((acc, site) => {
+                const siteValue = site.guardSnippet ? `${site.value}[${site.guardSnippet}]` : site.value;
+
+                return acc ? `${acc}|${siteValue}` : siteValue;
+            }, '');
+
+            const kind = candidate.signature.output.returnType;
+            const allValues = candidate.signature.output.returnSites.map((site) => site.value);
+            const duplicatedValues = allValues.filter((v, i) => allValues.indexOf(v) !== i);
 
             findings.push({
                 ruleId: this.id,
                 ruleIdentifier: { value, kind },
-                message: `"${value}" (${kind}) appears in ${distinctFiles.size} files — possible Connascence of Meaning`,
-                artifacts: occurrences.map((c) => ({
-                    kind: 'source' as const,
-                    data: c,
+                message: `"${duplicatedValues.join(', ')}" value for the return type in function "${candidate.signature.name}" in file "${candidate.signature.file}" might be a sign of Connascence of Meaning. Reason: ${candidate.reason} (confidence: ${candidate.confidence})`,
+                artifacts: candidate.signature.output.returnSites.map((site) => ({
+                    kind: 'com-semantic' as const,
+                    data: site,
                 })),
             });
         }
@@ -70,18 +59,14 @@ export class ConnascenceOfMeaningSemanticRule implements Rule<'constants'> {
     }
 
     public describeArtifact(artifact: Artifact): Record<string, string> {
-        if (artifact.kind === 'source') {
-            const c = artifact.data as Constant;
-            const loc = `${c.location.file}:${c.location.line}${c.location.column !== undefined ? `:${c.location.column}` : ''}`;
+        const data = artifact.data as CoMCandidate['signature']['output']['returnSites'][number];
+        const loc = `${data.location.file}:${data.location.line}${data.location.column !== undefined ? `:${data.location.column}` : ''}`;
 
-            return {
-                location: loc,
-                value: c.value,
-            };
-        }
-
-        return { value: String(artifact.data) };
+        return {
+            location: loc,
+            value: data.value,
+        };
     }
 }
 
-export default defineRule((options?: CoMRuleOptions) => new ConnascenceOfMeaningSemanticRule(options));
+export default defineRule((options?: CoMSemanticRuleOptions) => new ConnascenceOfMeaningSemanticRule(options));

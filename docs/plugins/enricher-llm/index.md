@@ -26,52 +26,30 @@ import type { EnricherLLMInput, LLMConfig, LLMModel, LLMProvider } from '@maat-t
 
 ```ts
 const LLMProvider = {
-  OpenAI: 'openai',
+  Vertex: 'vertex',
 } as const
 
-type LLMProvider = typeof LLMProvider[keyof typeof LLMProvider] // 'openai'
+type LLMProvider = typeof LLMProvider[keyof typeof LLMProvider] // 'vertex'
 ```
 
-### `LLMModel`
+### `GeminiAIModel`
 
 ```ts
-const OpenAIModel = {
-  GPT4o: 'gpt-4o',
-  GPT4oMini: 'gpt-4o-mini',
+const GeminiAIModel = {
+  Gemini_3_5_Flash: 'gemini-3-5-flash',
 } as const
 
-type OpenAIModel = typeof OpenAIModel[keyof typeof OpenAIModel]
+type GeminiAIModel = typeof GeminiAIModel[keyof typeof GeminiAIModel]
 ```
 
 ### `LLMConfig`
 
 ```ts
 type LLMConfig = {
-  provider: 'openai'
-  model: 'gpt-4o' | 'gpt-4o-mini'
-  apiKey?: string
-  baseURL?: string
+  provider: 'vertex'
+  model: 'gemini-3-5-flash'
+  extra?: { project?: string; location?: string }
   timeoutMs?: number
-  cacheDir?: string
-}
-```
-
-### `EnricherLLMInput`
-
-```ts
-type EnricherLLMInput = LLMConfig
-```
-
-### `LLMConfig`
-
-```ts
-type LLMConfig = {
-  provider: 'openai'
-  model: 'gpt-4o' | 'gpt-4o-mini'
-  apiKey?: string
-  baseURL?: string
-  timeoutMs?: number
-  cacheDir?: string
 }
 ```
 
@@ -90,9 +68,8 @@ export default defineConfig({
   collectors: ['@maat-tools/collector-ts'],
   enrichers: [
     ['@maat-tools/enricher-llm/coa', {
-      provider: 'openai',
-      model: 'gpt-4o-mini',
-      cacheDir: './.maat-enricher-cache',
+      provider: 'vertex',
+      model: 'gemini-3-5-flash',
     }],
   ],
   rules: ['@maat-tools/connascence-rules'],
@@ -105,7 +82,7 @@ export default defineConfig({
 
 ### Cost and latency
 
-LLM calls add latency and cost to every run. Use `cacheDir` in `LLMConfig` to cache responses keyed by content hash, model version, and prompt version. Commit the cache directory if you want reproducible runs across CI environments.
+LLM calls add latency and cost to every run. Maat automatically caches every LLM response at `.maat/enricher-cache/`, keyed by content hash, model version, and prompt instructions. Cache entries are per-item (not per-batch), so only changed code triggers new LLM calls. Commit `.maat/enricher-cache/` for reproducible runs across CI environments.
 
 ### Determinism
 

@@ -160,7 +160,7 @@ maat verify --fingerprint <fp> --revoke
 **Tradeoff:** LLM-backed enrichers add latency and cost to every run.
 
 - Enrichers run in parallel. Total latency is bounded by the slowest enricher, not the sum of all. They all receive the same snapshot of collected facts.
-- LLM calls are expensive. Consider caching strategies inside the enricher (keyed by content hash × model version × prompt version) to reduce cost across runs.
+- LLM calls are expensive. The official `@maat-tools/enricher-llm` package caches every LLM response at `.maat/enricher-cache/`, keyed by content hash × model version × prompt instructions. Only items whose code actually changed trigger new LLM calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
 
 ### Verification fatigue
 

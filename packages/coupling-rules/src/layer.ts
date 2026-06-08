@@ -67,13 +67,9 @@ class PureLayerRule implements Rule<'dependsOn'> {
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === DEPENDS_ON_CAPABILITY) {
-			const dep = artifact.data as DependsOn;
+		const dep = artifact.data as DependsOn;
 
-			return { file: dep.from.path, dependency: dep.to.path };
-		}
-
-		return { value: String(artifact.data) };
+		return { file: dep.from.path, dependency: dep.to.path };
 	}
 }
 
@@ -122,13 +118,9 @@ class LayerRule implements Rule<'dependsOn'> {
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === DEPENDS_ON_CAPABILITY) {
-			const dep = artifact.data as DependsOn;
+		const dep = artifact.data as DependsOn;
 
-			return { file: dep.from.path, dependency: dep.to.path };
-		}
-
-		return { value: String(artifact.data) };
+		return { file: dep.from.path, dependency: dep.to.path };
 	}
 
 	private isAllowed(dep: DependsOn): boolean {

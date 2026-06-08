@@ -98,20 +98,16 @@ export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBin
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === 'algorithmicBinding') {
-			const b = artifact.data as AlgorithmicBinding;
-			const loc = `${b.location.file}:${b.location.line}${b.location.column !== undefined ? `:${b.location.column}` : ''}`;
-			return {
-				location: loc,
-				role: b.role,
-				pattern: b.patternId,
-				invariant: b.bindingKey,
-				function: b.functionName,
-				container: b.containingFunction ?? '(module-level)',
-			};
-		}
-
-		return { value: String(artifact.data) };
+		const b = artifact.data as AlgorithmicBinding;
+		const loc = `${b.location.file}:${b.location.line}${b.location.column !== undefined ? `:${b.location.column}` : ''}`;
+		return {
+			location: loc,
+			role: b.role,
+			pattern: b.patternId,
+			invariant: b.bindingKey,
+			function: b.functionName,
+			container: b.containingFunction ?? '(module-level)',
+		};
 	}
 }
 

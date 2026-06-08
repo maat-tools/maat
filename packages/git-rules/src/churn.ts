@@ -69,13 +69,9 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === 'git-churn') {
-			const data = artifact.data as { path: string; count: number };
+		const data = artifact.data as { path: string; count: number };
 
-			return { file: data.path, changes: String(data.count) };
-		}
-
-		return { value: String(artifact.data) };
+		return { file: data.path, changes: String(data.count) };
 	}
 }
 

@@ -57,12 +57,12 @@ The rule remains pure and deterministic. The finding is explicitly flagged as ne
 | **Badge** | None | `[Verify]` in CLI output |
 | **`requiresVerification`** | `false` / absent | `true` |
 | **Breaks strict build?** | Yes | **Never** |
-| **Goes to ledger?** | Yes | **No** (skipped by `syncLedgerEvents`) |
+| **Goes to ledger?** | Yes | **Yes** (as `finding.unverified` via `maat check --ledger`) |
 | **Can be baselined?** | Yes | Only after human verification |
 
 ### Human-in-the-loop verification
 
-Findings with `requiresVerification: true` are presented to the user with a `[Verify]` badge. They never break CI builds. They never go to the ledger.
+Findings with `requiresVerification: true` are presented to the user with a `[Verify]` badge. They never break CI builds. When `maat check --ledger` is used, they are written to the ledger as `finding.unverified`.
 
 A human can run:
 
@@ -70,9 +70,15 @@ A human can run:
 maat verify --fingerprint <fp>
 ```
 
-This appends a `finding.verified` event to the ledger. On subsequent runs, when the Kernel produces the same finding, the CLI consults the ledger: if the fingerprint is marked `verified`, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — can be persisted, baselined, and can break builds.
+This promotes the finding in the ledger from `finding.unverified` to `finding.observed`. On subsequent runs, when the kernel produces the same finding, the CLI reconciles against the ledger: if the fingerprint is in `observed` state, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — can be persisted, baselined, and can break builds.
 
-If a human revokes verification (`maat verify --revoke`), the finding regains `requiresVerification: true`.
+If a human decides the finding is a false positive, they can dismiss it:
+
+```bash
+maat verify --fingerprint <fp> --revoke
+```
+
+This appends a `finding.revoked` event. The finding is suppressed — hidden from output on subsequent runs.
 
 ## Consequences
 
@@ -81,7 +87,7 @@ If a human revokes verification (`maat verify --revoke`), the finding regains `r
 - A new `Enricher` interface is added to `@maat-tools/contracts`.
 - The Kernel gains a new execution phase: collectors run in parallel, then enrichers run in parallel, then rules run in parallel. Enrichers receive the same snapshot of collected facts; they cannot depend on facts produced by other enrichers.
 - The CLI gains a new command: `maat verify`.
-- The ledger gains two new event types: `finding.verified` and `finding.revoked`.
+- The ledger gains two new event types: `finding.unverified` and `finding.revoked`. Verification reuses the existing `finding.observed` event type — it promotes a `finding.unverified` record to `finding.observed`.
 - `Finding` gains a new field: `requiresVerification?: boolean`.
 - `FindingRecord` gains a new field: `verified: boolean`.
 - ADR-006 and ADR-007 remain valid. The LLM boundary is still at the collector/enricher layer, never inside rules. What changed is the explicit acknowledgment that probabilistic findings exist and need containment.

@@ -64,7 +64,7 @@ export type LLMInput =
 export type LLMOutput = {
 	response: string;
 	usedTokens: number;
-	cost?: number
+	cost?: number;
 };
 export interface LLMModel {
 	call(input: LLMInput): Promise<LLMOutput>;
@@ -123,7 +123,8 @@ function estimateSchemaTokens(schema: JsonSchema): number {
 		}
 		case 'array':
 			return schema.items
-				? estimateSchemaTokens(schema.items) * SCHEMA_TOKEN_ESTIMATES.arrayItemMultiplier + SCHEMA_TOKEN_ESTIMATES.arrayBrackets
+				? estimateSchemaTokens(schema.items) * SCHEMA_TOKEN_ESTIMATES.arrayItemMultiplier +
+						SCHEMA_TOKEN_ESTIMATES.arrayBrackets
 				: SCHEMA_TOKEN_ESTIMATES.emptyArray;
 		default:
 			return SCHEMA_TOKEN_ESTIMATES.unknown;
@@ -166,11 +167,9 @@ async function pruneStaleEntries(enricherId: string, usedKeys: Set<string>): Pro
 	} catch {
 		return;
 	}
-	
+
 	await Promise.all(
-		files
-			.filter((f) => f.endsWith('.json') && !usedKeys.has(f.slice(0, -5)))
-			.map((f) => unlink(join(dir, f))),
+		files.filter((f) => f.endsWith('.json') && !usedKeys.has(f.slice(0, -5))).map((f) => unlink(join(dir, f))),
 	);
 }
 
@@ -202,7 +201,9 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 		serializeForCache?: (item: TItem) => string;
 		responseSchema: JsonArraySchema;
 	}): Promise<{ items: { item: TItem; result: TResult }[]; usedTokens: number; cost: number }> {
-		if (items.length === 0) return { items: [], usedTokens: 0, cost: 0 };
+		if (items.length === 0) {
+			return { items: [], usedTokens: 0, cost: 0 };
+		}
 
 		const keyOf = serializeForCache ?? serialize;
 		const provider = this.config.provider as string;
@@ -246,7 +247,9 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 			await Promise.all(
 				flatResults.map(({ item, result }) => {
 					const cacheKey = cacheKeyByItem.get(item);
-					if (!cacheKey) throw new Error('Cache key not found for item — this is a bug in batchedInteract');
+					if (!cacheKey) {
+						throw new Error('Cache key not found for item — this is a bug in batchedInteract');
+					}
 					freshKeys.push(cacheKey);
 					return writeCacheEntry(enricherId, cacheKey, result);
 				}),
@@ -254,7 +257,9 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 
 			for (const { item, result } of flatResults) {
 				const originalIndex = originalIndexByItem.get(item);
-				if (originalIndex === undefined) throw new Error('Original index not found for item — this is a bug in batchedInteract');
+				if (originalIndex === undefined) {
+					throw new Error('Original index not found for item — this is a bug in batchedInteract');
+				}
 				freshEntries.push({ originalIndex, item, result });
 			}
 		}
@@ -272,7 +277,10 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 		return { items: sortedItems, usedTokens, cost };
 	}
 
-	private computeBatchBudget(instructions: string, responseSchema: JsonArraySchema): { availableInputTokens: number; maxItemsByOutput: number } {
+	private computeBatchBudget(
+		instructions: string,
+		responseSchema: JsonArraySchema,
+	): { availableInputTokens: number; maxItemsByOutput: number } {
 		const caps = this.modelInstance.getCapabilities();
 		const fixedTokens = this.modelInstance.calculatePromptSize(instructions);
 		const inputSafetyMargin = Math.ceil(caps.maxInputTokens * 0.2);
@@ -366,5 +374,4 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 			usedTokens,
 		};
 	}
-
 }

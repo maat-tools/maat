@@ -1,6 +1,6 @@
 # `maat verify`
 
-Verify or revoke a probabilistic finding that was flagged with `[Verify]`.
+Verify or dismiss a probabilistic finding that was flagged with `[Verify]`.
 
 ```bash
 maat verify --fingerprint <fingerprint>
@@ -11,13 +11,12 @@ maat --config ./path/to/maat.config.ts verify --fingerprint <fingerprint>
 
 ## What it does
 
-`maat verify` appends a `finding.verified` event to the ledger for the given fingerprint. This is the human-in-the-loop step that converts a probabilistic finding into a trusted, deterministic one.
+`maat verify` promotes a `finding.unverified` ledger record to `finding.observed`. This is the human-in-the-loop step that converts a probabilistic finding into a trusted, deterministic one.
 
-When the kernel produces a finding that depends on enriched facts, it marks the finding with `requiresVerification: true`. These findings:
+When the kernel produces a finding that depends on enriched facts, it marks the finding with `requiresVerification: true`. When `maat check --ledger` runs, these findings are written to the ledger as `finding.unverified`. They:
 
 - Display a `[Verify]` badge in CLI output
 - Never break strict builds
-- Never go to the ledger via `maat check --ledger`
 
 After `maat verify`, the finding is treated as deterministic on subsequent runs.
 
@@ -28,32 +27,34 @@ Kernel produces finding from enriched fact
     ↓
 CLI shows [Verify] badge
     ↓
+maat check --ledger writes finding.unverified to ledger
+    ↓
 Human reviews finding and runs `maat verify --fingerprint <fp>`
     ↓
-Ledger records `finding.verified` event
+Ledger records finding.observed event (promoted from unverified)
     ↓
-Next run: CLI sees verified fingerprint, clears `requiresVerification`
+Next run: CLI sees observed fingerprint, clears requiresVerification
     ↓
 Finding is now treated as deterministic
 ```
 
-## Revocation
+## Dismissal
 
-If a verification was made in error, or the enriched fact is no longer valid:
+If a finding is a false positive, it can be dismissed:
 
 ```bash
 maat verify --fingerprint <fingerprint> --revoke
 ```
 
-This appends a `finding.revoked` event to the ledger. The finding regains `requiresVerification: true` on subsequent runs.
+This appends a `finding.revoked` event. The finding is hidden from output on subsequent runs. Dismissal only applies to findings currently in `unverified` state.
 
 ## Options
 
 | Option | Purpose |
 |---|---|
-| `--fingerprint <fp>` | **Required.** The fingerprint of the finding to verify or revoke. |
-| `--revoke` | Revoke a previous verification instead of creating one. |
-| `--reason <text>` | Optional human-readable reason for the verification or revocation. |
+| `--fingerprint <fp>` | **Required.** The fingerprint of the finding to verify or dismiss. |
+| `--revoke` | Dismiss the finding instead of verifying it. Only valid for `unverified` findings. |
+| `--reason <text>` | Optional human-readable reason for the verification or dismissal. |
 
 ## Ledger requirement
 

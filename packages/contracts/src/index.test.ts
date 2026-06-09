@@ -219,7 +219,7 @@ describe('defineEnricher', () => {
 			id: 'e',
 			needFacts: [],
 			provideFacts: [],
-			enrich: async () => ({}),
+			enrich: async () => ({ facts: {} }),
 		}));
 		expect(typeof factory).toBe('function');
 		expect(factory[ENRICHER_FACTORY_BRAND]).toBe(true);
@@ -232,7 +232,7 @@ describe('isEnricherFactory', () => {
 			id: 'e',
 			needFacts: [],
 			provideFacts: [],
-			enrich: async () => ({}),
+			enrich: async () => ({ facts: {} }),
 		}));
 		expect(isEnricherFactory(factory)).toBe(true);
 	});

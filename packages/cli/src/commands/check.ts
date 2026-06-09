@@ -3,7 +3,6 @@ import {
 	type Finding,
 	type FindingRecord,
 	FindingStatus,
-	type FindingUnverifiedEvent,
 	type LedgerBackend,
 } from '@maat-tools/contracts';
 import type { KernelProgressEvent } from '@maat-tools/kernel';
@@ -51,7 +50,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		const spinner = options.silent ? null : createSpinner();
-		let totalLLMCosts = { usedTokens: 0, cost: 0 };
+		const totalLLMCosts = { usedTokens: 0, cost: 0 };
 		const { findings: currentFindings } = await this.kernel
 			.run({
 				onProgress: (event: KernelProgressEvent) => {
@@ -87,7 +86,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
 			}
 			if (totalLLMCosts.usedTokens > 0) {
-				printer.info(`\nLLM costs: $${totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`);
+				printer.info(
+					`\nLLM costs: $${totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
+				);
 			}
 			if (this.config.check?.strict && actionableFindings.length > 0) {
 				printer.error(
@@ -102,13 +103,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const findings = await this.ledger.getAllFindings();
 		const analysis = await this.analyzeLedgerState(axioms, findings, currentFingerprints);
 		if (options.ledger === true) {
-			await this.syncLedgerEvents(
-				this.ledger,
-				findings,
-				currentFindings,
-				currentFingerprints,
-				analysis,
-			);
+			await this.syncLedgerEvents(this.ledger, findings, currentFindings, currentFingerprints, analysis);
 		}
 		const ledgerByFingerprint = new Map(findings.map((r) => [r.fingerprint, r]));
 		const reconciled = currentFindings.map((f) => {
@@ -118,12 +113,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			}
 			return f;
 		});
-		const visibleFindings = options.showBaselined
-			? reconciled
-			: this.getVisibleFindings(
-				reconciled,
-				analysis,
-			);
+		const visibleFindings = options.showBaselined ? reconciled : this.getVisibleFindings(reconciled, analysis);
 
 		if (displayMode === 'all') {
 			this.printRunContext(printer, {
@@ -142,7 +132,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (totalLLMCosts.usedTokens > 0) {
-			printer.info(`\nLLM costs: $${totalLLMCosts.cost === 0 ? '0.000000' : totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens === 0 ? '0' : totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`);
+			printer.info(
+				`\nLLM costs: $${totalLLMCosts.cost === 0 ? '0.000000' : totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens === 0 ? '0' : totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
+			);
 		}
 
 		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
@@ -252,10 +244,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			}
 		}
 
-		for (const finding of this.getActiveFindings(
-			currentFindings,
-			analysis
-		)) {
+		for (const finding of this.getActiveFindings(currentFindings, analysis)) {
 			const common = {
 				timestamp,
 				fingerprint: finding.fingerprint,
@@ -263,7 +252,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				instance_id: finding.instanceId,
 				message: finding.message,
 				artifacts: finding.artifacts,
-			}
+			};
 
 			if (finding.requiresVerification) {
 				const existing = findingsByFingerprint.get(finding.fingerprint);
@@ -289,10 +278,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		context:
 			| { ledger: false }
 			| {
-				ledger: true;
-				writesLedger: boolean;
-				showBaselined: boolean;
-			},
+					ledger: true;
+					writesLedger: boolean;
+					showBaselined: boolean;
+			  },
 	): void {
 		const findingsScope =
 			context.ledger && !context.showBaselined
@@ -386,22 +375,38 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private getActiveFindings(
 		findings: Finding[],
-		analysis: Pick<LedgerAnalysis, 'baselinedFingerprints' | 'axiomExceptedFingerprints' | 'requiringVerificationFingerprints' | 'revokedFingerprints'>,
+		analysis: Pick<
+			LedgerAnalysis,
+			| 'baselinedFingerprints'
+			| 'axiomExceptedFingerprints'
+			| 'requiringVerificationFingerprints'
+			| 'revokedFingerprints'
+		>,
 	): Finding[] {
-		return findings.filter((f) =>
-			!analysis.baselinedFingerprints.has(f.fingerprint) &&
-			!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
-			!analysis.requiringVerificationFingerprints.has(f.fingerprint) &&
-			!analysis.revokedFingerprints.has(f.fingerprint));
+		return findings.filter(
+			(f) =>
+				!analysis.baselinedFingerprints.has(f.fingerprint) &&
+				!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
+				!analysis.requiringVerificationFingerprints.has(f.fingerprint) &&
+				!analysis.revokedFingerprints.has(f.fingerprint),
+		);
 	}
 
 	private getVisibleFindings(
 		findings: Finding[],
-		analysis: Pick<LedgerAnalysis, 'baselinedFingerprints' | 'axiomExceptedFingerprints' | 'requiringVerificationFingerprints' | 'revokedFingerprints'>,
+		analysis: Pick<
+			LedgerAnalysis,
+			| 'baselinedFingerprints'
+			| 'axiomExceptedFingerprints'
+			| 'requiringVerificationFingerprints'
+			| 'revokedFingerprints'
+		>,
 	): Finding[] {
-		return findings.filter((f) =>
-			!analysis.baselinedFingerprints.has(f.fingerprint) &&
-			!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
-			!analysis.revokedFingerprints.has(f.fingerprint));
+		return findings.filter(
+			(f) =>
+				!analysis.baselinedFingerprints.has(f.fingerprint) &&
+				!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
+				!analysis.revokedFingerprints.has(f.fingerprint),
+		);
 	}
 }

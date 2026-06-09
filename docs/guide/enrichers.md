@@ -121,12 +121,12 @@ The rule itself remains pure and deterministic. The finding is explicitly flagge
 | **Badge** | None | `[Verify]` in CLI output |
 | **`requiresVerification`** | `false` / absent | `true` |
 | **Breaks strict build?** | Yes | **Never** |
-| **Goes to ledger?** | Yes | **No** (skipped by `syncLedgerEvents`) |
+| **Goes to ledger?** | Yes | **Yes** (as `finding.unverified` via `maat check --ledger`) |
 | **Can be baselined?** | Yes | Only after human verification |
 
 ## Human-in-the-loop verification
 
-Findings with `requiresVerification: true` are presented with a `[Verify]` badge. They never break CI builds. They never go to the ledger.
+Findings with `requiresVerification: true` are presented with a `[Verify]` badge. They never break CI builds. When `maat check --ledger` is used, they are written to the ledger as `finding.unverified`.
 
 A human can verify a finding after reviewing it:
 
@@ -134,9 +134,9 @@ A human can verify a finding after reviewing it:
 maat verify --fingerprint <fp>
 ```
 
-This appends a `finding.verified` event to the ledger. On subsequent runs, when the kernel produces the same finding, the CLI consults the ledger: if the fingerprint is marked `verified`, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — it can be persisted, baselined, and can break builds.
+This promotes the finding in the ledger from `finding.unverified` to `finding.observed`. On subsequent runs, when the kernel produces the same finding, the CLI reconciles against the ledger: if the fingerprint is in `observed` state, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — it can be persisted, baselined, and can break builds.
 
-Verification can be revoked:
+If a finding is a false positive, it can be dismissed:
 
 ```bash
 maat verify --fingerprint <fp> --revoke

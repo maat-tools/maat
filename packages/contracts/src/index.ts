@@ -72,7 +72,7 @@ export type FindingObservedEvent = LedgerEntryBase & {
 	readonly instance_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
-	readonly reason?: string; 
+	readonly reason?: string;
 };
 
 export type FindingBaselinedEvent = LedgerEntryBase & {
@@ -202,7 +202,9 @@ export interface Enricher<
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
 	readonly provideFacts: readonly TProduces[];
-	enrich(facts?: { [K in TNeeds]: FactRegistry[K] }): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
+	enrich(
+		facts?: { [K in TNeeds]: FactRegistry[K] },
+	): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
 }
 
 export interface Insight {

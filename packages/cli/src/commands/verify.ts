@@ -23,7 +23,9 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (revoke && record.state !== FindingStatus.UNVERIFIED) {
-			this.printer.error(`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can have their verification revoked.\n`);
+			this.printer.error(
+				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can have their verification revoked.\n`,
+			);
 			process.exit(1);
 		}
 

@@ -57,12 +57,12 @@ export type FunctionSignature = {
 	input: {
 		parameters: Parameter[];
 		heterogeneous: boolean;
-	},
+	};
 	output: {
 		returnType: string;
 		heterogeneous: boolean;
 		returnSites: ReturnSite[];
-	},
+	};
 	location: SourceLocation;
 	exported: boolean;
 };

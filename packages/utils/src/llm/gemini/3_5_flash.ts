@@ -11,16 +11,16 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 		maxInputTokens: 1_000_000,
 		maxOutputTokens: 65_536,
 		cost: {
-			inputTokenCost: 0.0000015,  // $1.50 per million tokens
-			outputTokenCost: 0.000009,  // $9.00 per million tokens
+			inputTokenCost: 0.0000015, // $1.50 per million tokens
+			outputTokenCost: 0.000009, // $9.00 per million tokens
 		},
-	}
+	};
 
 	private readonly ai: GoogleGenAI;
 
 	public constructor(config: GeminiConfig) {
 		super();
-		
+
 		if (config.provider !== 'vertex' || config.model !== GeminiAIModel.Gemini_3_5_Flash) {
 			throw new Error('Invalid config for Gemini 3.5 Flash model');
 		}
@@ -40,9 +40,9 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 			temperature: 0,
 			...(input.responseFormat === 'json'
 				? {
-					responseMimeType: 'application/json' as const,
-					responseSchema: input.responseSchema,
-				}
+						responseMimeType: 'application/json' as const,
+						responseSchema: input.responseSchema,
+					}
 				: {}),
 		};
 
@@ -58,7 +58,7 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 			return {
 				response: text,
 				usedTokens: this.calculatePromptSize(prompt) + this.calculatePromptSize(text),
-				cost: this.calculateInputCost(prompt) + this.calculateOutputCost(text)
+				cost: this.calculateInputCost(prompt) + this.calculateOutputCost(text),
 			};
 		} catch (e) {
 			console.error('Error calling Gemini 3.5 Flash model:', e);

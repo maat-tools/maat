@@ -78,6 +78,9 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
+		if (artifact.kind !== 'source' && artifact.kind !== 'access') {
+			return { value: String(artifact.data) };
+		}
 		const data = artifact.data as PositionalSource;
 		const loc = `${data.location.file}:${data.location.line}${data.location.column !== undefined ? `:${data.location.column}` : ''}`;
 
@@ -85,14 +88,15 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 			role: artifact.kind === 'source' ? '[Source]' : '[Access]',
 			location: loc,
 			identifier: data.name,
-			...(artifact.kind === 'access' ? {
-				kind: (data as unknown as PositionalAccess).accessKind,
-				index: String((data as unknown as PositionalAccess).accessedIndex)
-			} : {
-				positions: data.positions.map((p) => `[${p.index}]: ${p.type}`).join(', '),
-			}),
-		}
-
+			...(artifact.kind === 'access'
+				? {
+						kind: (data as unknown as PositionalAccess).accessKind,
+						index: String((data as unknown as PositionalAccess).accessedIndex),
+					}
+				: {
+						positions: data.positions.map((p) => `[${p.index}]: ${p.type}`).join(', '),
+					}),
+		};
 	}
 }
 

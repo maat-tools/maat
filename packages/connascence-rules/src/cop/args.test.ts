@@ -6,18 +6,26 @@ function makeParam(name: string, type: string, position: number): Parameter {
 	return { name, type, position };
 }
 
+function makeInput(params: Parameter[]): FunctionSignature['input'] {
+	return { parameters: params, heterogeneous: false };
+}
+
 function makeFunctionSignature(overrides: Partial<FunctionSignature> = {}): FunctionSignature {
 	return {
 		file: '/src/index.ts',
 		name: 'sendEmail',
-		parameters: [
+		input: makeInput([
 			makeParam('firstName', 'string', 0),
 			makeParam('lastName', 'string', 1),
 			makeParam('email', 'string', 2),
 			makeParam('subject', 'string', 3),
 			makeParam('body', 'string', 4),
-		],
-		heterogeneous: false,
+		]),
+		output: {
+			returnType: 'void',
+			heterogeneous: false,
+			returnSites: [],
+		},
 		location: { file: '/src/index.ts', line: 10, column: 5 },
 		exported: true,
 		...overrides,
@@ -30,7 +38,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)],
+					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)]),
 				}),
 			],
 		});
@@ -44,12 +52,12 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [
+					input: makeInput([
 						makeParam('a', 'string', 0),
 						makeParam('b', 'string', 1),
 						makeParam('c', 'string', 2),
 						makeParam('d', 'string', 3),
-					],
+					]),
 				}),
 			],
 		});
@@ -62,7 +70,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [makeParam('a', 'string', 0), makeParam('b', 'string', 1), makeParam('c', 'string', 2)],
+					input: makeInput([makeParam('a', 'string', 0), makeParam('b', 'string', 1), makeParam('c', 'string', 2)]),
 				}),
 			],
 		});
@@ -74,7 +82,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)],
+					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)]),
 				}),
 			],
 		});
@@ -86,12 +94,12 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [
+					input: makeInput([
 						makeParam('a', 'string', 0),
 						makeParam('b', 'string', 1),
 						makeParam('c', 'string', 2),
 						makeParam('d', 'string', 3),
-					],
+					]),
 				}),
 			],
 		});
@@ -103,12 +111,12 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [
+					input: makeInput([
 						makeParam('a', 'string', 0),
 						makeParam('b', 'string', 1),
 						makeParam('c', 'string', 2),
 						makeParam('d', 'boolean', 3),
-					],
+					]),
 				}),
 			],
 		});
@@ -136,15 +144,15 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
 		const findings = rule.evaluate({
 			functionSignatures: [
-				makeFunctionSignature({ name: 'fnA', parameters: [makeParam('x', 'boolean', 0)] }),
+				makeFunctionSignature({ name: 'fnA', input: makeInput([makeParam('x', 'boolean', 0)]) }),
 				makeFunctionSignature({
 					name: 'fnB',
-					parameters: [
+					input: makeInput([
 						makeParam('a', 'string', 0),
 						makeParam('b', 'string', 1),
 						makeParam('c', 'string', 2),
 						makeParam('d', 'string', 3),
-					],
+					]),
 				}),
 			],
 		});
@@ -157,7 +165,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 			functionSignatures: [
 				makeFunctionSignature({
 					exported: false,
-					parameters: [makeParam('x', 'boolean', 0)],
+					input: makeInput([makeParam('x', 'boolean', 0)]),
 				}),
 			],
 		});
@@ -170,7 +178,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 			functionSignatures: [
 				makeFunctionSignature({
 					exported: false,
-					parameters: [makeParam('x', 'boolean', 0)],
+					input: makeInput([makeParam('x', 'boolean', 0)]),
 				}),
 			],
 		});
@@ -184,7 +192,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [makeParam('name', 'string', 0), makeParam('active', 'boolean | undefined', 1)],
+					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean | undefined', 1)]),
 				}),
 			],
 		});
@@ -194,7 +202,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 	test('zero-parameter function → no finding', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
 		const findings = rule.evaluate({
-			functionSignatures: [makeFunctionSignature({ parameters: [] })],
+			functionSignatures: [makeFunctionSignature({ input: makeInput([]) })],
 		});
 		expect(findings).toHaveLength(0);
 	});
@@ -202,7 +210,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 	test('maxArgumentsAllowed: 0 — any function with params is flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule({ maxArgumentsAllowed: 0 });
 		const findings = rule.evaluate({
-			functionSignatures: [makeFunctionSignature({ parameters: [makeParam('x', 'string', 0)] })],
+			functionSignatures: [makeFunctionSignature({ input: makeInput([makeParam('x', 'string', 0)]) })],
 		});
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('1 params exceeds threshold of 0');
@@ -213,7 +221,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		const findings = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
-					parameters: [makeParam('x', 'boolean', 0)],
+					input: makeInput([makeParam('x', 'boolean', 0)]),
 				}),
 			],
 		});

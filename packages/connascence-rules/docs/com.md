@@ -88,9 +88,7 @@ The classic example from the original definition is a function that returns `Non
 
 Detecting semantic ambiguity would require tracking the same value across multiple **usage contexts** (e.g. a value returned in one place and checked in a condition elsewhere, with different surrounding logic). That pattern is detectable in principle — the `Constant` shape already carries a `context` field — but it produces false positives and belongs in a dedicated rule rather than here.
 
-::: info Planned
-A companion rule `com-ambiguous` is planned to flag values that appear in mixed usage contexts (e.g. both as `return` values and as `condition` operands across distinct files), surfacing candidates for the semantic ambiguity case described above.
-:::
+The companion rule [`com-semantic`](./com-semantic.md) detects this function-level semantic ambiguity using LLM analysis. It identifies functions that return the same value from multiple sites where each site carries a different meaning — the classic case described above. It requires the `@maat-tools/enricher-llm/com` enricher and produces probabilistic findings that need human verification.
 
 ## Finding Identity
 

@@ -16,7 +16,6 @@ import {
 	type RuleRegistry,
 } from '@maat-tools/contracts';
 import { ulid } from 'ulid';
-import { dump } from '../../utils/src/dump';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 

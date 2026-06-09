@@ -1,5 +1,5 @@
 import { defineEnricher, type Enricher } from '@maat-tools/contracts';
-import { LLMInteractor, type LLMConfig, type KnownLLMConfig, dump } from '@maat-tools/utils';
+import { type KnownLLMConfig, type LLMConfig, LLMInteractor } from '@maat-tools/utils';
 import { FUNCTION_SIGNATURES_CAPABILITY, type FunctionSignature } from '@maat-tools/vocabulary';
 
 export type CoMCandidate = {
@@ -49,7 +49,6 @@ For each function listed below, assess whether it exhibits CoM. Consider:
 Respond with a JSON array with one assessment object per function:
 [{ "isCoM": <boolean — true if CoM is present>, "confidence": <number 0.0–1.0>, "reason": <concise explanation> }]`;
 
-
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		comCandidates: CoMCandidate[];
@@ -59,7 +58,10 @@ declare module '@maat-tools/contracts' {
 	}
 }
 
-export class CoMEnricherLLM extends LLMInteractor implements Enricher<'functionSignatures', typeof COM_ENRICHER_FACT_KEY> {
+export class CoMEnricherLLM
+	extends LLMInteractor
+	implements Enricher<'functionSignatures', typeof COM_ENRICHER_FACT_KEY>
+{
 	public id = 'maat-tools/enricher-llm/com@v1';
 	public needFacts = [FUNCTION_SIGNATURES_CAPABILITY] as const;
 	public provideFacts = [COM_ENRICHER_FACT_KEY] as const;
@@ -68,7 +70,11 @@ export class CoMEnricherLLM extends LLMInteractor implements Enricher<'functionS
 		super(config as LLMConfig);
 	}
 
-	public async enrich({ functionSignatures }: { functionSignatures: FunctionSignature[] }): Promise<{ facts: { comCandidates: CoMCandidate[] }, usedTokens?: number; cost?: number }> {
+	public async enrich({
+		functionSignatures,
+	}: {
+		functionSignatures: FunctionSignature[];
+	}): Promise<{ facts: { comCandidates: CoMCandidate[] }; usedTokens?: number; cost?: number }> {
 		const heterogeneousCandidates = functionSignatures.filter((sig) => sig.output.heterogeneous);
 		if (heterogeneousCandidates.length === 0) {
 			return { facts: { comCandidates: [] } };
@@ -120,7 +126,6 @@ Return type: \`${sig.output.returnType}\`
 Return sites (${sig.output.returnSites.length} total):
 ${returnSiteLines}`;
 	}
-
 }
 
 export default defineEnricher((config: KnownLLMConfig) => new CoMEnricherLLM(config));

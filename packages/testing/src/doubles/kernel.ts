@@ -32,7 +32,7 @@ export function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
 		needFacts: ['testFacts'] as const,
 		provideFacts: ['enrichedFacts'] as const,
 		enrich: async ({ testFacts }: { testFacts: string[] } = { testFacts: [] }) => ({
-			enrichedFacts: testFacts.map((v) => `enriched:${v}`),
+			facts: { enrichedFacts: testFacts.map((v) => `enriched:${v}`) },
 		}),
 	};
 }

@@ -1,5 +1,12 @@
 import type { FunctionSignature, Parameter, ReturnSite } from '@maat-tools/vocabulary';
-import { type FunctionDeclaration, type MethodDeclaration, type ReturnTypedNode, SyntaxKind, type SourceFile, type TupleTypeNode } from 'ts-morph';
+import {
+	type FunctionDeclaration,
+	type MethodDeclaration,
+	type ReturnTypedNode,
+	type SourceFile,
+	SyntaxKind,
+	type TupleTypeNode,
+} from 'ts-morph';
 import { makeLocation } from './utils';
 
 const GUARD_SNIPPET_MAX = 300;
@@ -12,9 +19,7 @@ function collectReturnSites(func: FunctionDeclaration | MethodDeclaration, file:
 		const value = expr ? expr.getText() : 'void';
 
 		const guardParent = returnStmt.getParent()?.getParent();
-		const guardSnippet = guardParent
-			? guardParent.getText().trim().slice(0, GUARD_SNIPPET_MAX)
-			: undefined;
+		const guardSnippet = guardParent ? guardParent.getText().trim().slice(0, GUARD_SNIPPET_MAX) : undefined;
 
 		sites.push({
 			value,
@@ -51,7 +56,10 @@ function getOutputHeterogeneous(node: ReturnTypedNode): boolean {
 	return outputTypeSet.size > 1;
 }
 
-function collectParameters(node: FunctionDeclaration | MethodDeclaration): { parameters: Parameter[]; heterogeneous: boolean } {
+function collectParameters(node: FunctionDeclaration | MethodDeclaration): {
+	parameters: Parameter[];
+	heterogeneous: boolean;
+} {
 	const params = node.getParameters();
 	const parameters: Parameter[] = [];
 	const typeSet = new Set<string>();

@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { FindingRuleOutput } from '@maat-tools/contracts';
+import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
-import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved, scenarioVerified } from '@maat-tools/testing';
+import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved, scenarioUnverified } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Verify } from '../../packages/cli/src/commands/verify';
 import { Printer } from '../../packages/cli/src/printer';
@@ -49,34 +50,34 @@ describe('verify', () => {
 		expect(capture.stderr).toContain('does-not-exist');
 	});
 
-	test('observed finding → verified flag set, logs success', async () => {
+	test('observed finding → warns already verified, no state change', async () => {
 		const fp = await scenarioObserved(ledger, FINDING);
-		await buildVerify(ledger).action({ fingerprint: fp });
-		exit.assertNotExited();
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.verified).toBe(true);
-		expect(capture.stdout).toContain(`"${fp}" verified`);
-	});
-
-	test('already-verified finding → warns, no exit, state unchanged', async () => {
-		const fp = await scenarioVerified(ledger, FINDING);
 		await buildVerify(ledger).action({ fingerprint: fp });
 		exit.assertNotExited();
 		expect(capture.stderr).toContain('already verified');
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.verified).toBe(true);
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.OBSERVED);
 	});
 
-	test('--revoke on verified finding → verified flag cleared, logs success', async () => {
-		const fp = await scenarioVerified(ledger, FINDING);
+	test('unverified finding → transitions to OBSERVED, logs success', async () => {
+		const fp = await scenarioUnverified(ledger, FINDING);
+		await buildVerify(ledger).action({ fingerprint: fp });
+		exit.assertNotExited();
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.OBSERVED);
+		expect(capture.stdout).toContain(`"${fp}" verified`);
+	});
+
+	test('--revoke on unverified finding → transitions to REVOKED, logs success', async () => {
+		const fp = await scenarioUnverified(ledger, FINDING);
 		await buildVerify(ledger).action({ fingerprint: fp, revoke: true });
 		exit.assertNotExited();
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.verified).toBe(false);
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.REVOKED);
 		expect(capture.stdout).toContain('revoked');
 	});
 
-	test('--revoke on non-verified finding → warns, no exit', async () => {
+	test('--revoke on observed finding → exit 1, not in unverified state', async () => {
 		const fp = await scenarioObserved(ledger, FINDING);
-		await buildVerify(ledger).action({ fingerprint: fp, revoke: true });
-		exit.assertNotExited();
-		expect(capture.stderr).toContain('not verified');
+		await expect(buildVerify(ledger).action({ fingerprint: fp, revoke: true })).rejects.toThrow('process.exit');
+		exit.assertExitedWith(1);
+		expect(capture.stderr).toContain('not in an unverified state');
 	});
 });

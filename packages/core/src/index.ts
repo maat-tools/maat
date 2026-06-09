@@ -16,6 +16,7 @@ import {
 	type RuleRegistry,
 } from '@maat-tools/contracts';
 import { ulid } from 'ulid';
+import { dump } from '../../utils/src/dump';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 
@@ -92,7 +93,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 					instance_id: event.instance_id,
 					message: event.message,
 					artifacts: event.artifacts,
-					verified: existing?.verified ?? false,
+					reason: event.reason,
 				} satisfies FindingRecord;
 				break;
 			}
@@ -110,17 +111,24 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 				}
 				break;
 			}
-			case FindingStatus.VERIFIED: {
-				const record = findings[event.fingerprint];
-				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, verified: true };
-				}
+			case FindingStatus.UNVERIFIED: {
+				const existing = findings[event.fingerprint];
+				findings[event.fingerprint] = {
+					fingerprint: event.fingerprint,
+					state: FindingStatus.UNVERIFIED,
+					baselined: existing?.baselined ?? false,
+					rule_id: event.rule_id,
+					instance_id: event.instance_id,
+					message: event.message,
+					artifacts: event.artifacts,
+					reason: event.reason,
+				} satisfies FindingRecord;
 				break;
 			}
 			case FindingStatus.REVOKED: {
 				const record = findings[event.fingerprint];
 				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, verified: false };
+					findings[event.fingerprint] = { ...record, state: FindingStatus.REVOKED, reason: event.reason };
 				}
 				break;
 			}
@@ -149,7 +157,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 	}
 
 	private nextState(existingState?: FindingStatus): FindingStatus {
-		if (!existingState || existingState === FindingStatus.RESOLVED) {
+		if (!existingState || existingState === FindingStatus.RESOLVED || existingState === FindingStatus.UNVERIFIED) {
 			return FindingStatus.OBSERVED;
 		}
 
@@ -185,5 +193,4 @@ export {
 export type {
 	LLMConfig,
 	LLMProvider,
-	OpenAIModel,
 } from '@maat-tools/utils';

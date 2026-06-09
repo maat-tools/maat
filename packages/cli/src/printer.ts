@@ -70,7 +70,7 @@ export class Printer {
 			process.stdout.write(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)\n`);
 			for (const f of group) {
 				const badge = f.requiresVerification ? chalk.yellow('[Verify] ') : '';
-				process.stdout.write(`    ${chalk.dim(f.fingerprint.slice(0, 8))}  ${badge}${f.message}\n`);
+				process.stdout.write(`    ${chalk.dim(f.fingerprint)}  ${badge}${f.message}\n`);
 				for (const artifact of f.artifacts) {
 					process.stdout.write(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}\n`);
 				}

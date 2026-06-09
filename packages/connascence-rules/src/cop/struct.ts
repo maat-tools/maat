@@ -78,33 +78,25 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === 'source') {
-			const src = artifact.data as PositionalSource;
-			const loc = `${src.location.file}:${src.location.line}${src.location.column !== undefined ? `:${src.location.column}` : ''}`;
-			const positions = src.positions.map((p) => `[${p.index}]: ${p.type}`).join(', ');
-
-			return {
-				role: '[Source]',
-				location: loc,
-				identifier: src.name,
-				positions,
-			};
+		if (artifact.kind !== 'source' && artifact.kind !== 'access') {
+			return { value: String(artifact.data) };
 		}
+		const data = artifact.data as PositionalSource;
+		const loc = `${data.location.file}:${data.location.line}${data.location.column !== undefined ? `:${data.location.column}` : ''}`;
 
-		if (artifact.kind === 'access') {
-			const acc = artifact.data as PositionalAccess;
-			const loc = `${acc.location.file}:${acc.location.line}${acc.location.column !== undefined ? `:${acc.location.column}` : ''}`;
-
-			return {
-				role: '[Access]',
-				location: loc,
-				identifier: acc.name,
-				kind: acc.accessKind,
-				index: String(acc.accessedIndex),
-			};
-		}
-
-		return { value: String(artifact.data) };
+		return {
+			role: artifact.kind === 'source' ? '[Source]' : '[Access]',
+			location: loc,
+			identifier: data.name,
+			...(artifact.kind === 'access'
+				? {
+						kind: (data as unknown as PositionalAccess).accessKind,
+						index: String((data as unknown as PositionalAccess).accessedIndex),
+					}
+				: {
+						positions: data.positions.map((p) => `[${p.index}]: ${p.type}`).join(', '),
+					}),
+		};
 	}
 }
 

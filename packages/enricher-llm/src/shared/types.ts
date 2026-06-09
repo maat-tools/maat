@@ -1,3 +1,3 @@
-import type { LLMConfig } from '@maat-tools/utils';
+import type { KnownLLMConfig } from '@maat-tools/utils';
 
-export type EnricherLLMInput = LLMConfig;
+export type EnricherLLMInput = KnownLLMConfig;

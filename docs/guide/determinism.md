@@ -45,7 +45,7 @@ Third-party package authors are expected to follow the plugin determinism contra
 - `Rule.evaluate(facts)` must be synchronous and pure.
 - `Insight.analyze(findings)` must be synchronous and pure.
 - `Collector.collect()` may perform I/O, but must produce deterministic facts for the same filesystem and environment state.
-- LLM-assisted collectors must use a committed or otherwise reproducible cache keyed by content hash, model version, and prompt version.
+- LLM-assisted enrichers must use a committed or otherwise reproducible cache keyed by content hash, model version, and prompt version. The official `@maat-tools/enricher-llm` package caches automatically at `.maat/enricher-cache/`.
 - LLM calls inside `Rule.evaluate()` or `Insight.analyze()` violate the contract.
 
 ## Ledger history

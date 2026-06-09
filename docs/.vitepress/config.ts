@@ -33,6 +33,21 @@ const guideAndPluginSidebar = [
       { text: 'ADRs vs Axioms', link: '/guide/adrs-vs-axioms' },
       { text: 'Plugin system', link: '/guide/plugins' },
       { text: 'Enrichers', link: '/guide/enrichers' },
+      {
+        text: 'LLM models',
+        link: '/guide/llm-models',
+        collapsed: false,
+        items: [
+          {
+            text: 'Vertex AI',
+            link: '/guide/llm-models/vertex',
+            collapsed: false,
+            items: [
+              { text: 'Gemini 3.5 Flash', link: '/guide/llm-models/gemini-3-5-flash' },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -98,7 +113,14 @@ const guideAndPluginSidebar = [
             link: '/plugins/connascence-rules/',
             collapsed: false,
             items: [
-              { text: 'com', link: '/plugins/connascence-rules/com' },
+              {
+                text: 'com',
+                collapsed: false,
+                items: [
+                  { text: 'com', link: '/plugins/connascence-rules/com' },
+                  { text: 'com-semantic', link: '/plugins/connascence-rules/com-semantic' },
+                ],
+              },
               {
                 text: 'cop',
                 link: '/plugins/connascence-rules/cop',

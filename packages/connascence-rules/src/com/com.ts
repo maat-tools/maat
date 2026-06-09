@@ -70,17 +70,16 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
-		if (artifact.kind === 'source') {
-			const c = artifact.data as Constant;
-			const loc = `${c.location.file}:${c.location.line}${c.location.column !== undefined ? `:${c.location.column}` : ''}`;
-
-			return {
-				location: loc,
-				value: c.value,
-			};
+		if (artifact.kind !== 'source') {
+			return { value: String(artifact.data) };
 		}
+		const c = artifact.data as Constant;
+		const loc = `${c.location.file}:${c.location.line}${c.location.column !== undefined ? `:${c.location.column}` : ''}`;
 
-		return { value: String(artifact.data) };
+		return {
+			location: loc,
+			value: c.value,
+		};
 	}
 }
 

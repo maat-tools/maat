@@ -17,7 +17,7 @@ type StoredEnricher = {
 	readonly id: string;
 	readonly needFacts: readonly (keyof FactRegistry)[];
 	readonly provideFacts: readonly (keyof FactRegistry)[];
-	enrich(facts?: Partial<FactRegistry>): Promise<Partial<FactRegistry>>;
+	enrich(facts?: Partial<FactRegistry>): Promise<{ facts: Partial<FactRegistry>; usedTokens?: number; cost?: number }>;
 };
 
 export type KernelResult = {
@@ -28,7 +28,13 @@ export type KernelProgressEvent =
 	| { type: 'collector:start'; collectorId: string; index: number; total: number }
 	| { type: 'collector:done'; collectorId: string; index: number; total: number }
 	| { type: 'enricher:start'; enricherId: string; index: number; total: number }
-	| { type: 'enricher:done'; enricherId: string; index: number; total: number };
+	| {
+			type: 'enricher:done';
+			enricherId: string;
+			index: number;
+			total: number;
+			enriched: { usedTokens?: number; cost?: number };
+	  };
 
 export class Kernel {
 	private collectors: StoredCollector[] = [];
@@ -138,7 +144,13 @@ export class Kernel {
 					const enriched = await enricher.enrich();
 					factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
 
-					onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
+					onProgress?.({
+						type: 'enricher:done',
+						enricherId: enricher.id,
+						index: i,
+						total: this.enrichers.length,
+						enriched: { usedTokens: enriched.usedTokens, cost: enriched.cost },
+					});
 
 					return { enriched, enricher };
 				}
@@ -146,22 +158,34 @@ export class Kernel {
 				const hasFacts = enricher.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
 					console.warn(`Enricher "${enricher.id}" skipped. Required facts are missing.`);
-					onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
+					onProgress?.({
+						type: 'enricher:done',
+						enricherId: enricher.id,
+						index: i,
+						total: this.enrichers.length,
+						enriched: { usedTokens: 0, cost: 0 },
+					});
 
-					return { enriched: {}, enricher };
+					return { enriched: { facts: {} }, enricher };
 				}
 
 				const enriched = await enricher.enrich(Object.fromEntries(enricher.needFacts.map((key) => [key, facts[key]])));
 				factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
 
-				onProgress?.({ type: 'enricher:done', enricherId: enricher.id, index: i, total: this.enrichers.length });
+				onProgress?.({
+					type: 'enricher:done',
+					enricherId: enricher.id,
+					index: i,
+					total: this.enrichers.length,
+					enriched: { usedTokens: enriched.usedTokens, cost: enriched.cost },
+				});
 
 				return { enriched, enricher };
 			}),
 		);
 
 		for (const { enriched } of enricherResults) {
-			facts = this.mergeFacts(facts, enriched);
+			facts = this.mergeFacts(facts, enriched.facts);
 		}
 
 		const factsRequiringVerificationEntries = [...factsRequiringVerification.entries()];
@@ -190,19 +214,7 @@ export class Kernel {
 						instanceId: rule.instanceId,
 						fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
 						requiresVerification: ruleNeedsVerification.length > 0,
-						artifacts:
-							ruleNeedsVerification.length > 0
-								? [
-										...rest.artifacts,
-										{
-											kind: 'finding.provenance',
-											data: {
-												requiresVerification: true,
-												verificationReason: `Facts provided by enrichers [${ruleNeedsVerification.join(', ')}]`,
-											},
-										},
-									]
-								: rest.artifacts,
+						artifacts: rest.artifacts,
 					};
 					return finding;
 				});

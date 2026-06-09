@@ -48,7 +48,7 @@ export const FindingStatus = {
 	OBSERVED: 'finding.observed',
 	BASELINED: 'finding.baselined',
 	RESOLVED: 'finding.resolved',
-	VERIFIED: 'finding.verified',
+	UNVERIFIED: 'finding.unverified',
 	REVOKED: 'finding.revoked',
 	AXIOM_DECLARED: 'axiom.declared',
 	AXIOM_SUPERSEDED: 'axiom.superseded',
@@ -72,6 +72,7 @@ export type FindingObservedEvent = LedgerEntryBase & {
 	readonly instance_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
+	readonly reason?: string;
 };
 
 export type FindingBaselinedEvent = LedgerEntryBase & {
@@ -85,9 +86,14 @@ export type FindingResolvedEvent = LedgerEntryBase & {
 	readonly fingerprint: string;
 };
 
-export type FindingVerifiedEvent = LedgerEntryBase & {
-	readonly type: typeof FindingStatus.VERIFIED;
+export type FindingUnverifiedEvent = LedgerEntryBase & {
+	readonly type: typeof FindingStatus.UNVERIFIED;
 	readonly fingerprint: string;
+	readonly rule_id: string;
+	readonly instance_id: string;
+	readonly message: string;
+	readonly artifacts: readonly Artifact[];
+	readonly requires_verification: true;
 	readonly reason?: string;
 };
 
@@ -101,7 +107,7 @@ export type FindingEvent =
 	| FindingObservedEvent
 	| FindingBaselinedEvent
 	| FindingResolvedEvent
-	| FindingVerifiedEvent
+	| FindingUnverifiedEvent
 	| FindingRevokedEvent;
 
 export type FindingEventInput = WithoutEntryId<FindingEvent>;
@@ -131,7 +137,7 @@ export type LedgerEvent =
 	| FindingObservedEvent
 	| FindingBaselinedEvent
 	| FindingResolvedEvent
-	| FindingVerifiedEvent
+	| FindingUnverifiedEvent
 	| FindingRevokedEvent
 	| AxiomDeclaredEvent
 	| AxiomSupersededEvent
@@ -148,7 +154,7 @@ export type FindingRecord = {
 	readonly instance_id: string;
 	readonly message: string;
 	readonly artifacts: readonly Artifact[];
-	verified: boolean;
+	reason?: string;
 };
 
 export type AxiomRecord = {
@@ -196,7 +202,9 @@ export interface Enricher<
 	readonly id: string;
 	readonly needFacts: readonly TNeeds[];
 	readonly provideFacts: readonly TProduces[];
-	enrich(facts?: { [K in TNeeds]: FactRegistry[K] }): Promise<{ [K in TProduces]: FactRegistry[K] }>;
+	enrich(
+		facts?: { [K in TNeeds]: FactRegistry[K] },
+	): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
 }
 
 export interface Insight {

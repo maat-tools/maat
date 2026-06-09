@@ -33,6 +33,8 @@
     "@types/micromatch": "4.0.10"
   },
   "dependencies": {
+    "@google-cloud/vertexai": "^1.12.0",
+    "@google/genai": "^2.7.0",
     "jiti": "2.7.0",
     "micromatch": "4.0.8"
   },

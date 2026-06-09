@@ -45,13 +45,26 @@ export type Parameter = {
 	position: number;
 };
 
+export type ReturnSite = {
+	value: string;
+	location: SourceLocation;
+	guardSnippet?: string;
+};
+
 export type FunctionSignature = {
 	file: string;
 	name: string;
-	parameters: Parameter[];
+	input: {
+		parameters: Parameter[];
+		heterogeneous: boolean;
+	};
+	output: {
+		returnType: string;
+		heterogeneous: boolean;
+		returnSites: ReturnSite[];
+	};
 	location: SourceLocation;
 	exported: boolean;
-	heterogeneous: boolean;
 };
 
 export type CallNodeKind = 'function' | 'method' | 'class' | 'module';

@@ -155,19 +155,13 @@ describe('Kernel.run with enrichers', () => {
 		expect(findings[0]?.message).toBe('finding: enriched:x');
 	});
 
-	test('enricher sets finding.requiresVerification and injects provenance artifact', async () => {
+	test('enricher sets finding.requiresVerification', async () => {
 		const kernel = new Kernel()
 			.registerCollector(makeCollector(['x']))
 			.registerEnricher(makeEnricher())
 			.registerRule(makeRuleConsumingEnriched());
 		const { findings } = await kernel.run();
 		expect(findings[0]?.requiresVerification).toBe(true);
-		const provenance = findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance');
-		expect(provenance).toHaveLength(1);
-		expect(provenance?.[0]?.data).toEqual({
-			requiresVerification: true,
-			verificationReason: 'Facts provided by enrichers [test-enricher]',
-		});
 	});
 
 	test('rule consuming both collector and enriched facts gets requiresVerification and provenance', async () => {
@@ -191,7 +185,6 @@ describe('Kernel.run with enrichers', () => {
 			.registerRule(mixedRule);
 		const { findings } = await kernel.run();
 		expect(findings[0]?.requiresVerification).toBe(true);
-		expect(findings[0]?.artifacts.filter((a) => a.kind === 'finding.provenance')).toHaveLength(1);
 	});
 
 	test('enricher skipped when required facts are missing', async () => {

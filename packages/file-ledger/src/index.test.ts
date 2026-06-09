@@ -116,7 +116,6 @@ describe('finding states', () => {
 		const record = await harness.backend.getFindingByFingerprint('fp1');
 		expect(record?.state).toBe(FindingStatus.OBSERVED);
 		expect(record?.baselined).toBe(false);
-		expect(record?.verified).toBe(false);
 		expect(record?.artifacts).toEqual([]);
 	});
 
@@ -142,17 +141,6 @@ describe('finding states', () => {
 		});
 		const record = await harness.backend.getFindingByFingerprint('fp1');
 		expect(record?.state).toBe(FindingStatus.RESOLVED);
-	});
-
-	test('verified finding reflects verified flag', async () => {
-		await harness.backend.append(OBSERVED);
-		await harness.backend.append({
-			type: FindingStatus.VERIFIED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-		});
-		const record = await harness.backend.getFindingByFingerprint('fp1');
-		expect(record?.verified).toBe(true);
 	});
 
 	test('getNotBaselinedFindings excludes baselined findings', async () => {

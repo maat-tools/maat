@@ -40,15 +40,15 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 
 			const reasons: string[] = [];
 
-			if (this.flagBoolean && sig.parameters.some((p) => p.type === 'boolean')) {
+			if (this.flagBoolean && sig.input.parameters.some((p) => p.type === 'boolean')) {
 				reasons.push(
 					'contains boolean param. (Consider remove the boolean flag or replace it with a more descriptive parameter)',
 				);
 			}
 
-			if (sig.parameters.length > this.maxArgumentsAllowed) {
+			if (sig.input.parameters.length > this.maxArgumentsAllowed) {
 				reasons.push(
-					`${sig.parameters.length} params exceeds threshold of ${this.maxArgumentsAllowed}. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)`,
+					`${sig.input.parameters.length} params exceeds threshold of ${this.maxArgumentsAllowed}. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)`,
 				);
 			}
 
@@ -56,7 +56,7 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 				continue;
 			}
 
-			const paramSummary = sig.parameters.map((p) => `${p.name}: ${p.type}`).join(', ');
+			const paramSummary = sig.input.parameters.map((p) => `${p.name}: ${p.type}`).join(', ');
 
 			findings.push({
 				ruleId: this.id,
@@ -78,7 +78,7 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 		if (artifact.kind === 'source') {
 			const sig = artifact.data as FunctionSignature;
 			const loc = `${sig.location.file}:${sig.location.line}${sig.location.column !== undefined ? `:${sig.location.column}` : ''}`;
-			const paramList = sig.parameters.map((p) => `${p.name}: ${p.type}`).join(', ');
+			const paramList = sig.input.parameters.map((p) => `${p.name}: ${p.type}`).join(', ');
 
 			return {
 				location: loc,

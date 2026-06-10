@@ -80,9 +80,9 @@ export async function importFileDynamically<T>({
 		const jiti = createJiti(import.meta.url);
 
 		if (asDefault) {
-			const mod = (await jiti.import(filePath, { default: true })) as { default?: T };
+			const defaultExport = await jiti.import(filePath, { default: true });
 
-			return mod.default as T;
+			return { default: defaultExport } as T;
 		}
 
 		return jiti.import(filePath) as Promise<T>;

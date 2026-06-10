@@ -22,10 +22,10 @@ export async function collectCallGraph(
 		jellyArgs.push('--timeout', String(options.timeout));
 	}
 
-	const jellyBinary = resolveJellyBinary();
+	const jellyScript = resolveJellyScript();
 
 	try {
-		await execa(jellyBinary, jellyArgs, {
+		await execa(process.execPath, [jellyScript, ...jellyArgs], {
 			cwd: projectRoot,
 			stdio: 'pipe',
 		});
@@ -41,8 +41,19 @@ export async function collectCallGraph(
 			// Ignore cleanup errors
 		}
 
-		throw error;
+		throw toCallGraphError(error);
 	}
+}
+
+function toCallGraphError(error: unknown): Error {
+	if (typeof error === 'object' && error !== null && 'stderr' in error) {
+		const stderr = String((error as { stderr: unknown }).stderr ?? '').trim();
+		if (stderr.length > 0) {
+			return new Error(`Call graph collection failed — jelly reported:\n${stderr}`, { cause: error });
+		}
+	}
+
+	return error instanceof Error ? error : new Error(String(error));
 }
 
 type JellyRange = {
@@ -105,8 +116,16 @@ function findEnclosingFunctionId(
 	return bestId;
 }
 
-function resolveJellyBinary(): string {
-	return require.resolve('@cs-au-dk/jelly/lib/main.js');
+function resolveJellyScript(): string {
+	try {
+		return require.resolve('@cs-au-dk/jelly/lib/main.js');
+	} catch (error) {
+		throw new Error(
+			'Call graph collection requires @cs-au-dk/jelly, which ships with @maat-tools/collector-ts but could not be resolved. ' +
+				'Reinstall your dependencies. If you use Yarn Plug-n-Play, set `nodeLinker: node-modules` — jelly is executed as a subprocess and cannot run from a zip archive.',
+			{ cause: error },
+		);
+	}
 }
 
 function mapJellyToMaat(

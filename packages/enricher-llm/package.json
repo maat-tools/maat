@@ -21,6 +21,8 @@
   },
   "files": [
     "dist",
+    "src",
+    "!src/**/*.test.ts",
     "LICENSE"
   ],
   "publishConfig": {

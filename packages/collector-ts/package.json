@@ -15,8 +15,13 @@
   },
   "files": [
     "dist",
+    "src",
+    "!src/**/*.test.ts",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "publishConfig": {
     "access": "public"
   },

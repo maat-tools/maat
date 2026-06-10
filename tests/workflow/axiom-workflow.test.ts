@@ -6,7 +6,7 @@ import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Axiom } from '../../packages/cli/src/commands/axiom';
-import { Printer } from '../../packages/cli/src/printer';
+import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
@@ -26,7 +26,7 @@ const DECLARE_OPTS = {
 type LifecycleOptions = { id: string; reason?: string };
 
 function buildAxiom(ledger: LedgerHarness | null) {
-	return new Axiom(new Command(), BASE_CONFIG, new Kernel(), [], new Printer(), ledger?.backend ?? null);
+	return new Axiom(new Command(), BASE_CONFIG, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 function supersede(axiom: Axiom, opts: LifecycleOptions): Promise<void> {

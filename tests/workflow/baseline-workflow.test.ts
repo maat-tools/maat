@@ -5,7 +5,7 @@ import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Baseline } from '../../packages/cli/src/commands/baseline';
-import { Printer } from '../../packages/cli/src/printer';
+import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
@@ -24,7 +24,7 @@ const FINDING_B: FindingRuleOutput = {
 };
 
 function buildBaseline(ledger: LedgerHarness | null, config: MaatConfig = BASE_CONFIG) {
-	return new Baseline(new Command(), config, new Kernel(), [], new Printer(), ledger?.backend ?? null);
+	return new Baseline(new Command(), config, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 const exit = new ExitCapture();

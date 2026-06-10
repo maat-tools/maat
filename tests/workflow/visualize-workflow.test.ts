@@ -12,7 +12,7 @@ import {
 } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Visualize } from '../../packages/cli/src/commands/visualize';
-import { Printer } from '../../packages/cli/src/printer';
+import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
@@ -31,7 +31,7 @@ const FINDING_B: FindingRuleOutput = {
 };
 
 function buildVisualize(ledger: LedgerHarness | null) {
-	return new Visualize(new Command(), BASE_CONFIG, new Kernel(), [], new Printer(), ledger?.backend ?? null);
+	return new Visualize(new Command(), BASE_CONFIG, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 const exit = new ExitCapture();

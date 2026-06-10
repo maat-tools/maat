@@ -6,7 +6,7 @@ import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved, scenarioUnverified } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Verify } from '../../packages/cli/src/commands/verify';
-import { Printer } from '../../packages/cli/src/printer';
+import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
@@ -18,7 +18,7 @@ const FINDING: FindingRuleOutput = {
 };
 
 function buildVerify(ledger: LedgerHarness | null) {
-	return new Verify(new Command(), BASE_CONFIG, new Kernel(), [], new Printer(), ledger?.backend ?? null);
+	return new Verify(new Command(), BASE_CONFIG, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 const exit = new ExitCapture();

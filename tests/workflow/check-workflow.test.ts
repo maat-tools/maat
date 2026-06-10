@@ -14,7 +14,7 @@ import {
 } from '@maat-tools/testing';
 import { Command } from 'commander';
 import { Check } from '../../packages/cli/src/commands/check';
-import { Printer } from '../../packages/cli/src/printer';
+import { StdoutPresenter } from '@maat-tools/utils';
 
 const RULE_OUTPUT: FindingRuleOutput = {
 	ruleId: 'test@v1',
@@ -60,7 +60,7 @@ function buildProbabilisticKernel() {
 }
 
 function buildCheck(findings: FindingRuleOutput[], ledger: LedgerHarness | null, config: MaatConfig = BASE_CONFIG) {
-	return new Check(new Command(), config, buildKernel(findings), [], new Printer(), ledger?.backend ?? null);
+	return new Check(new Command(), config, buildKernel(findings), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 const exit = new ExitCapture();
@@ -100,7 +100,7 @@ describe('check — no ledger', () => {
 	});
 
 	test('only probabilistic findings, strict → no exit', async () => {
-		const check = new Check(new Command(), STRICT_CONFIG, buildProbabilisticKernel(), [], new Printer(), null);
+		const check = new Check(new Command(), STRICT_CONFIG, buildProbabilisticKernel(), [], new StdoutPresenter(), null);
 		await check.action({ silent: true });
 		exit.assertNotExited();
 	});

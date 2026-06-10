@@ -38,7 +38,9 @@
     "@google-cloud/vertexai": "^1.12.0",
     "@google/genai": "^2.7.0",
     "jiti": "2.7.0",
-    "micromatch": "4.0.8"
+    "micromatch": "4.0.8",
+    "chalk": "5.6.2",
+    "@maat-tools/contracts": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

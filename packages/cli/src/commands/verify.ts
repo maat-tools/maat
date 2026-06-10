@@ -11,19 +11,19 @@ type VerifyOptions = {
 export class Verify extends MaatCommandBase implements MaatCommand {
 	public async action({ fingerprint, revoke, reason }: VerifyOptions) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot verify without a ledger.\n');
+			this.presenter.error('No ledger configured. Cannot verify without a ledger.\n');
 			process.exit(1);
 		}
 
 		const record = await this.ledger.getFindingByFingerprint(fingerprint);
 
 		if (!record) {
-			this.printer.error(`No finding with fingerprint "${fingerprint}" found in the ledger.\n`);
+			this.presenter.error(`No finding with fingerprint "${fingerprint}" found in the ledger.\n`);
 			process.exit(1);
 		}
 
 		if (revoke && record.state !== FindingStatus.UNVERIFIED) {
-			this.printer.error(
+			this.presenter.error(
 				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can have their verification revoked.\n`,
 			);
 			process.exit(1);
@@ -37,12 +37,12 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 				reason,
 			});
 
-			this.printer.log(`Finding "${fingerprint}" revoked.\n`);
+			this.presenter.log(`Finding "${fingerprint}" revoked.\n`);
 			return;
 		}
 
 		if (record.state === FindingStatus.OBSERVED) {
-			this.printer.warn(`Finding "${fingerprint}" is already verified.\n`);
+			this.presenter.warn(`Finding "${fingerprint}" is already verified.\n`);
 			return;
 		}
 
@@ -57,7 +57,7 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			reason,
 		});
 
-		this.printer.log(`Finding "${fingerprint}" verified.\n`);
+		this.presenter.log(`Finding "${fingerprint}" verified.\n`);
 	}
 
 	public register(): void {

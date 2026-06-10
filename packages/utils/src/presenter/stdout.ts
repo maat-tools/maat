@@ -11,15 +11,15 @@ function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
 		.join(' ');
 }
 
-export class Printer {
+export class StdoutPresenter {
 	private readonly silent: boolean;
 
 	public constructor(options: { silent?: boolean } = {}) {
 		this.silent = options.silent ?? false;
 	}
 
-	public asSilent(): Printer {
-		return new Printer({ silent: true });
+	public asSilent(): StdoutPresenter {
+		return new StdoutPresenter({ silent: true });
 	}
 
 	public log(message: string): void {

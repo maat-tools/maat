@@ -1,8 +1,8 @@
 import type { Finding, Insight, InsightResult, LedgerBackend } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import type { Kernel } from '@maat-tools/kernel';
+import type { StdoutPresenter } from '@maat-tools/utils';
 import type { Command } from 'commander';
-import type { Printer } from '../printer';
 
 export abstract class MaatCommandBase {
 	public constructor(
@@ -10,7 +10,7 @@ export abstract class MaatCommandBase {
 		protected config: MaatConfig,
 		protected kernel: Kernel,
 		protected insights: Insight[],
-		protected printer: Printer,
+		protected presenter: StdoutPresenter,
 		protected ledger: LedgerBackend | null,
 	) {}
 

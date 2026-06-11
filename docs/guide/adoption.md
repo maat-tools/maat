@@ -1,6 +1,6 @@
 # Greenfield and brownfield adoption
 
-Maat works in both new and existing codebases, but the ledger does not have the same job in both places.
+maat works in both new and existing codebases, but the ledger does not have the same job in both places.
 
 In a greenfield codebase, the main value is early enforcement. You usually run `maat check` as a gate and fix violations in the same pull request that introduced them. The ledger should have no active findings most of the time, except for rare reviewed exceptions or manual axioms.
 
@@ -12,15 +12,14 @@ Start without a ledger unless the team already needs explicit exceptions.
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
-import { layer } from '@maat-tools/coupling-rules'
-import { Pure } from '@maat-tools/coupling-rules/roles'
+import { layer, Pure } from '@maat-tools/coupling-rules'
 
 export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   rules: [
-    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
-    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+    layer('@myapp/domain').is(Pure).build(),
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts').build(),
   ],
 })
 ```
@@ -42,8 +41,8 @@ export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   rules: [
-    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
-    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+    layer('@myapp/domain').is(Pure).build(),
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts').build(),
   ],
   ledger: ['@maat-tools/file-ledger', { path: './maat-ledger.ndjson' }],
 })

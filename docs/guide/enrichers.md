@@ -1,6 +1,6 @@
 # Enrichers
 
-Enrichers are a new architectural layer in Maat that sits between **collectors** and **rules**. Their sole purpose is to derive higher-level facts from lower-level facts.
+Enrichers are a new architectural layer in maat that sits between **collectors** and **rules**. Their sole purpose is to derive higher-level facts from lower-level facts.
 
 An enricher consumes facts and produces new facts. Unlike a collector, it does not read the filesystem or network. Unlike a rule, it does not produce findings. It exists to enable **semantic interpretation** that static analysis cannot provide.
 
@@ -37,7 +37,7 @@ The kernel runs this in three phases:
 An enricher is a package with a default export created by `defineEnricher()` from `@maat-tools/contracts`.
 
 ```ts
-import { type Enricher, defineEnricher, type FactRegistry } from '@maat-tools/contracts'
+import { type Enricher, defineEnricher } from '@maat-tools/contracts'
 
 export type SimilarFunctionPair = {
   functionA: string
@@ -59,7 +59,9 @@ export class SemanticSimilarityEnricher
   constructor(private readonly options: SemanticSimilarityEnricherOptions) {}
 
   async enrich(facts: { 'acme.ts.functions': unknown[] }): Promise<{
-    'acme.semantic.similarity': SimilarFunctionPair[]
+    facts: { 'acme.semantic.similarity': SimilarFunctionPair[] }
+    usedTokens?: number
+    cost?: number
   }> {
     // Use an LLM or other probabilistic model to analyze functions
     // and identify semantic similarity.
@@ -68,12 +70,12 @@ export class SemanticSimilarityEnricher
     // ... analysis logic ...
 
     return {
-      'acme.semantic.similarity': pairs,
+      facts: { 'acme.semantic.similarity': pairs },
     }
   }
 }
 
-// Extend Maat's registries for TypeScript autocomplete
+// Extend maat's registries for TypeScript autocomplete
 declare module '@maat-tools/contracts' {
   interface FactRegistry {
     'acme.semantic.similarity': SimilarFunctionPair[]
@@ -122,7 +124,7 @@ The rule itself remains pure and deterministic. The finding is explicitly flagge
 | **`requiresVerification`** | `false` / absent | `true` |
 | **Breaks strict build?** | Yes | **Never** |
 | **Goes to ledger?** | Yes | **Yes** (as `finding.unverified` via `maat check --ledger`) |
-| **Can be baselined?** | Yes | Only after human verification |
+| **Can be baselined?** | Yes | Yes — `maat baseline` baselines every non-baselined ledger record, including `finding.unverified` ones |
 
 ## Human-in-the-loop verification
 
@@ -142,6 +144,12 @@ If a finding is a false positive, it can be dismissed:
 maat verify --fingerprint <fp> --revoke
 ```
 
+## Caching: every LLM response is cached, always
+
+For the official `@maat-tools/enricher-llm` package, caching is not optional and has no off switch. Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. **If nothing changed — same code, same prompt, same model — the cached result is used and the LLM is never called again for that item.** Only changed items trigger new calls; entries are per-item, so one changed function re-asks about one function, not the whole batch. Entries for items that no longer exist are pruned automatically.
+
+Commit `.maat/enricher-cache/` with your repository. This makes enriched runs reproducible across machines and CI — same facts, no network access, no repeated cost — and it means LLM cost scales with how much code changed, not with how often `maat check` runs. The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
+
 ## Tradeoffs and design decisions
 
 ### Enrichers vs. deterministic alternatives
@@ -157,10 +165,10 @@ maat verify --fingerprint <fp> --revoke
 
 ### Performance and cost
 
-**Tradeoff:** LLM-backed enrichers add latency and cost to every run.
+**Tradeoff:** LLM-backed enrichers add latency and cost when code changes.
 
 - Enrichers run in parallel. Total latency is bounded by the slowest enricher, not the sum of all. They all receive the same snapshot of collected facts.
-- LLM calls are expensive. The official `@maat-tools/enricher-llm` package caches every LLM response at `.maat/enricher-cache/`, keyed by content hash × model version × prompt instructions. Only items whose code actually changed trigger new LLM calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
+- The [always-on cache](#caching-every-llm-response-is-cached-always) means unchanged items never trigger LLM calls — a run over unchanged code makes zero calls.
 
 ### Verification fatigue
 
@@ -172,7 +180,7 @@ maat verify --fingerprint <fp> --revoke
 
 ### Determinism is preserved at the rule layer
 
-**This is the most important tradeoff to understand.** The existence of enrichers does **not** mean Maat rules are no longer deterministic. Rules remain pure functions:
+**This is the most important tradeoff to understand.** The existence of enrichers does **not** mean maat rules are no longer deterministic. Rules remain pure functions:
 
 - `Rule.evaluate(facts)` is still synchronous and deterministic.
 - Rules do not call LLMs or make network requests.
@@ -181,9 +189,9 @@ maat verify --fingerprint <fp> --revoke
 
 The maat philosophy is not contradicted: **rules are still deterministic**. The probabilistic nature is contained in the *facts*, and the system marks the *findings* that depend on them.
 
-## Does this mean Maat is no longer deterministic?
+## Does this mean maat is no longer deterministic?
 
-**No.** Maat's determinism guarantee applies to the rule layer, not the entire pipeline. Here is the exact boundary:
+**No.** maat's determinism guarantee applies to the rule layer, not the entire pipeline. Here is the exact boundary:
 
 | Layer | Deterministic? | Why |
 |---|---|---|
@@ -207,7 +215,7 @@ import type { EnricherLLMInput } from '@maat-tools/enricher-llm'
 
 | Type | Purpose |
 |---|---|
-| `EnricherLLMInput` | OpenAI LLM configuration (`provider`, `model`, `apiKey`, `cacheDir`, etc.) |
+| `EnricherLLMInput` | LLM configuration for the supported provider/model combinations (`provider`, `model`, optional `extra` and `timeoutMs`). Currently Google Vertex AI with Gemini models — see [LLM models](/guide/llm-models) |
 
 ## Related
 

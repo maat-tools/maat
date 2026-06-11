@@ -1,12 +1,12 @@
 # Determinism
 
-Maat is designed for reproducible architecture checks. A finding is useful only when the same repository state can produce it again.
+maat is designed for reproducible architecture checks. A finding is useful only when the same repository state can produce it again.
 
 ## Official rule guarantee
 
 Rules shipped from the official `maat-tools/maat` repository are deterministic by guarantee.
 
-For the same rule version and the same collected facts, official Maat rules produce the same findings:
+For the same rule version and the same collected facts, official maat rules produce the same findings:
 
 - no hidden state
 - no randomness
@@ -29,8 +29,8 @@ When a rule consumes facts produced by an enricher, the resulting finding is mar
 
 - display a `[Verify]` badge in CLI output;
 - never break strict builds;
-- never go to the ledger;
-- can only be treated as deterministic after human verification with `maat verify`.
+- enter the ledger in a quarantined state: `maat check --ledger` appends them as `finding.unverified` events, not `finding.observed`;
+- become `finding.observed` — and only then treated as deterministic — after human verification with `maat verify`.
 
 The non-determinism is explicitly contained at the **fact layer**, not the rule layer. See the [Enrichers guide](/guide/enrichers) and [ADR-011](/adr/011-enrichers-probabilistic-facts) for the full design.
 
@@ -38,7 +38,7 @@ The non-determinism is explicitly contained at the **fact layer**, not the rule 
 
 Third-party collectors, rules, insights, and ledger backends are outside the official guarantee.
 
-Maat supports third-party packages through public interfaces, but it cannot prove at runtime that external package code is pure, deterministic, or safe. If you install a third-party Maat package, you are responsible for deciding whether that package is acceptable for your repository and CI environment.
+maat supports third-party packages through public interfaces, but it cannot prove at runtime that external package code is pure, deterministic, or safe. If you install a third-party maat package, you are responsible for deciding whether that package is acceptable for your repository and CI environment.
 
 Third-party package authors are expected to follow the plugin determinism contract:
 
@@ -54,7 +54,7 @@ Official ledger backends preserve append-only history. The current file ledger w
 
 The generated ledger file can be committed to version control so accepted findings, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
 
-Maat does not bind a finding or ledger event to a user identity. Decisions such as baselining or resolving findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps Maat independent from Git hosting providers, identity systems, and external approval flows.
+maat does not bind a finding or ledger event to a user identity. Decisions such as baselining or resolving findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps maat independent from Git hosting providers, identity systems, and external approval flows.
 
 Third-party ledger backends must preserve the same event-log semantics, but the TypeScript interface cannot enforce that by itself.
 

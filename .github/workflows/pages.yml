@@ -1,10 +1,12 @@
 name: Deploy Pages
 
+# Docs deploy together with releases (v* tags), so the site always documents
+# what is actually published on npm. Use workflow_dispatch for doc-only
+# hotfixes between releases.
 on:
   push:
-    branches: [main]
-    paths:
-      - 'docs/**'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -35,6 +37,7 @@ jobs:
       - name: Build docs
         env:
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+          MAAT_DOCS_VERSION: ${{ github.ref_name }}
         run: bun run docs:build
 
       - uses: actions/configure-pages@v4

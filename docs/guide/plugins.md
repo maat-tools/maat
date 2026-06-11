@@ -1,6 +1,6 @@
 # Plugin system
 
-Maat plugins are packages that implement one of the public extension interfaces:
+maat plugins are packages that implement one of the public extension interfaces:
 
 | Plugin type | Purpose |
 |---|---|
@@ -14,7 +14,7 @@ Plugins are regular packages with a default export created by one of the helpers
 
 ## Determinism contract
 
-Third-party plugins are not covered by Maat's official determinism guarantee. Plugin authors must honor the contract documented in [Determinism](/guide/determinism).
+Third-party plugins are not covered by maat's official determinism guarantee. Plugin authors must honor the contract documented in [Determinism](/guide/determinism).
 
 The short version:
 
@@ -28,10 +28,10 @@ An enricher consumes facts and produces new facts. Unlike a collector, it does n
 
 **All enrichers are probabilistic by definition.** They interpret, synthesize, or infer. If a transformation is deterministic, it belongs in a collector, a rule, or an insight.
 
-When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings display a `[Verify]` badge, never break strict builds, and never go to the ledger until a human verifies them.
+When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings display a `[Verify]` badge and never break strict builds. With `maat check --ledger` they are recorded as quarantined `finding.unverified` events; they are promoted to `finding.observed` only after a human verifies them with `maat verify`.
 
 ```ts
-import { type Enricher, defineEnricher, type FactRegistry } from '@maat-tools/contracts'
+import { type Enricher, defineEnricher } from '@maat-tools/contracts'
 
 export type SemanticSimilarity = {
   functionA: string
@@ -47,10 +47,12 @@ export class SemanticSimilarityEnricher
   readonly provideFacts = ['acme.semantic.similarity'] as const
 
   async enrich(facts: { 'acme.ts.functions': unknown[] }): Promise<{
-    'acme.semantic.similarity': SemanticSimilarity[]
+    facts: { 'acme.semantic.similarity': SemanticSimilarity[] }
+    usedTokens?: number
+    cost?: number
   }> {
     // Use an LLM or other probabilistic model to identify semantic patterns
-    return { 'acme.semantic.similarity': [] }
+    return { facts: { 'acme.semantic.similarity': [] } }
   }
 }
 
@@ -103,7 +105,7 @@ export class PythonImportCollector implements Collector<'acme.python.imports'> {
   }
 }
 
-// Extend Maat's registries so TypeScript knows about your custom fact key
+// Extend maat's registries so TypeScript knows about your custom fact key
 // and config entry. This is what gives users autocomplete and option checking
 // inside defineConfig().
 declare module '@maat-tools/contracts' {
@@ -119,7 +121,7 @@ declare module '@maat-tools/contracts' {
 export default defineCollector((options: PythonImportCollectorOptions) => new PythonImportCollector(options))
 ```
 
-Use collectors for parsing source files, reading package metadata, loading generated manifests, or adapting another deterministic source into Maat facts.
+Use collectors for parsing source files, reading package metadata, loading generated manifests, or adapting another deterministic source into maat facts.
 
 ## Rule
 
@@ -132,7 +134,6 @@ import {
   type FindingRuleOutput,
   type Rule,
 } from '@maat-tools/contracts'
-import { RuleBase } from '@maat-tools/core'
 
 type PythonImportFact = {
   file: string
@@ -156,16 +157,19 @@ function belongsToLayer(moduleName: string, layer: string): boolean {
   return moduleName === layer || moduleName.startsWith(`${layer}.`)
 }
 
-export class PythonBoundaryRule extends RuleBase implements Rule<'acme.python.imports'> {
+export class PythonBoundaryRule implements Rule<'acme.python.imports'> {
   // Keep rule ids stable. Ledger entries and finding fingerprints include this id.
   readonly id = 'acme.python-boundaries'
+
+  // instanceId is required by the kernel and must be unique among registered rules.
+  // When a rule is registered once per config, reuse the id; when the same rule
+  // can be configured multiple times, derive it from the options.
+  readonly instanceId = this.id
 
   // needFacts declares which collected facts must exist before this rule can run.
   readonly needFacts = ['acme.python.imports'] as const
 
-  constructor(private readonly options: PythonBoundaryRuleOptions) {
-    super()
-  }
+  constructor(private readonly options: PythonBoundaryRuleOptions) {}
 
   evaluate(facts: { 'acme.python.imports': PythonImportFact[] }): FindingRuleOutput[] {
     const findings: FindingRuleOutput[] = []
@@ -230,7 +234,7 @@ Findings should use stable identifiers. The `ruleIdentifier` should describe the
 
 Avoid values that change when the underlying architectural fact did not change: line numbers, columns, timestamps, absolute temporary paths, stack traces, formatted messages, or raw object dumps from tools that do not guarantee stable shape.
 
-Maat does not track file renames as a separate ledger operation. If a fingerprint includes `file`, renaming the file produces a new fingerprint and the old finding can later be resolved. If a rename should not create a new finding, keep the file path in `artifacts` for display and use a more durable identifier, such as package, symbol, route path, dependency specifier, or architectural scope.
+maat does not track file renames as a separate ledger operation. If a fingerprint includes `file`, renaming the file produces a new fingerprint and the old finding can later be resolved. If a rename should not create a new finding, keep the file path in `artifacts` for display and use a more durable identifier, such as package, symbol, route path, dependency specifier, or architectural scope.
 
 The kernel generates each fingerprint with `generateFingerprint(ruleId, ruleIdentifier)`, which uses a stable stringify before hashing. Object property order does not matter: `{ file, path }` and `{ path, file }` hash the same way. See [ADR-008](/adr/008-fingerprint-based-finding-identity) for the full design.
 
@@ -320,14 +324,15 @@ Use insights for summaries, grouping, prioritization, and reporting. In this exa
 
 A ledger backend persists events and derives the current ledger state by folding them.
 
-Official ledger backends preserve append-only history. The current file ledger writes NDJSON events by appending lines and derives state by replaying those events. The ledger file is generated by Maat, but it is meant to be committed to version control when you want findings, accepted exceptions, and axiom history to travel with the repository. Maat does not require ledger backends to store actor identity; decision ownership can come from the repository history around the committed ledger changes.
+Official ledger backends preserve append-only history. The current file ledger writes NDJSON events by appending lines and derives state by replaying those events. The ledger file is generated by maat, but it is meant to be committed to version control when you want findings, accepted exceptions, and axiom history to travel with the repository. maat does not require ledger backends to store actor identity; decision ownership can come from the repository history around the committed ledger changes.
 
-The `LedgerBackend` interface is a contract, not a complete runtime enforcement boundary. Third-party ledger backends must preserve event-log semantics: events already accepted by `append()` should not be modified or removed, and `getState()` should represent the state derived from persisted events.
+The `LedgerBackend` interface is a contract, not a complete runtime enforcement boundary. It requires `initialize()`, `append()`, and the read methods `getAxiomByFingerprint()`, `getFindingByFingerprint()`, `getNotBaselinedFindings()`, `getAllAxioms()`, and `getAllFindings()`. Third-party ledger backends must preserve event-log semantics: events already accepted by `append()` should not be modified or removed, and the read methods should return state derived only from persisted events.
 
 ```ts
 import {
+  type AxiomRecord,
   defineLedgerBackend,
-  type LedgerEvent,
+  type FindingRecord,
   type LedgerEventInput,
   type LedgerSnapshot,
 } from '@maat-tools/contracts'
@@ -344,20 +349,39 @@ const EMPTY_SNAPSHOT: LedgerSnapshot = {
 }
 
 export class MemoryLedgerBackend extends LedgerBackendBase {
-  private readonly events: LedgerEvent[] = []
-  private snapshot = EMPTY_SNAPSHOT
+  private snapshot: LedgerSnapshot = EMPTY_SNAPSHOT
+
+  async initialize(): Promise<void> {
+    // Called once before any other method. A durable backend would
+    // load persisted events here and fold them into the snapshot.
+  }
 
   async append(event: LedgerEventInput): Promise<void> {
     // stampEvent adds the standard ledger entry id before persistence.
     const stamped = this.stampEvent(event)
-    this.events.push(stamped)
 
-    // applyEvent folds the event into the current snapshot using Maat's state rules.
+    // applyEvent folds the event into the current snapshot using maat's state rules.
     this.snapshot = this.applyEvent(this.snapshot, stamped)
   }
 
-  async getState(): Promise<LedgerSnapshot> {
-    return this.snapshot
+  async getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null> {
+    return this.snapshot.findings[fingerprint] ?? null
+  }
+
+  async getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null> {
+    return this.snapshot.axioms[fingerprint] ?? null
+  }
+
+  async getNotBaselinedFindings(): Promise<FindingRecord[]> {
+    return Object.values(this.snapshot.findings).filter((finding) => !finding.baselined)
+  }
+
+  async getAllFindings(): Promise<FindingRecord[]> {
+    return Object.values(this.snapshot.findings)
+  }
+
+  async getAllAxioms(): Promise<AxiomRecord[]> {
+    return Object.values(this.snapshot.axioms)
   }
 }
 
@@ -443,6 +467,7 @@ The `rule()` helper from `@maat-tools/core` gives scoped autocomplete and enforc
 import { defineConfig, rule } from '@maat-tools/core'
 
 export default defineConfig({
+  collectors: [['@acme/maat-collector-python-imports', { root: './services' }]],
   rules: [
     rule('@acme/maat-rule-python-boundaries', {
       forbiddenImports: [

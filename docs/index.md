@@ -10,9 +10,9 @@ import { withBase } from 'vitepress'
 <section class="maat-hero">
   <div class="maat-hero-copy">
     <p class="maat-kicker">Architecture checks for large codebases</p>
-    <h1>Turn implicit architecture knowledge into deterministic checks.</h1>
+    <h1>Linters check lines. maat checks the agreements your team made about the codebase.</h1>
     <p class="maat-lead">
-      Maat helps teams capture the coupling, boundaries, and codebase rules that usually live in a few developers' heads.
+      Write your team's architecture rules as code, check them on every run, and keep a committed history of every violation and every decision made about it.
     </p>
     <div class="maat-actions">
       <a class="maat-button maat-button-primary" :href="withBase('/guide/getting-started.html')">Read the guide</a>
@@ -26,7 +26,7 @@ import { withBase } from 'vitepress'
 
 <section class="maat-note">
   <p>
-    Maat is not a linter, an AI reviewer, or a diagram generator. It is a way to turn architectural observations into collectors, deterministic rules, and a ledger of explicit decisions about findings.
+    maat is not a linter, a code grader, or an AI reviewer. Linters tells you a line breaks a style rule. SonarQube gives your code a score. maat answers a different question: is the codebase still keeping the promises your team made about it — and if not, since when?
   </p>
 </section>
 
@@ -34,27 +34,27 @@ import { withBase } from 'vitepress'
 
 <section class="maat-panel">
   <p>
-    Large codebases collect rules that are hard to see from one file: which modules may talk to each other, which data shapes are public, which duplicated policies must stay consistent, and which shortcuts have become dangerous.
+    Every team has rules that no linter knows about. <em>The domain layer never talks to the database directly. These two modules must not know about each other. This policy is implemented in one place only.</em> Those rules live in code review comments, onboarding chats, and a few people's heads — and they erode quietly, one reasonable-looking PR at a time.
   </p>
   <p>
-    Those rules often live in review comments, ADRs, debugging sessions, and the memory of people who know the codebase well. Maat gives teams a path to make that knowledge explicit.
+    Most teams living with a hard-to-change codebase share the same picture: the same kinds of bugs keep coming back, the time goes to firefighting, and nobody asks why — that's just how work feels. When someone finally reviews the architecture by hand, they find the reasons: rules everyone had silently agreed on, broken little by little over years, where every individual change looked fine. And the review usually fails anyway — not because it's wrong, but because it arrives without evidence: no way to show when each rule started slipping, how fast, or what it's costing.
   </p>
   <p>
-    A team can write collectors for the facts its codebase needs, write rules for the policies it cares about, and keep the accepted exceptions in version control.
+    maat is that review, automated, with the receipts built in. It asks the question a good tech lead carries in their head — on every commit, with a paper trail.
   </p>
 </section>
 
-## The invisible coupling
+## The problems linters can't see
 
 <section class="maat-panel">
   <p>
-    The hardest coupling isn't in import graphs. It's in semantic patterns: multiple code paths executing the same domain operation with different invariants, shared data structures carrying incompatible assumptions across bounded contexts, configuration surfaces that govern the same action from disconnected panels.
+    The hardest coupling isn't in import graphs. It's in the things that have to stay in agreement without saying so: the same business policy implemented in three slightly different copies, a data shape shared between modules that read it with incompatible assumptions, two functions that must change together but live far apart.
   </p>
   <p>
-    These patterns are invisible to linters, type checkers, SAST, and unit tests. Each function works correctly in isolation. Types compile. Tests pass. The damage accumulates silently — orphaned data, broken audit trails, compliance gaps that surface months later.
+    These problems are invisible to linters, type checkers, and unit tests, because every individual line is fine. Types compile. Tests pass. The damage accumulates silently — bugs that keep coming back, data nobody can explain, gaps that surface months later.
   </p>
   <p>
-    Maat was born to make these patterns detectable. The direction is clear: deterministic collectors gather raw facts from code and history; enrichers add semantic interpretation when a rule needs higher-level judgment; deterministic rules check those facts against policies the team chooses to encode. Enrichers for interpretation. Rules for guarantees.
+    maat makes these problems detectable. Collectors read plain facts from your code and git history. When a fact needs reading rather than parsing — like noticing that two functions implement the same policy differently — AI-assisted enrichers can extract it. But AI never gets a vote: boring, repeatable rules decide what counts as a violation. AI for reading. Rules for guarantees.
   </p>
 </section>
 
@@ -64,9 +64,9 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Greenfield</p>
     <h3>Write the rules before the shortcuts settle in.</h3>
-    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. <code>maat check</code> fails the pull request before active findings become normal ledger state.</p>
+    <p>New systems can encode package boundaries, layer rules, and purity constraints from the first commit. <code>maat check</code> fails the pull request before an accidental dependency becomes precedent.</p>
     <ul>
-      <li>Prevent accidental dependencies before they become precedent.</li>
+      <li>Prevent accidental dependencies before they become normal.</li>
       <li>Keep domain code independent from infrastructure and framework details.</li>
       <li>Review architecture rules as code.</li>
     </ul>
@@ -74,7 +74,7 @@ import { withBase } from 'vitepress'
   <section>
     <p class="maat-mode">Brownfield</p>
     <h3>Start from what the codebase already taught you.</h3>
-    <p>Existing systems can turn repeated review notes and manual architecture analysis into checks, baseline existing findings in dedicated ledger PRs, and keep fixed fingerprints from quietly regressing.</p>
+    <p>The first run on a mature codebase will find things. That's expected, and none of it counts against anyone — maat separates new violations from existing debt, so you can adopt rules without first fixing years of history.</p>
     <ul>
       <li>Separate new violations from existing debt.</li>
       <li>Track accepted exceptions in the same repository history as the code.</li>
@@ -91,7 +91,7 @@ import { withBase } from 'vitepress'
 
 <section class="maat-panel">
   <p>
-    Maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, Maat can still help.
+    Backend codebases with real business logic, layers, and module boundaries — the bigger and older, the more maat has to say. Frontend projects tend to have less business logic encoded in structure, so a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, maat can still help.
   </p>
 </section>
 
@@ -99,27 +99,27 @@ import { withBase } from 'vitepress'
 
 <div class="maat-grid">
   <section>
-    <h3>Deterministic analysis</h3>
-    <p>Same collected facts, same findings. No hidden state, no randomness, no LLM judgment inside the gate.</p>
+    <h3>Boring on purpose</h3>
+    <p>Same facts in, same findings out. No hidden state, no randomness, no network calls, no AI judgment anywhere in the check path.</p>
   </section>
   <section>
-    <h3>File-based history</h3>
-    <p>The ledger records findings and state changes in a file that can be committed with the codebase. Maat stores the decision; repository history stores who made it.</p>
+    <h3>History lives with the code</h3>
+    <p>Findings and decisions are recorded in a plain file (the ledger) committed with the repository. maat stores the decision; git history stores who made it. Context survives when people leave — it's about memory, not blame.</p>
   </section>
   <section>
-    <h3>Incremental adoption</h3>
-    <p>The tool should work before the codebase is clean. Existing violations can be baselined or resolved over time.</p>
+    <h3>Adoptable before the codebase is clean</h3>
+    <p>Existing violations can be accepted for a limited time or marked as fixed. Accepted exceptions expire and force a revisit — there is no permanent "ignore".</p>
   </section>
 </div>
 
 <section class="maat-note">
   <p>
-    Official rules from the <code>maat-tools/maat</code> repository are deterministic by guarantee. Third-party plugins are supported through public interfaces, but their behavior is the responsibility of the package author and the team that installs them.
+    Official rules from the <code>maat-tools/maat</code> repository carry the repeatability guarantee. Third-party plugins are supported through the same public interfaces, but their behavior is the responsibility of the package author and the team that installs them.
   </p>
 </section>
 
 <p class="maat-adoption-more">
-  Read more about <a :href="withBase('/guide/determinism.html')">the determinism guarantee</a> and <a :href="withBase('/guide/plugins.html')">the plugin system</a>.
+  Read more about <a :href="withBase('/guide/determinism.html')">the repeatability guarantee</a> and <a :href="withBase('/guide/plugins.html')">the plugin system</a>.
 </p>
 
 ## What happens when it runs
@@ -127,19 +127,19 @@ import { withBase } from 'vitepress'
 <div class="maat-flow" aria-label="what maat does when it runs">
   <div>
     <strong>Collect facts</strong>
-    <span>Collectors gather deterministic facts from the codebase. Enrichers add semantic interpretation when a rule needs higher-level judgment.</span>
+    <span>Collectors read plain facts from the repository: which files import which, what lives in which layer, what changes together in git history.</span>
   </div>
   <div>
     <strong>Check rules</strong>
-    <span>Rules compare facts against policies the team chose to encode. The check path stays deterministic and reproducible.</span>
+    <span>Rules compare those facts against the agreements your team chose to encode. Same facts in, same findings out.</span>
   </div>
   <div>
     <strong>Report findings</strong>
-    <span>Violations are shown with stable fingerprints. Findings that depend on enriched facts are flagged for human verification.</span>
+    <span>Each finding gets a stable ID, so the same problem stays the same problem across commits and renames. Findings based on AI-extracted facts are flagged for human verification.</span>
   </div>
   <div>
-    <strong>Update ledger</strong>
-    <span>Accepted findings and decisions are stored with the repository, so exceptions and resolutions travel with the code.</span>
+    <strong>Update the ledger</strong>
+    <span>Decisions — accepted for now, fixed, declared — are stored in a file committed with the repository, so they travel with the code they describe.</span>
   </div>
 </div>
 
@@ -147,7 +147,7 @@ import { withBase } from 'vitepress'
 
 <section class="maat-panel">
   <p>
-    Maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors, enrichers, and rules for codebase-specific problems.
+    maat ships with a TypeScript collector and built-in rules for package and layer boundaries. Teams can add their own collectors, enrichers, and rules for codebase-specific problems.
   </p>
   <p>
     The CLI is just the runner — collectors, enrichers, rules, insights, and ledger backends are separate packages you install per project based on what you need:
@@ -160,20 +160,27 @@ npm install -D @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-t
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
-import { layer } from '@maat-tools/coupling-rules'
-import { Pure } from '@maat-tools/coupling-rules/roles'
+import { layer, Pure } from '@maat-tools/coupling-rules'
 
 export default defineConfig({
   check: { strict: true },
   collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   rules: [
-    layer('@myapp/domain').is(Pure).allows('@myapp/contracts'),
-    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts'),
+    // "Business logic stays free of databases, HTTP, and frameworks."
+    layer('@myapp/domain').is(Pure).build(),
+    // "Infrastructure may use the domain and shared contracts. Nothing else."
+    layer('@myapp/infra').allows('@myapp/domain', '@myapp/contracts').build(),
   ],
 })
 ```
 
-## Manual claims
+## Agreements a machine can't check yet
+
+<section class="maat-panel">
+  <p>
+    Some agreements can't be verified by a collector or rule yet. Write them down anyway, so they're versioned and visible instead of tribal:
+  </p>
+</section>
 
 ```bash
 maat axiom declare \
@@ -187,39 +194,36 @@ maat axiom declare \
 
 <section class="maat-panel">
   <p>
-    Maat rules implement the fitness function concept from <a href="https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/"><em>Building Evolutionary Architectures</em></a> (Ford, Parsons, Kua, Sadalage): automated checks that measure how well a system adheres to its intended architectural characteristics.
-  </p>
-  <p>
-    Each rule evaluates collected facts against a policy the team chose to encode. When a rule fails, the finding signals that the codebase is drifting from the shape the team wants to preserve. Over time, adding and refining rules guides the architecture's evolution in a deliberate direction.
+    If you've read <a href="https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/"><em>Building Evolutionary Architectures</em></a> (Ford, Parsons, Kua, Sadalage), maat rules are fitness functions: automated checks that measure how well a system adheres to its intended architectural characteristics. You don't need the book to use maat — but if you have that vocabulary, this is where maat sits.
   </p>
 </section>
 
 <p class="maat-adoption-more">
-  <a :href="withBase('/guide/fitness-functions.html')">Read more about how Maat implements fitness functions</a>
+  <a :href="withBase('/guide/fitness-functions.html')">Read more about how maat implements fitness functions</a>
 </p>
 
 ## FAQ
 
 <div class="maat-faq">
   <section>
-    <h3>Is Maat a linter?</h3>
-    <p>No. Linters usually check local syntax, style, or common code patterns. Maat is for architecture rules that need facts from more than one place in the repository.</p>
+    <h3>Is maat a linter?</h3>
+    <p>No. Linters check local syntax, style, or common code patterns — one file at a time. maat is for rules that need facts from more than one place in the repository, including its history.</p>
   </section>
   <section>
     <h3>How is it different from dependency rules?</h3>
-    <p>Dependency rules are one use case. Maat can express package and layer boundaries, but the collector model is broader: rules can run over any fact type a collector provides.</p>
+    <p>Dependency rules are one use case. maat can express package and layer boundaries, but rules can run over any fact a collector provides — including facts from git history and AI-assisted reading of the code.</p>
   </section>
   <section>
     <h3>How is it different from architecture unit tests?</h3>
-    <p>Architecture tests usually pass or fail at one point in time. Maat adds lifecycle: baseline existing findings and mark fixed fingerprints as resolved so exact regressions are caught later.</p>
+    <p>Architecture tests pass or fail at one point in time. maat adds memory: existing findings can be accepted for a limited time, fixed ones are marked resolved, and the exact same problem coming back is caught as a regression — not rediscovered as something new.</p>
   </section>
   <section>
-    <h3>Are Maat rules fitness functions?</h3>
-    <p>Yes. In the vocabulary of <a href="https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/"><em>Building Evolutionary Architectures</em></a> (Ford, Parsons, Kua, Sadalage), Maat rules are fitness functions: automated, objective checks that verify architectural characteristics. Collectors gather the facts, rules evaluate them, and findings report deviations from the desired shape.</p>
+    <h3>Does AI decide what's a violation?</h3>
+    <p>Never. AI-assisted enrichers can extract facts that need reading rather than parsing — like two functions implementing the same policy differently. But the rules that judge those facts are plain, repeatable code, and findings based on AI-extracted facts are flagged for human verification.</p>
   </section>
   <section>
     <h3>Can we write our own checks?</h3>
-    <p>Yes. Maat is built around plugins: collectors gather facts, rules evaluate them, and the kernel keeps the check path deterministic.</p>
+    <p>Yes. maat is built around plugins: collectors gather facts, rules evaluate them, and the same public interfaces the official packages use are available to yours.</p>
   </section>
 </div>
 
@@ -227,7 +231,7 @@ maat axiom declare \
 
 <section class="maat-panel">
   <p>
-    Maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline and resolve flows.
+    maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline and resolve flows.
   </p>
   <p>
     The model is stable enough to inspect and experiment with, but package APIs can still change while the collector and rule interfaces settle.

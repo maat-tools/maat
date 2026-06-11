@@ -19,6 +19,7 @@ This config is passed directly to the enricher in `maat.config.ts`:
 import { defineConfig } from '@maat-tools/core'
 
 export default defineConfig({
+  collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }]],
   enrichers: [
     ['@maat-tools/enricher-llm/com', {
       provider: 'vertex',
@@ -26,6 +27,7 @@ export default defineConfig({
       extra: { project: 'my-gcp-project', location: 'us-central1' },
     }],
   ],
+  rules: [['@maat-tools/connascence-rules/com-semantic', { threshold: '0.8' }]],
 })
 ```
 
@@ -38,6 +40,8 @@ export default defineConfig({
 ## Cache and cost
 
 Every LLM response is cached at `.maat/enricher-cache/`, keyed by content hash, model version, and prompt instructions. Only items whose code actually changed trigger new calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
+
+Set the `MAAT_ENRICHER_CACHE_DIR` environment variable to override the cache location.
 
 ## Related
 

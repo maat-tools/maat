@@ -7,15 +7,15 @@ maat resolve --fingerprint <fingerprint>
 maat --config ./path/to/maat.config.ts resolve --fingerprint <fingerprint>
 ```
 
-## Why resolution is explicit
+## Resolution is per fingerprint
 
 `resolved` is a decision about one exact fingerprint. It does not protect the whole rule.
 
-When a resolved fingerprint appears again, Maat treats that as a regression and exits non-zero. A different finding from the same rule gets a different fingerprint and starts as a new finding.
+When a resolved fingerprint appears again, maat treats that as a regression and exits non-zero. A different finding from the same rule gets a different fingerprint and starts as a new finding.
 
 ## Why resolution is explicit
 
-When a finding disappears, Maat does not assume the architecture was fixed. The finding could have disappeared because:
+When a finding disappears, maat does not assume the architecture was fixed. The finding could have disappeared because:
 
 - the code was corrected;
 - the rule changed;
@@ -32,7 +32,7 @@ Any finding stored in the ledger can be resolved. Observed findings that disappe
 
 | Option | Purpose |
 |---|---|
-| `--fingerprint <fingerprint>` | Fingerprint of the finding to resolve. |
+| `--fingerprint <fingerprint>` | **Required.** Fingerprint of the finding to resolve. |
 
 ## Regression behavior
 

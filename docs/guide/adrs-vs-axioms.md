@@ -1,6 +1,6 @@
 # ADRs vs Axioms
 
-Maat uses both ADRs and axioms to capture architecture knowledge, but they serve different purposes.
+maat uses both ADRs and axioms to capture architecture knowledge, but they serve different purposes.
 
 ## ADRs: the decision record
 

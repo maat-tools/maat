@@ -15,13 +15,11 @@ Rules derived from git history. Requires [`@maat-tools/collector-git`](../collec
 ## Usage
 
 ```ts
-import gitRules from '@maat-tools/git-rules';
-
 export default defineConfig({
 	collectors: [
 		['@maat-tools/collector-git', {}],
 	],
-	rules: [gitRules],
+	rules: ['@maat-tools/git-rules'],
 });
 ```
 
@@ -32,7 +30,7 @@ import churn from '@maat-tools/git-rules/churn';
 
 export default defineConfig({
 	collectors: [
-		['@maat-tools/collector-git', { since: '90 days ago' }],
+		['@maat-tools/collector-git', { sinceDays: 90 }],
 	],
 	rules: [
 		churn({

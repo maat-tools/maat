@@ -39,7 +39,7 @@ Both return sites produce `null`, but they encode fundamentally different outcom
 Finding:
 
 ```txt
-"null" value for the return type in function "findUser" might be a sign of Connascence of Meaning.
+"null" value for the return type in function "findUser" in file "src/users/find.ts" might be a sign of Connascence of Meaning.
 Reason: The function uses null both when the entity is not found and when a database error occurs...
 (confidence: 0.95)
 ```
@@ -69,7 +69,9 @@ import { defineConfig } from '@maat-tools/core'
 import '@maat-tools/enricher-llm/com'
 
 export default defineConfig({
-  collectors: ['@maat-tools/collector-ts'],
+  collectors: [
+    ['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.json' }],
+  ],
   enrichers: [
     ['@maat-tools/enricher-llm/com', {
       provider: 'vertex',
@@ -97,7 +99,7 @@ The two rules are complementary and can be used together.
 ruleIdentifier: { value, kind }
 ```
 
-`value` is the pipe-separated list of return site values and their guards (e.g. `null[catch block]|null`). `kind` is the return type. Two findings for the same function are stable across runs as long as the return sites do not change.
+`value` is the pipe-separated list of return site values, each suffixed with its guard snippet in brackets when one exists (e.g. `null[if (!row) return null]|null[try { ... } catch { return null }]`). The guard is the actual code surrounding the return statement, truncated to 300 characters — not a label. `kind` is the return type. Two findings for the same function are stable across runs as long as the return sites do not change.
 
 ## Related
 

@@ -22,11 +22,11 @@ layer('@acme/payments')
   .build()
 ```
 
-A Controlled rule can also verify transitive imports — that is, imports of allowed dependencies that would pull in something outside the boundary:
+A Controlled rule can also verify transitive imports — that is, imports of allowed internal paths that would pull in something outside the boundary:
 
 ```ts
-layer('@acme/payments')
-  .allows('@acme/core')
+layer('src/payments/**')
+  .allows('src/core/**')
   .build({ transitive: true })
 ```
 
@@ -49,7 +49,7 @@ layer(target).allows(...patterns).build({ transitive: true })
 
 | Pattern | What it matches |
 |---|---|
-| `'@scope/pkg'` | Exact package name, and any sub-path like `@scope/pkg/types` |
+| `'@scope/pkg'` | Exact package name only — `@scope/pkg/types` does **not** match. Use `'@scope/pkg{,/**}'` to also allow sub-paths |
 | `'node:crypto'` | Exact Node.js built-in |
 | `'src/shared/**'` | Any file path under `src/shared/` at any depth |
 | `'src/shared/*'` | Direct children of `src/shared/` only |
@@ -71,7 +71,7 @@ The rule watches every import recorded under the target package. For each one:
 | File | Import | Result |
 |---|---|---|
 | `packages/kernel/src/index.ts` | `@maat-tools/contracts` | Allowed: exact match |
-| `packages/kernel/src/index.ts` | `@maat-tools/contracts/types` | Allowed: sub-path of allowed entry |
+| `packages/kernel/src/index.ts` | `@maat-tools/contracts/types` | Blocked: sub-paths do not match the plain pattern — add `'@maat-tools/contracts{,/**}'` to allow them |
 | `packages/kernel/src/index.ts` | `@maat-tools/core` | Blocked: not in `allows()` |
 | `packages/kernel/src/index.ts` | `node:crypto` | Blocked: not in `allows()` |
 | `packages/kernel/src/index.ts` | `./utils` | Allowed: relative import |
@@ -130,15 +130,17 @@ Use `is(Pure)` only when the target genuinely has zero external dependencies. If
 
 ## Transitive Checks
 
-`build({ transitive: true })` extends the Controlled check to the imports of every allowed dependency. If an allowed dependency itself pulls in something outside the boundary, the rule reports it as a transitive violation.
+`build({ transitive: true })` extends the Controlled check to the imports of allowed **internal** dependencies. Traversal starts from direct dependencies that are allowed and path-resolved (relative imports resolved to project-relative paths); the imports found under those paths are checked against the same `allows()` list, recursively.
 
 ```ts
-layer('@acme/payments')
-  .allows('@acme/core')
+layer('src/payments/**')
+  .allows('src/core/**')
   .build({ transitive: true })
 ```
 
-If `@acme/core` imports `node:crypto` and `node:crypto` is not listed in `allows()`, the rule reports it as a transitive boundary violation.
+If `src/payments/checkout.ts` imports `../core/db` (allowed), and `src/core/db.ts` imports `pg` — which is not listed in `allows()` — the rule reports it as a transitive boundary violation.
+
+Allowed **external** dependencies (bare package specifiers such as `@acme/core` or `node:crypto`) are not traversed: an external specifier is not a file path, so there are no collected imports to follow under it. In package mode, transitive checking therefore only follows cross-package *relative* imports — dependencies imported by package name are leaves.
 
 Transitive checks are only available in Controlled mode. `is(Pure)` has no allow list, so `transitive` does not apply.
 
@@ -162,10 +164,16 @@ export default defineConfig({
 
 ## Finding Identity
 
-Findings are identified by the boundary target and the blocked import specifier:
+Direct findings are identified by the boundary target and the blocked import specifier:
 
 ```ts
 ruleIdentifier: { target, dependency }
 ```
 
-In package mode, `target` is the package name (e.g. `@acme/payments`). In path mode, `target` is the glob (e.g. `src/domain/**`). A finding remains stable across runs as long as the same file in the same layer imports the same blocked specifier.
+Transitive findings additionally carry the intermediate path through which the blocked import was reached:
+
+```ts
+ruleIdentifier: { target, currentPath, dependency }
+```
+
+In package mode, `target` is the package name (e.g. `@acme/payments`). In path mode, `target` is the glob (e.g. `src/domain/**`). A finding remains stable across runs as long as the same file in the same layer imports the same blocked specifier (and, for transitive findings, through the same intermediate path).

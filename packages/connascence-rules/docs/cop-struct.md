@@ -49,10 +49,10 @@ const port = config[1]  // position 1 = port number
 Findings:
 
 ```txt
-"getUserDetails" in src/user.ts — positional access at src/admin.ts[2], src/admin.ts[3]
-        ↳ location: src/user.ts:2:10  variable: getUserDetails  role: Definition (source)  positions: [0]: string, [1]: string, [2]: number, [3]: boolean
-        ↳ location: src/admin.ts:4:17  variable: user  role: Usage (access)  index: 2  kind: index
-        ↳ location: src/admin.ts:5:17  variable: user  role: Usage (access)  index: 3  kind: index
+"getUserDetails" in src/user.ts — positional access at src/admin.ts, src/admin.ts
+        ↳ role: [Source] location: src/user.ts:2:10 identifier: getUserDetails positions: [0]: string, [1]: string, [2]: number, [3]: boolean
+        ↳ role: [Access] location: src/admin.ts:4:13 identifier: user kind: index index: 2
+        ↳ role: [Access] location: src/admin.ts:5:16 identifier: user kind: index index: 3
 ```
 
 :::
@@ -96,11 +96,13 @@ export default defineConfig({
 When a positional source is accessed, the rule reports:
 
 ```txt
-"getUserDetails" in src/user.ts — positional access at src/admin.ts[3], src/report.ts[0]
-        ↳ location: src/user.ts:2:10  variable: getUserDetails  role: Definition (source)  positions: [0]: string, [1]: string, [2]: number, [3]: boolean
-        ↳ location: src/admin.ts:4:17  variable: remoteUser  role: Usage (access)  index: 3  kind: index
-        ↳ location: src/report.ts:5:10  variable: reportData  role: Usage (access)  index: 0  kind: index
+"getUserDetails" in src/user.ts — positional access at src/admin.ts, src/report.ts
+        ↳ role: [Source] location: src/user.ts:2:10 identifier: getUserDetails positions: [0]: string, [1]: string, [2]: number, [3]: boolean
+        ↳ role: [Access] location: src/admin.ts:4:17 identifier: remoteUser kind: index index: 3
+        ↳ role: [Access] location: src/report.ts:5:10 identifier: reportData kind: index index: 0
 ```
+
+The message lists the file of every matched access (one entry per access, so the same file can appear more than once).
 
 ## Limitations
 
@@ -115,9 +117,9 @@ When a positional source is accessed, the rule reports:
 Findings are identified by the source variable name and its defining file:
 
 ```ts
-ruleIdentifier: { variable, file }
+ruleIdentifier: { name, file }
 ```
 
 Each finding includes two artifact types:
-- **`role: Definition (source)`** — Where the positional data originates, including its position types.
-- **`role: Usage (access)`** — Where the data is consumed, including the index expression and access kind (`index` or `destructuring`).
+- **`role: [Source]`** — Where the positional data originates, including its position types.
+- **`role: [Access]`** — Where the data is consumed, including the accessed index and access kind (`index` or `destructuring`).

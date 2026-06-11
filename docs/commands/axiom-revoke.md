@@ -17,5 +17,9 @@ Use this when the claim should no longer be treated as true or useful.
 
 | Option | Purpose |
 |---|---|
-| `--id <id>` | Axiom id to revoke. |
+| `--id <id>` | **Required.** Axiom id to revoke. |
 | `--reason <reason>` | Optional explanation for revocation. |
+
+## Errors
+
+`maat axiom revoke` requires a configured ledger. The command exits with an error when no ledger is configured, when the axiom id is not found in the ledger, or when the axiom is already inactive (revoked or superseded).

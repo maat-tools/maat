@@ -52,9 +52,9 @@ export class UserService {
 Findings:
 
 ```txt
-"createUser" — 4 params exceeds threshold of 3
-"sendEmail" — contains boolean param
-"UserService.updateUser" — contains boolean param; 5 params exceeds threshold of 3
+"createUser" — 4 params exceeds threshold of 3. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)
+"sendEmail" — contains boolean param. (Consider remove the boolean flag or replace it with a more descriptive parameter)
+"UserService.updateUser" — contains boolean param. (Consider remove the boolean flag or replace it with a more descriptive parameter); 5 params exceeds threshold of 3. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)
 ```
 
 :::
@@ -104,9 +104,9 @@ export default defineConfig({
 If a function or method exceeds the threshold or contains boolean parameters, the rule reports:
 
 ```txt
-"createUser" — 4 params exceeds threshold of 3
-"sendEmail" — contains boolean param
-"UserService.updateUser" — contains boolean param; 5 params exceeds threshold of 3
+"createUser" — 4 params exceeds threshold of 3. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)
+"sendEmail" — contains boolean param. (Consider remove the boolean flag or replace it with a more descriptive parameter)
+"UserService.updateUser" — contains boolean param. (Consider remove the boolean flag or replace it with a more descriptive parameter); 5 params exceeds threshold of 3. (Consider refactoring to reduce the number of parameters, e.g., by grouping related parameters into a data structure)
 ```
 
 ## Limitations

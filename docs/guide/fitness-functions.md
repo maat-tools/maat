@@ -1,8 +1,8 @@
 # Fitness functions
 
-Maat rules implement the **fitness function** concept from [*Building Evolutionary Architectures*](https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/) (Neal Ford, Rebecca Parsons, Patrick Kua, Pramod Sadalage): automated checks that verify how well a system adheres to its intended architectural characteristics.
+maat rules implement the **fitness function** concept from [*Building Evolutionary Architectures*](https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/) (Neal Ford, Rebecca Parsons, Patrick Kua, Pramod Sadalage): automated checks that verify how well a system adheres to its intended architectural characteristics.
 
-This page explains how Maat maps to that model and how to use fitness functions to guide your codebase's evolution.
+This page explains how maat maps to that model and how to use fitness functions to guide your codebase's evolution.
 
 ## What is a fitness function
 
@@ -15,11 +15,11 @@ A fitness function is an objective check that measures some aspect of a system's
 
 Fitness functions make architectural intent explicit and verifiable. They replace "we should not do that" with "the check fails when we do that."
 
-## How Maat implements fitness functions
+## How maat implements fitness functions
 
-Maat's architecture maps directly to the fitness function pattern:
+maat's architecture maps directly to the fitness function pattern:
 
-| Fitness function concept | Maat equivalent |
+| Fitness function concept | maat equivalent |
 |---|---|
 | **Characteristic to protect** | The architectural policy you encode in a rule |
 | **Measurement** | Collectors gather facts from the repository |
@@ -27,11 +27,11 @@ Maat's architecture maps directly to the fitness function pattern:
 | **Score / result** | Findings with stable fingerprints |
 | **Guided evolution** | Adding and refining rules over time |
 
-The flow is deterministic: the same collected facts and rule version always produce the same findings. There is no randomness, hidden state, or LLM judgment in the check path.
+The evaluation is deterministic at the rule layer: the same collected facts and rule version always produce the same findings, with no randomness, hidden state, or LLM judgment in rule evaluation. When [enrichers](./enrichers.md) are configured, LLM calls can run during `maat check` to produce additional facts; findings that depend on those facts are explicitly flagged as requiring human verification. See the [determinism guarantee](./determinism.md) for the exact boundary.
 
 ## Dimensions of fitness functions
 
-Maat rules can express checks across multiple dimensions of your codebase. Each dimension captures a different kind of architectural concern:
+maat rules can express checks across multiple dimensions of your codebase. Each dimension captures a different kind of architectural concern:
 
 ### Structure
 
@@ -67,7 +67,7 @@ Each dimension answers a different question: **structure** asks "can these parts
 
 ## Guiding evolution with fitness functions
 
-The evolutionary architecture model treats fitness functions as guardrails, not gates that must all pass from day one. Maat supports this through its ledger and lifecycle commands.
+The evolutionary architecture model treats fitness functions as guardrails, not gates that must all pass from day one. maat supports this through its ledger and lifecycle commands.
 
 ### Start with what matters most
 
@@ -104,18 +104,18 @@ Resolved findings are fingerprint-specific. If the same rule fires on a differen
 
 ## Writing custom fitness functions
 
-Maat's plugin system lets you write collectors and rules for codebase-specific concerns. A custom collector gathers facts your codebase needs; a custom rule evaluates those facts against your policy.
+maat's plugin system lets you write collectors and rules for codebase-specific concerns. A custom collector gathers facts your codebase needs; a custom rule evaluates those facts against your policy.
 
 Read the [plugin guide](./plugins.md) for details on writing custom collectors and rules.
 
 ## Comparison with other approaches
 
-| Approach | How it works | Maat difference |
+| Approach | How it works | maat difference |
 |---|---|---|
-| Architecture unit tests | Pass/fail checks embedded in test suites | Maat adds lifecycle: baselining, resolving, and ledger history |
-| Manual code review | Human judgment at PR time | Maat makes repeated review comments into deterministic checks |
-| Diagrams and ADRs | Documentation of intended architecture | Maat verifies whether the code still matches the intent |
-| Linters | Local syntax and style checks | Maat checks cross-cutting architectural facts from multiple sources |
+| Architecture unit tests | Pass/fail checks embedded in test suites | maat adds lifecycle: baselining, resolving, and ledger history |
+| Manual code review | Human judgment at PR time | maat makes repeated review comments into deterministic checks |
+| Diagrams and ADRs | Documentation of intended architecture | maat verifies whether the code still matches the intent |
+| Linters | Local syntax and style checks | maat checks cross-cutting architectural facts from multiple sources |
 
 ## Further reading
 

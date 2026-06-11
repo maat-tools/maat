@@ -24,9 +24,10 @@ A delimiter shared between `.join` and `.split` without a named constant, creati
 ```ts
 // cache.ts
 export function buildKey(userId: string, scope: string): string {
-	return `${userId}:${scope}`;
+	return [userId, scope].join(':');
 }
 
+// session.ts
 export function parseKey(key: string): [string, string] {
 	return key.split(':') as [string, string];
 }
@@ -35,8 +36,10 @@ export function parseKey(key: string): [string, string] {
 Finding:
 
 ```txt
-Pattern "pack-unpack" shares invariant ":" across 1 file(s) without a shared abstraction — possible Connascence of Algorithm
+Pattern "pack-unpack" shares invariant ":" across 2 file(s) without a shared abstraction — possible Connascence of Algorithm
 ```
+
+With the default `minFiles: 2`, the complementary usages must live in two distinct files. Set `minFiles: 1` to also flag pairs inside a single file.
 
 :::
 

@@ -10,9 +10,9 @@ import {
 	scenarioObserved,
 	scenarioResolved,
 } from '@maat-tools/testing';
+import { StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import { Visualize } from '../../packages/cli/src/commands/visualize';
-import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 

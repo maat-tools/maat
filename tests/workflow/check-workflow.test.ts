@@ -12,9 +12,9 @@ import {
 	scenarioBaselined,
 	scenarioResolved,
 } from '@maat-tools/testing';
+import { StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import { Check } from '../../packages/cli/src/commands/check';
-import { StdoutPresenter } from '@maat-tools/utils';
 
 const RULE_OUTPUT: FindingRuleOutput = {
 	ruleId: 'test@v1',

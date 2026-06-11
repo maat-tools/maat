@@ -4,9 +4,9 @@ import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved, scenarioResolved } from '@maat-tools/testing';
+import { StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import { Resolve } from '../../packages/cli/src/commands/resolve';
-import { StdoutPresenter } from '@maat-tools/utils';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 

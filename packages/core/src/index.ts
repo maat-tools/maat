@@ -1,9 +1,9 @@
 import {
 	type AnyCollector,
-	type AxiomRecord,
+	type AxiomEvent,
 	type CollectorRegistry,
 	type EnricherRegistry,
-	type FindingRecord,
+	type FindingEvent,
 	FindingStatus,
 	generateFingerprint,
 	type Insight,
@@ -11,7 +11,6 @@ import {
 	type LedgerBackendRegistry,
 	type LedgerEvent,
 	type LedgerEventInput,
-	type LedgerSnapshot,
 	type Rule,
 	type RuleRegistry,
 } from '@maat-tools/contracts';
@@ -62,105 +61,71 @@ export abstract class RuleBase {
 	}
 }
 
+export type LedgerSnapshot = {
+	readonly lastEntryId: string | null;
+	readonly findings: Record<string, FindingEvent>;
+	readonly axioms: Record<string, AxiomEvent>;
+};
+
+const AXIOM_EVENT_TYPES: ReadonlySet<FindingStatus> = new Set([
+	FindingStatus.AXIOM_DECLARED,
+	FindingStatus.AXIOM_SUPERSEDED,
+	FindingStatus.AXIOM_REVOKED,
+]);
+
+export function isAxiomEvent(event: LedgerEvent): event is AxiomEvent {
+	return AXIOM_EVENT_TYPES.has(event.type);
+}
+
 export abstract class LedgerBackendBase implements LedgerBackend {
 	private readonly runId = ulid();
 
 	public abstract initialize(): Promise<void>;
 	public abstract append(event: LedgerEventInput): Promise<void>;
-	public abstract getAllAxioms(): Promise<AxiomRecord[]>;
-	public abstract getAllFindings(): Promise<FindingRecord[]>;
-	public abstract getAxiomByFingerprint(fingerprint: string): Promise<AxiomRecord | null>;
-	public abstract getFindingByFingerprint(fingerprint: string): Promise<FindingRecord | null>;
-	public abstract getNotBaselinedFindings(): Promise<FindingRecord[]>;
+	public abstract getAllAxiomsState(): Promise<AxiomEvent[]>;
+	public abstract getAllFindingsState(): Promise<FindingEvent[]>;
+	public abstract getAxiomByFingerprint(fingerprint: string): Promise<AxiomEvent | null>;
+	public abstract getFindingByFingerprint(fingerprint: string): Promise<FindingEvent | null>;
+	public abstract getNotBaselinedFindingsState(): Promise<FindingEvent[]>;
 
 	protected stampEvent(input: LedgerEventInput): LedgerEvent {
-		return { entry_id: ulid(), run_id: this.runId, ...input } as LedgerEvent;
+		return { entryId: ulid(), runId: this.runId, ...input };
 	}
 
-	protected applyEvent(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
-		const findings = { ...snapshot.findings };
-		const axioms = { ...snapshot.axioms };
-
-		switch (event.type) {
-			case FindingStatus.OBSERVED: {
-				const existing = findings[event.fingerprint];
-				findings[event.fingerprint] = {
-					fingerprint: event.fingerprint,
-					state: this.nextState(existing?.state),
-					baselined: existing?.baselined ?? false,
-					rule_id: event.rule_id,
-					instance_id: event.instance_id,
-					message: event.message,
-					artifacts: event.artifacts,
-					reason: event.reason,
-				} satisfies FindingRecord;
-				break;
-			}
-			case FindingStatus.BASELINED: {
-				const record = findings[event.fingerprint];
-				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, baselined: true, baseline_expires_at: event.expires_at };
-				}
-				break;
-			}
-			case FindingStatus.RESOLVED: {
-				const record = findings[event.fingerprint];
-				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, state: event.type };
-				}
-				break;
-			}
-			case FindingStatus.UNVERIFIED: {
-				const existing = findings[event.fingerprint];
-				findings[event.fingerprint] = {
-					fingerprint: event.fingerprint,
-					state: FindingStatus.UNVERIFIED,
-					baselined: existing?.baselined ?? false,
-					rule_id: event.rule_id,
-					instance_id: event.instance_id,
-					message: event.message,
-					artifacts: event.artifacts,
-					reason: event.reason,
-				} satisfies FindingRecord;
-				break;
-			}
-			case FindingStatus.REVOKED: {
-				const record = findings[event.fingerprint];
-				if (record !== undefined) {
-					findings[event.fingerprint] = { ...record, state: FindingStatus.REVOKED, reason: event.reason };
-				}
-				break;
-			}
-			case FindingStatus.AXIOM_DECLARED: {
-				axioms[event.axiom_id] = {
-					axiom_id: event.axiom_id,
-					scope: event.scope,
-					claim: event.claim,
-					note: event.note,
-					fingerprints: event.fingerprints,
-					active: true,
-				} satisfies AxiomRecord;
-				break;
-			}
-			case FindingStatus.AXIOM_SUPERSEDED:
-			case FindingStatus.AXIOM_REVOKED: {
-				const record = axioms[event.axiom_id];
-				if (record !== undefined) {
-					axioms[event.axiom_id] = { ...record, active: false };
-				}
-				break;
-			}
+	protected assertValidTransition(current: LedgerEvent | undefined, input: LedgerEventInput): void {
+		const doesNotExist = current === undefined;
+		if (doesNotExist || isAxiomEvent(current)) {
+			return;
 		}
 
-		return { last_entry_id: event.entry_id, findings, axioms };
+		const reObservation = input.type === FindingStatus.OBSERVED || input.type === FindingStatus.UNVERIFIED;
+
+		if (
+			reObservation &&
+			current.type === FindingStatus.BASELINED &&
+			new Date(current.expiresAt).getTime() > Date.now()
+		) {
+			throw new Error(
+				`invalid transition: finding "${current.fingerprint}" is baselined until ${current.expiresAt}; ` +
+					`appending "${input.type}" would silently discard the baseline`,
+			);
+		}
 	}
 
-	private nextState(existingState?: FindingStatus): FindingStatus {
-		if (!existingState || existingState === FindingStatus.RESOLVED || existingState === FindingStatus.UNVERIFIED) {
-			return FindingStatus.OBSERVED;
+	protected applyEventLastWriteWins(snapshot: LedgerSnapshot, event: LedgerEvent): LedgerSnapshot {
+		if (isAxiomEvent(event)) {
+			return {
+				lastEntryId: event.entryId,
+				findings: snapshot.findings,
+				axioms: { ...snapshot.axioms, [event.axiomId]: event },
+			};
 		}
 
-		return existingState;
+		return {
+			lastEntryId: event.entryId,
+			findings: { ...snapshot.findings, [event.fingerprint]: event },
+			axioms: snapshot.axioms,
+		};
 	}
 }
 

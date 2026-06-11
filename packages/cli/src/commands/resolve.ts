@@ -20,7 +20,7 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		if (record.state === FindingStatus.RESOLVED) {
+		if (record.type === FindingStatus.RESOLVED) {
 			this.presenter.warn(`Finding "${fingerprint}" is already resolved. Nothing to do.\n`);
 
 			return;
@@ -30,6 +30,10 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 			type: FindingStatus.RESOLVED,
 			timestamp: new Date().toISOString(),
 			fingerprint,
+			ruleId: record.ruleId,
+			instanceId: record.instanceId,
+			message: record.message,
+			artifacts: record.artifacts,
 		});
 
 		this.presenter.log(`Finding "${fingerprint}" resolved.\n`);

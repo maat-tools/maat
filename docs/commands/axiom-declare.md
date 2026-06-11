@@ -36,7 +36,6 @@ maat axiom declare \
 | `--claim <claim>` | **Required.** Invariant or exception being asserted. |
 | `--note <note>` | Optional rationale or references. |
 | `--fingerprints <fingerprints>` | Comma-separated finding fingerprints covered by the axiom. Each fingerprint must already exist in the ledger; the command exits with an error otherwise. |
-| `--force` | Re-declare an id that currently has an active axiom. A revoked or superseded id can be re-declared without `--force`. |
 
 ## Ledger requirement
 

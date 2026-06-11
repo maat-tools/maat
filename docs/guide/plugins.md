@@ -343,7 +343,7 @@ export type MemoryLedgerOptions = {
 }
 
 const EMPTY_SNAPSHOT: LedgerSnapshot = {
-  last_entry_id: null,
+  last_entryId: null,
   findings: {},
   axioms: {},
 }

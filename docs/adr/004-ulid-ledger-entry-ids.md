@@ -5,7 +5,7 @@
 
 ## Context
 
-Every ledger event needs a globally unique identifier (`entry_id`) that:
+Every ledger event needs a globally unique identifier (`entryId`) that:
 
 1. Does not require a central authority or database sequence.
 2. Is sortable by creation time without a separate timestamp sort.
@@ -17,10 +17,10 @@ Every ledger event needs a globally unique identifier (`entry_id`) that:
 Ledger entries use ULID (Universally Unique Lexicographically Sortable Identifier). A ULID is a 26-character string encoding a 48-bit millisecond timestamp and 80 bits of randomness.
 
 ```
-entry_id: "01HZ4QK7BRXF3S2EGVN1V4PXWZ"
+entryId: "01HZ4QK7BRXF3S2EGVN1V4PXWZ"
 ```
 
-ULIDs are generated at write time in `LedgerBackendBase.stampEvent()` (in `@maat-tools/core`). The caller supplies the event payload without `entry_id`; the base class assigns it, so all ledger backends share the same ID generation logic.
+ULIDs are generated at write time in `LedgerBackendBase.stampEvent()` (in `@maat-tools/core`). The caller supplies the event payload without `entryId`; the base class assigns it, so all ledger backends share the same ID generation logic.
 
 **Why not UUID v4:** UUIDs are not sortable. Ledger entries should be queryable in insertion order without a separate sequence column or sort key.
 
@@ -28,6 +28,6 @@ ULIDs are generated at write time in `LedgerBackendBase.stampEvent()` (in `@maat
 
 ## Consequences
 
-- `entry_id` is always monotonically increasing within a single process. Across concurrent processes writing to the same file, ordering within the same millisecond is random (80-bit entropy collision probability is negligible).
-- The `entry_id` is assigned by the backend, not the caller. This means the caller cannot predict the `entry_id` before writing — callers that need the ID must read it back or use the timestamp field.
-- Sorting the ledger file lexicographically by `entry_id` produces chronological order.
+- `entryId` is always monotonically increasing within a single process. Across concurrent processes writing to the same file, ordering within the same millisecond is random (80-bit entropy collision probability is negligible).
+- The `entryId` is assigned by the backend, not the caller. This means the caller cannot predict the `entryId` before writing — callers that need the ID must read it back or use the timestamp field.
+- Sorting the ledger file lexicographically by `entryId` produces chronological order.

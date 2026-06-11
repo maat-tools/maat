@@ -1,4 +1,4 @@
-import { type Artifact, defineRuleBuilder, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRuleBuilder, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { isMatch } from '@maat-tools/utils';
 import { DEPENDS_ON_CAPABILITY, type DependsOn } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';
@@ -46,8 +46,8 @@ class PureLayerRule implements Rule<'dependsOn'> {
 		this.instanceId = `${this.id}:${target}`;
 	}
 
-	public evaluate(facts: { dependsOn: DependsOn[] }): FindingRuleOutput[] {
-		const findings: FindingRuleOutput[] = [];
+	public evaluate(facts: { dependsOn: DependsOn[] }): RuleOutput[] {
+		const findings: RuleOutput[] = [];
 		const targetPath = getValidTargetPath(facts.dependsOn, this.target);
 
 		for (const dep of facts.dependsOn) {
@@ -90,8 +90,8 @@ class LayerRule implements Rule<'dependsOn'> {
 		this.instanceId = `${this.id}:${target}`;
 	}
 
-	public evaluate(facts: { dependsOn: DependsOn[] }): FindingRuleOutput[] {
-		const findings: FindingRuleOutput[] = [];
+	public evaluate(facts: { dependsOn: DependsOn[] }): RuleOutput[] {
+		const findings: RuleOutput[] = [];
 		const targetPath = getValidTargetPath(facts.dependsOn, this.target);
 		const directDependencies: DependsOn[] = [];
 
@@ -137,8 +137,8 @@ class LayerRule implements Rule<'dependsOn'> {
 		allDependencies: DependsOn[],
 		directDependencies: DependsOn[],
 		_rootGlob: string,
-	): FindingRuleOutput[] {
-		const findings: FindingRuleOutput[] = [];
+	): RuleOutput[] {
+		const findings: RuleOutput[] = [];
 		const dependenciesByPath = new Map<string, DependsOn[]>();
 		const visited = new Set<string>([]);
 		const queue: Map<string, string> = new Map();

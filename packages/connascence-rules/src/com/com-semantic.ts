@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { COM_ENRICHER_FACT_KEY, type CoMCandidate } from '@maat-tools/enricher-llm/com';
 
 export type CoMSemanticRuleOptions = {
@@ -25,9 +25,9 @@ export class ConnascenceOfMeaningSemanticRule implements Rule<typeof COM_ENRICHE
 		this.threshold = Number(options.threshold);
 	}
 
-	public evaluate(facts: { comCandidates: CoMCandidate[] }): FindingRuleOutput[] {
+	public evaluate(facts: { comCandidates: CoMCandidate[] }): RuleOutput[] {
 		const comCandidates = facts[COM_ENRICHER_FACT_KEY] ?? [];
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 
 		for (const candidate of comCandidates) {
 			if (candidate.confidence < this.threshold) {

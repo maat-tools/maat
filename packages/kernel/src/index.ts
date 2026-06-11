@@ -210,9 +210,10 @@ export class Kernel {
 
 				return ruleResult.map(({ ruleIdentifier, ...rest }) => {
 					const finding: Finding = {
-						...rest,
+						message: rest.message,
+						ruleId: rule.id,
 						instanceId: rule.instanceId,
-						fingerprint: generateFingerprint(rest.ruleId, ruleIdentifier),
+						fingerprint: generateFingerprint(rule.id, ruleIdentifier),
 						requiresVerification: ruleNeedsVerification.length > 0,
 						artifacts: rest.artifacts,
 					};

@@ -4,7 +4,7 @@ import {
 	type GitCommit,
 	type GitFileChange,
 } from '@maat-tools/collector-git';
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { isMatch } from '@maat-tools/utils';
 
 declare module '@maat-tools/contracts' {
@@ -34,7 +34,7 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 		this.exclude = options.exclude ?? [];
 	}
 
-	public evaluate(facts: { git_commits: GitCommit[]; git_file_changes: GitFileChange[] }): FindingRuleOutput[] {
+	public evaluate(facts: { git_commits: GitCommit[]; git_file_changes: GitFileChange[] }): RuleOutput[] {
 		const cutoff = Date.now() - this.windowMs;
 
 		const hashesInWindow = new Set(
@@ -52,7 +52,7 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 			changeCount.set(change.path, (changeCount.get(change.path) ?? 0) + 1);
 		}
 
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 		for (const [path, count] of changeCount) {
 			if (count < this.threshold) {
 				continue;

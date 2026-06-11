@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { FUNCTION_SIGNATURES_CAPABILITY, type FunctionSignature } from '@maat-tools/vocabulary';
 
 export type CoPArgsRuleOptions = {
@@ -28,10 +28,10 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 		this.onlyExported = options.onlyExported ?? true;
 	}
 
-	public evaluate(facts: { functionSignatures: FunctionSignature[] }): FindingRuleOutput[] {
+	public evaluate(facts: { functionSignatures: FunctionSignature[] }): RuleOutput[] {
 		const signatures = facts[FUNCTION_SIGNATURES_CAPABILITY] ?? [];
 
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 
 		for (const sig of signatures) {
 			if (this.onlyExported && !sig.exported) {

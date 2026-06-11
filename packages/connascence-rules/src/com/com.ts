@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { CONSTANTS_CAPABILITY, type Constant } from '@maat-tools/vocabulary';
 
 export type CoMRuleOptions = {
@@ -25,7 +25,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 		this.ignoreValues = new Set(options.ignoreValues ?? []);
 	}
 
-	public evaluate(facts: { constants: Constant[] }): FindingRuleOutput[] {
+	public evaluate(facts: { constants: Constant[] }): RuleOutput[] {
 		const constants = facts[CONSTANTS_CAPABILITY] ?? [];
 
 		const byValue = new Map<string, Constant[]>();
@@ -41,7 +41,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 			byValue.set(key, group);
 		}
 
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 
 		for (const [, occurrences] of byValue) {
 			const distinctFiles = new Set(occurrences.map((o) => o.location.file));

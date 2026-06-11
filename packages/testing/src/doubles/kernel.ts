@@ -1,4 +1,4 @@
-import type { Collector, Enricher, FindingRuleOutput, Rule } from '@maat-tools/contracts';
+import type { Collector, Enricher, Rule, RuleOutput } from '@maat-tools/contracts';
 import { Kernel } from '@maat-tools/kernel';
 import '../facts';
 
@@ -37,7 +37,7 @@ export function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {
 	};
 }
 
-export function makeKernel(findings: FindingRuleOutput[] = []): Kernel {
+export function makeKernel(findings: RuleOutput[] = []): Kernel {
 	const kernel = new Kernel();
 	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
@@ -10,7 +10,7 @@ import { Verify } from '../../packages/cli/src/commands/verify';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
-const FINDING: FindingRuleOutput = {
+const FINDING: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-a' },
 	message: 'finding a',
@@ -55,14 +55,14 @@ describe('verify', () => {
 		await buildVerify(ledger).action({ fingerprint: fp });
 		exit.assertNotExited();
 		expect(capture.stderr).toContain('already verified');
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.OBSERVED);
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.type).toBe(FindingStatus.OBSERVED);
 	});
 
 	test('unverified finding → transitions to OBSERVED, logs success', async () => {
 		const fp = await scenarioUnverified(ledger, FINDING);
 		await buildVerify(ledger).action({ fingerprint: fp });
 		exit.assertNotExited();
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.OBSERVED);
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.type).toBe(FindingStatus.OBSERVED);
 		expect(capture.stdout).toContain(`"${fp}" verified`);
 	});
 
@@ -70,7 +70,7 @@ describe('verify', () => {
 		const fp = await scenarioUnverified(ledger, FINDING);
 		await buildVerify(ledger).action({ fingerprint: fp, revoke: true });
 		exit.assertNotExited();
-		expect((await ledger.backend.getFindingByFingerprint(fp))?.state).toBe(FindingStatus.REVOKED);
+		expect((await ledger.backend.getFindingByFingerprint(fp))?.type).toBe(FindingStatus.REVOKED);
 		expect(capture.stdout).toContain('revoked');
 	});
 

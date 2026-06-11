@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import { FindingStatus, type RuleOutput } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved } from '@maat-tools/testing';
@@ -9,14 +9,14 @@ import { Baseline } from '../../packages/cli/src/commands/baseline';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
-const FINDING_A: FindingRuleOutput = {
+const FINDING_A: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-a' },
 	message: 'finding a',
 	artifacts: [],
 };
 
-const FINDING_B: FindingRuleOutput = {
+const FINDING_B: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-b' },
 	message: 'finding b',
@@ -86,7 +86,7 @@ describe('baseline — behaviour', () => {
 		await buildBaseline(ledger).action({});
 		exit.assertNotExited();
 		const record = await ledger.backend.getFindingByFingerprint(fp);
-		expect(record?.baselined).toBe(true);
+		expect(record?.type).toBe(FindingStatus.BASELINED);
 		expect(capture.stdout).toContain('Baselined 1 finding(s)');
 		expect(capture.stdout).toContain('30 day(s)');
 	});
@@ -96,8 +96,8 @@ describe('baseline — behaviour', () => {
 		const fpB = await scenarioObserved(ledger, FINDING_B);
 		await buildBaseline(ledger).action({});
 		exit.assertNotExited();
-		expect((await ledger.backend.getFindingByFingerprint(fpA))?.baselined).toBe(true);
-		expect((await ledger.backend.getFindingByFingerprint(fpB))?.baselined).toBe(true);
+		expect((await ledger.backend.getFindingByFingerprint(fpA))?.type).toBe(FindingStatus.BASELINED);
+		expect((await ledger.backend.getFindingByFingerprint(fpB))?.type).toBe(FindingStatus.BASELINED);
 		expect(capture.stdout).toContain('Baselined 2 finding(s)');
 	});
 
@@ -111,10 +111,12 @@ describe('baseline — behaviour', () => {
 	test('already-baselined finding is not re-baselined', async () => {
 		const fp = await scenarioObserved(ledger, FINDING_A);
 		await buildBaseline(ledger).action({ expiresIn: '7' });
-		const firstExpiry = (await ledger.backend.getFindingByFingerprint(fp))?.baseline_expires_at;
+		const first = await ledger.backend.getFindingByFingerprint(fp);
+		const firstExpiry = first?.type === FindingStatus.BASELINED ? first.expiresAt : undefined;
 
 		await buildBaseline(ledger).action({ expiresIn: '60' });
-		const secondExpiry = (await ledger.backend.getFindingByFingerprint(fp))?.baseline_expires_at;
+		const second = await ledger.backend.getFindingByFingerprint(fp);
+		const secondExpiry = second?.type === FindingStatus.BASELINED ? second.expiresAt : undefined;
 
 		expect(secondExpiry).toBe(firstExpiry);
 		expect(capture.stdout).toContain('Nothing to baseline');

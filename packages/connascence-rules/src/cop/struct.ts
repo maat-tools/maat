@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import {
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
@@ -30,7 +30,7 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 	public evaluate(facts: {
 		positionalSources: PositionalSource[];
 		positionalAccesses: PositionalAccess[];
-	}): FindingRuleOutput[] {
+	}): RuleOutput[] {
 		const { positionalSources, positionalAccesses } = facts;
 		const accessMap = new Map<string, PositionalAccess[]>();
 
@@ -40,7 +40,7 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 			existing.push(acc);
 			accessMap.set(key, existing);
 		}
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 
 		for (const source of positionalSources) {
 			if (this.onlyHeterogeneous && !source.isHeterogeneous) {

@@ -22,7 +22,7 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		if (revoke && record.state !== FindingStatus.UNVERIFIED) {
+		if (revoke && record.type !== FindingStatus.UNVERIFIED) {
 			this.presenter.error(
 				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can have their verification revoked.\n`,
 			);
@@ -34,6 +34,10 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 				type: FindingStatus.REVOKED,
 				timestamp: new Date().toISOString(),
 				fingerprint,
+				ruleId: record.ruleId,
+				instanceId: record.instanceId,
+				message: record.message,
+				artifacts: record.artifacts,
 				reason,
 			});
 
@@ -41,7 +45,7 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			return;
 		}
 
-		if (record.state === FindingStatus.OBSERVED) {
+		if (record.type === FindingStatus.OBSERVED) {
 			this.presenter.warn(`Finding "${fingerprint}" is already verified.\n`);
 			return;
 		}
@@ -50,10 +54,10 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			type: FindingStatus.OBSERVED,
 			timestamp: new Date().toISOString(),
 			fingerprint,
-			artifacts: record.artifacts,
-			rule_id: record.rule_id,
-			instance_id: record.instance_id,
+			ruleId: record.ruleId,
+			instanceId: record.instanceId,
 			message: record.message,
+			artifacts: record.artifacts,
 			reason,
 		});
 

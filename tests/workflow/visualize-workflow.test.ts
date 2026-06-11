@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
 import {
@@ -16,14 +16,14 @@ import { Visualize } from '../../packages/cli/src/commands/visualize';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
-const FINDING_A: FindingRuleOutput = {
+const FINDING_A: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-a' },
 	message: 'finding a',
 	artifacts: [],
 };
 
-const FINDING_B: FindingRuleOutput = {
+const FINDING_B: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-b' },
 	message: 'finding b',
@@ -100,7 +100,7 @@ describe('visualize', () => {
 		await ledger.backend.append({
 			type: 'axiom.declared',
 			timestamp: new Date().toISOString(),
-			axiom_id: 'ax-001',
+			axiomId: 'ax-001',
 			scope: 'kernel',
 			claim: 'Kernel is pure',
 		});
@@ -114,7 +114,7 @@ describe('visualize', () => {
 		await ledger.backend.append({
 			type: 'axiom.declared',
 			timestamp: new Date().toISOString(),
-			axiom_id: 'ax-001',
+			axiomId: 'ax-001',
 			scope: 'kernel',
 			claim: 'Kernel is pure',
 		});

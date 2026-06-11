@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type FindingRuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { ALGORITHMIC_BINDINGS_CAPABILITY, type AlgorithmicBinding } from '@maat-tools/vocabulary';
 
 const UNIVERSAL_NOISE_BINDING_KEYS = new Set([',', '/', '\\']);
@@ -30,7 +30,7 @@ export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBin
 		this.ignoreBindingKeys = new Set([...UNIVERSAL_NOISE_BINDING_KEYS, ...(options.ignoreBindingKeys ?? [])]);
 	}
 
-	public evaluate(facts: { algorithmicBindings: AlgorithmicBinding[] }): FindingRuleOutput[] {
+	public evaluate(facts: { algorithmicBindings: AlgorithmicBinding[] }): RuleOutput[] {
 		const bindings = facts[ALGORITHMIC_BINDINGS_CAPABILITY] ?? [];
 
 		const groups = new Map<string, AlgorithmicBinding[]>();
@@ -47,7 +47,7 @@ export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBin
 			groups.set(key, group);
 		}
 
-		const findings: FindingRuleOutput[] = [];
+		const findings: RuleOutput[] = [];
 
 		for (const [key, group] of groups) {
 			const files = new Set(group.map((b) => b.file));

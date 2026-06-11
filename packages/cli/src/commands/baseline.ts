@@ -23,7 +23,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 
 		const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
 
-		const toBaseline = await this.ledger.getNotBaselinedFindings();
+		const toBaseline = await this.ledger.getNotBaselinedFindingsState();
 
 		if (toBaseline.length === 0) {
 			this.presenter.log('Nothing to baseline. All observed findings are already baselined.\n');
@@ -35,7 +35,11 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 				type: FindingStatus.BASELINED,
 				timestamp: new Date().toISOString(),
 				fingerprint: record.fingerprint,
-				expires_at: expiresAt,
+				ruleId: record.ruleId,
+				instanceId: record.instanceId,
+				message: record.message,
+				artifacts: record.artifacts,
+				expiresAt: expiresAt,
 			});
 		}
 

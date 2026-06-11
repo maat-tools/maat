@@ -8,7 +8,7 @@ The ledger is maat's memory: every finding observation, baseline, resolution, ve
 
 - **Append-only.** Events are only ever appended — existing lines are never rewritten. History stays intact.
 - **State by replay.** The current state (findings, axioms) is derived by replaying every event from the top of the file. There is no separate state store and no migration on read.
-- **One event per line.** Each line is a self-contained JSON object stamped with a unique `entry_id` and the `run_id` of the run that produced it.
+- **One event per line.** Each line is a self-contained JSON object stamped with a unique `entryId` and the `runId` of the run that produced it.
 - **No user identity.** Events carry fingerprints, rule IDs, messages, artifacts, and optional reasons — not who ran the command.
 
 ## Options

@@ -1,39 +1,19 @@
-import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
-import { getCurrentDir, isMatch, resolveSymbol } from '@maat-tools/utils';
+import { fileURLToPath } from 'node:url';
+import { Worker } from 'node:worker_threads';
+import { type Collector, defineCollector } from '@maat-tools/contracts';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
-	type AlgorithmicBinding,
-	type AlgorithmicPattern,
 	CALL_GRAPH_CAPABILITY,
 	CONSTANTS_CAPABILITY,
-	type Constant,
 	DEPENDS_ON_CAPABILITY,
-	type DependsOn,
 	FUNCTION_SIGNATURES_CAPABILITY,
-	type FunctionSignature,
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
-	type PositionalAccess,
-	type PositionalSource,
 } from '@maat-tools/vocabulary';
-import { glob } from 'tinyglobby';
-import { Project } from 'ts-morph';
-import { collectAlgorithmicBindings } from './algorithmic-bindings';
-import { collectCallGraph } from './call-graph';
-import { collectConstants } from './constants';
-import { collectDependsOn, toProjectRelativePath } from './dependencies';
-import { collectFunctionSignatures } from './functions';
-import { collectPositionalAccesses, collectPositionalSources } from './positional';
+import type { TSCollectedFacts, TSInput } from './collect';
+import type { WorkerResult } from './collect-worker';
 
-export type TSInput = {
-	tsConfigFilePath: string | string[];
-	exclude?: string[];
-	algorithmicPatterns?: AlgorithmicPattern[];
-	callGraph?: {
-		maxIndirections?: number;
-		timeout?: number;
-	};
-};
+export type { TSCollectedFacts, TSInput } from './collect';
 
 export class TSCollector
 	implements
@@ -60,87 +40,32 @@ export class TSCollector
 
 	public constructor(private readonly config: TSInput) {}
 
-	private async expandGlobs(patterns: string[], rootDir: string): Promise<string[]> {
-		const results: string[] = [];
-		for (const pattern of patterns) {
-			if (/[*?{[]/.test(pattern)) {
-				const matches = await glob(pattern, { cwd: rootDir, absolute: true });
-				results.push(...matches);
-			} else {
-				results.push(resolveSymbol(pattern));
-			}
-		}
+	public collect(): Promise<TSCollectedFacts> {
+		const workerEntry = fileURLToPath(import.meta.resolve('@maat-tools/collector-ts/worker'));
 
-		return results;
-	}
+		return new Promise((resolve, reject) => {
+			const worker = new Worker(workerEntry, { workerData: this.config });
 
-	public async collect(): Promise<
-		Pick<
-			FactRegistry,
-			| 'dependsOn'
-			| 'constants'
-			| 'functionSignatures'
-			| 'positionalSources'
-			| 'positionalAccesses'
-			| 'algorithmicBindings'
-			| 'callGraph'
-		>
-	> {
-		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
-			? this.config.tsConfigFilePath
-			: [this.config.tsConfigFilePath];
-
-		const projectRoot = getCurrentDir();
-		const tsConfigPaths = await this.expandGlobs(rawPatterns, projectRoot);
-
-		const excludePatterns = this.config.exclude ?? [];
-		const algorithmicPatterns = this.config.algorithmicPatterns ?? [];
-		const seenFiles = new Set<string>();
-		const constants: Constant[] = [];
-		const dependsOn: DependsOn[] = [];
-		const functionSignatures: FunctionSignature[] = [];
-		const positionalSources: PositionalSource[] = [];
-		const positionalAccesses: PositionalAccess[] = [];
-		const algorithmicBindings: AlgorithmicBinding[] = [];
-		const includedFiles: string[] = [];
-
-		for (const tsConfigPath of tsConfigPaths) {
-			const project = new Project({ tsConfigFilePath: tsConfigPath });
-
-			for (const sourceFile of project.getSourceFiles()) {
-				const absoluteFile = sourceFile.getFilePath();
-				if (seenFiles.has(absoluteFile)) {
-					continue;
+			worker.once('message', (result: WorkerResult) => {
+				void worker.terminate();
+				if (result.ok) {
+					resolve(result.facts);
+				} else {
+					const error = new Error(result.error.message);
+					error.stack = result.error.stack ?? error.stack;
+					reject(error);
 				}
-				seenFiles.add(absoluteFile);
-
-				const file = toProjectRelativePath(projectRoot, absoluteFile);
-				if (isMatch(file, excludePatterns)) {
-					continue;
+			});
+			worker.once('error', (error) => {
+				void worker.terminate();
+				reject(error);
+			});
+			worker.once('exit', (code) => {
+				if (code !== 0) {
+					reject(new Error(`TS collector worker exited with code ${code}`));
 				}
-
-				includedFiles.push(absoluteFile);
-
-				dependsOn.push(...collectDependsOn(sourceFile, file));
-				constants.push(...collectConstants(sourceFile, file));
-				functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
-				positionalSources.push(...collectPositionalSources(sourceFile, file));
-				positionalAccesses.push(...collectPositionalAccesses(sourceFile, file, projectRoot));
-				algorithmicBindings.push(...collectAlgorithmicBindings(sourceFile, file, algorithmicPatterns));
-			}
-		}
-
-		const callGraph = await collectCallGraph(includedFiles, projectRoot, this.config.callGraph ?? {});
-
-		return {
-			dependsOn,
-			constants,
-			functionSignatures,
-			positionalSources,
-			positionalAccesses,
-			algorithmicBindings,
-			callGraph,
-		};
+			});
+		});
 	}
 }
 

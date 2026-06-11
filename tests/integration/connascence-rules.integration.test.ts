@@ -1,9 +1,11 @@
-import { beforeAll, describe, expect, test } from 'bun:test';
+import { beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { resolve } from 'node:path';
 import { TSCollector } from '@maat-tools/collector-ts';
 import { com, copArgs, copStruct } from '@maat-tools/connascence-rules';
 import type { Finding } from '@maat-tools/contracts';
 import { Kernel } from '@maat-tools/kernel';
+
+setDefaultTimeout(30_000);
 
 const FIXTURE_DIR = resolve(import.meta.dir, '../fixtures/sample-project');
 const FIXTURE_TSCONFIG = resolve(FIXTURE_DIR, 'tsconfig.json');

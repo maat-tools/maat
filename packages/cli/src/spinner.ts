@@ -1,33 +1,20 @@
-import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-function workerPath(): string {
-	const dir = dirname(fileURLToPath(import.meta.url));
-	const js = join(dir, 'spinner-worker.js');
-
-	return existsSync(js) ? js : join(dir, 'spinner-worker.ts');
-}
+import yoctoSpinner from 'yocto-spinner';
 
 export type Spinner = ReturnType<typeof createSpinner>;
 
 export function createSpinner() {
-	if (!process.stderr.isTTY) {
+	if (!process.stderr.isTTY || !process.stderr.columns) {
 		return null;
 	}
 
-	const proc = spawn(process.execPath, [workerPath()], {
-		stdio: ['pipe', 'ignore', 'inherit'],
-	});
+	const spinner = yoctoSpinner({ stream: process.stderr }).start();
 
 	return {
 		update(text: string) {
-			proc.stdin?.write(`${text}\n`);
+			spinner.text = text;
 		},
 		stop() {
-			proc.kill('SIGTERM');
-			process.stderr.write('\r\x1b[K');
+			spinner.stop();
 		},
 	};
 }

@@ -21,3 +21,4 @@ export {
 	type LLMProvider,
 	type ProviderModelRegistry,
 } from './llm';
+export { StdoutPresenter } from './presenter/stdout';

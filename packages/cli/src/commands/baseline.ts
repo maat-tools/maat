@@ -12,7 +12,7 @@ type BaselineOptions = {
 export class Baseline extends MaatCommandBase implements MaatCommand {
 	public async action(options: BaselineOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot baseline without a ledger.\n');
+			this.presenter.error('No ledger configured. Cannot baseline without a ledger.\n');
 			process.exit(1);
 		}
 
@@ -26,7 +26,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		const toBaseline = await this.ledger.getNotBaselinedFindings();
 
 		if (toBaseline.length === 0) {
-			this.printer.log('Nothing to baseline. All observed findings are already baselined.\n');
+			this.presenter.log('Nothing to baseline. All observed findings are already baselined.\n');
 			return;
 		}
 
@@ -39,7 +39,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 			});
 		}
 
-		this.printer.log(
+		this.presenter.log(
 			`Baselined ${toBaseline.length} finding(s). Baseline expires in ${expiresInDays} day(s) on ${expiresAt.slice(0, 10)}.\n`,
 		);
 	}
@@ -51,17 +51,17 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 
 		const days = Number(raw);
 		if (!Number.isInteger(days) || Number.isNaN(days)) {
-			this.printer.error(`--expires-in must be an integer number of days.\n`);
+			this.presenter.error(`--expires-in must be an integer number of days.\n`);
 
 			return null;
 		}
 		if (days < 1) {
-			this.printer.error(`--expires-in must be at least 1 day. Got: ${days}.\n`);
+			this.presenter.error(`--expires-in must be at least 1 day. Got: ${days}.\n`);
 
 			return null;
 		}
 		if (days > BASELINE_MAX_DAYS) {
-			this.printer.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.\n`);
+			this.presenter.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.\n`);
 
 			return null;
 		}

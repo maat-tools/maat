@@ -36,7 +36,7 @@ function toFinding(record: FindingRecord): Finding {
 export class Visualize extends MaatCommandBase implements MaatCommand {
 	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Cannot visualize without a ledger.\n');
+			this.presenter.error('No ledger configured. Cannot visualize without a ledger.\n');
 			process.exit(1);
 		}
 
@@ -65,7 +65,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			if (insights && this.insights.length > 0) {
 				out.insights = await this.runInsightsIfEnabled(allFindings.map(toFinding));
 			}
-			this.printer.json(out);
+			this.presenter.json(out);
 
 			return;
 		}
@@ -79,23 +79,23 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 
 			hasOutput = true;
 			const heading = `${group.toUpperCase()} (${records.length})`;
-			this.printer.section(heading);
+			this.presenter.section(heading);
 			for (const r of records) {
-				this.printer.log(`  ${r.fingerprint.slice(0, 8)}`);
-				this.printer.info(` [${r.rule_id}]`);
-				this.printer.log(` ${r.message}`);
+				this.presenter.log(`  ${r.fingerprint.slice(0, 8)}`);
+				this.presenter.info(` [${r.rule_id}]`);
+				this.presenter.log(` ${r.message}`);
 			}
 		}
 
 		if (axioms !== false && allAxioms.length > 0) {
 			hasOutput = true;
 			const heading = `\nAXIOMS (${allAxioms.length})`;
-			this.printer.section(heading);
+			this.presenter.section(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				this.printer.info(`\n${axiom.axiom_id}`);
-				this.printer.bold(` [${axiom.scope}]`);
-				this.printer.log(` ${axiom.claim}${note}`);
+				this.presenter.info(`\n${axiom.axiom_id}`);
+				this.presenter.bold(` [${axiom.scope}]`);
+				this.presenter.log(` ${axiom.claim}${note}`);
 			}
 		}
 
@@ -104,16 +104,16 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			if (results.length > 0) {
 				hasOutput = true;
 				const heading = `INSIGHTS (${results.length})`;
-				this.printer.section(heading);
+				this.presenter.section(heading);
 
 				for (const result of results) {
-					this.printer.insight(result);
+					this.presenter.insight(result);
 				}
 			}
 		}
 
 		if (!hasOutput) {
-			this.printer.log('No findings or axioms in the ledger.');
+			this.presenter.log('No findings or axioms in the ledger.');
 		}
 	}
 

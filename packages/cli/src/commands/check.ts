@@ -6,7 +6,6 @@ import {
 	type LedgerBackend,
 } from '@maat-tools/contracts';
 import type { KernelProgressEvent } from '@maat-tools/kernel';
-import type { Printer } from '../printer';
 import { createSpinner } from '../spinner';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
@@ -34,18 +33,20 @@ type LedgerAnalysis = {
 
 export class Check extends MaatCommandBase implements MaatCommand {
 	public async action(options: CheckOptions = {}) {
-		const printer = options.silent ? this.printer.asSilent() : this.printer;
-		const displayMode = this.resolveDisplayMode(options.show, printer);
+		if (options.silent) {
+			this.presenter = this.presenter.asSilent();
+		}
+		const displayMode = this.resolveDisplayMode(options.show);
 
 		if (options.ledger === true && !this.isLedgerProvided()) {
-			printer.error(
+			this.presenter.error(
 				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to use this feature.\n',
 			);
 			process.exit(1);
 		}
 
 		if (options.showBaselined && !this.isLedgerProvided()) {
-			printer.error('--show-baselined requires a ledger to be configured.\n');
+			this.presenter.error('--show-baselined requires a ledger to be configured.\n');
 			process.exit(1);
 		}
 
@@ -77,21 +78,21 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		if (!this.isLedgerProvided()) {
 			if (displayMode === 'all') {
-				this.printRunContext(printer, { ledger: false });
+				this.printRunContext({ ledger: false });
 			}
 			if (displayMode === 'all' || displayMode === 'findings') {
-				printer.findings(currentFindings, (id) => this.kernel.getRuleById(id));
+				this.presenter.findings(currentFindings, (id) => this.kernel.getRuleById(id));
 			}
 			if (displayMode === 'all' || displayMode === 'insights') {
-				await this.printInsights(currentFindings, printer, { warnAboutScope: displayMode === 'all' });
+				await this.printInsights(currentFindings, { warnAboutScope: displayMode === 'all' });
 			}
 			if (totalLLMCosts.usedTokens > 0) {
-				printer.info(
+				this.presenter.info(
 					`\nLLM costs: $${totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
 				);
 			}
 			if (this.config.check?.strict && actionableFindings.length > 0) {
-				printer.error(
+				this.presenter.error(
 					'One or more findings that require verification detected. Please address these issues to comply with the defined architecture.\n',
 				);
 				process.exit(1);
@@ -116,7 +117,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const visibleFindings = options.showBaselined ? reconciled : this.getVisibleFindings(reconciled, analysis);
 
 		if (displayMode === 'all') {
-			this.printRunContext(printer, {
+			this.printRunContext({
 				ledger: true,
 				writesLedger: options.ledger === true,
 				showBaselined: options.showBaselined === true,
@@ -124,20 +125,20 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		if (displayMode === 'all' || displayMode === 'findings') {
-			printer.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
+			this.presenter.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
 		}
 
 		if (displayMode === 'all' || displayMode === 'insights') {
-			await this.printInsights(reconciled, printer, { warnAboutScope: displayMode === 'all' });
+			await this.printInsights(reconciled, { warnAboutScope: displayMode === 'all' });
 		}
 
 		if (totalLLMCosts.usedTokens > 0) {
-			printer.info(
+			this.presenter.info(
 				`\nLLM costs: $${totalLLMCosts.cost === 0 ? '0.000000' : totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens === 0 ? '0' : totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
 			);
 		}
 
-		this.evaluateExitConditions(visibleFindings, analysis, printer, { printSummary: displayMode !== 'insights' });
+		this.evaluateExitConditions(visibleFindings, analysis, { printSummary: displayMode !== 'insights' });
 	}
 
 	public register(): void {
@@ -151,13 +152,13 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			.action((options: CheckOptions) => this.action(options));
 	}
 
-	private resolveDisplayMode(show: string | undefined, printer: Printer): CheckDisplayMode {
+	private resolveDisplayMode(show: string | undefined): CheckDisplayMode {
 		const mode = show ?? 'all';
 		if (CHECK_DISPLAY_MODES.has(mode as CheckDisplayMode)) {
 			return mode as CheckDisplayMode;
 		}
 
-		printer.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.\n`);
+		this.presenter.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.\n`);
 		process.exit(1);
 	}
 
@@ -274,7 +275,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	}
 
 	private printRunContext(
-		printer: Printer,
 		context:
 			| { ledger: false }
 			| {
@@ -294,7 +294,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				: 'configured; this run reads state only';
 		}
 
-		printer.runContext([
+		this.presenter.runContext([
 			'Rules run on current workspace facts collected during this check.',
 			`Ledger: ${ledgerScope}.`,
 			`Findings shown: ${findingsScope}.`,
@@ -302,13 +302,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		]);
 	}
 
-	private async printInsights(
-		findings: Finding[],
-		printer: Printer,
-		options: { warnAboutScope: boolean },
-	): Promise<void> {
+	private async printInsights(findings: Finding[], options: { warnAboutScope: boolean }): Promise<void> {
 		if (options.warnAboutScope && this.insights.length > 0) {
-			printer.warn(
+			this.presenter.warn(
 				'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.\n',
 			);
 		}
@@ -317,28 +313,27 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		if (results.length === 0) {
 			return;
 		}
-		printer.section(`INSIGHTS (${results.length})`);
+		this.presenter.section(`INSIGHTS (${results.length})`);
 		for (const result of results) {
-			printer.insight(result);
+			this.presenter.insight(result);
 		}
 	}
 
 	private evaluateExitConditions(
 		visibleFindings: Finding[],
 		analysis: LedgerAnalysis,
-		printer: Printer,
 		options: { printSummary: boolean },
 	): void {
 		const { hasRegressions, hasExpiredBaselines, activeAxiomCount } = analysis;
 
 		if (hasRegressions || hasExpiredBaselines) {
 			if (hasRegressions) {
-				printer.error(
+				this.presenter.error(
 					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.\n',
 				);
 			}
 			if (hasExpiredBaselines) {
-				printer.error(
+				this.presenter.error(
 					"One or more baselined findings have expired. Please revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.\n",
 				);
 			}
@@ -348,7 +343,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const actionableFindings = visibleFindings.filter((f) => !f.requiresVerification);
 
 		if (this.config.check?.strict && actionableFindings.length > 0) {
-			printer.error(
+			this.presenter.error(
 				'One or more findings detected. Please address these issues to comply with the defined architecture.\n',
 			);
 			process.exit(1);
@@ -363,13 +358,13 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				activeAxiomCount > 0
 					? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!\n`
 					: 'No findings detected. Great job!';
-			printer.log(summary);
+			this.presenter.log(summary);
 		} else {
 			const summary =
 				activeAxiomCount > 0
 					? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.\n`
 					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.\n`;
-			printer.log(summary);
+			this.presenter.log(summary);
 		}
 	}
 

@@ -15,7 +15,7 @@ import {
 } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
-import { getFileURL, requireFile, resolveModule } from '@maat-tools/utils';
+import { getFileURL, requireFile, resolveModule, StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import type { MaatCommand } from './commands';
 import { Axiom } from './commands/axiom';
@@ -25,7 +25,6 @@ import { Resolve } from './commands/resolve';
 import { Verify } from './commands/verify';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
-import { Printer } from './printer';
 
 const { version } = requireFile('../package.json') as { version: string };
 
@@ -46,7 +45,7 @@ class MaatCLI {
 	private kernel: Kernel = new Kernel();
 	private ledger: LedgerBackend | null = null;
 	private insights: Insight[] = [];
-	private printer: Printer = new Printer();
+	private presenter: StdoutPresenter = new StdoutPresenter();
 	private configFilePath = '';
 	private resolvedPluginPaths = new Set<string>();
 
@@ -82,7 +81,7 @@ class MaatCLI {
 		await this.configureLedger(loadedConfig.config);
 
 		if (!this.ledger) {
-			this.printer.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.\n');
+			this.presenter.warn('No ledger configured. Ledger-backed commands will require a ledger before they can run.\n');
 		}
 
 		this.registerCommands(loadedConfig.config);
@@ -109,7 +108,7 @@ class MaatCLI {
 
 	private registerCommands(maatConfig: MaatConfig) {
 		const config = { ...maatConfig, check: maatConfig.check ?? defaultStrictness };
-		const args = [this.program, config, this.kernel, this.insights, this.printer, this.ledger] as const;
+		const args = [this.program, config, this.kernel, this.insights, this.presenter, this.ledger] as const;
 
 		const commands: MaatCommand[] = [
 			new Check(...args),

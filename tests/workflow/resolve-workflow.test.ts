@@ -4,9 +4,9 @@ import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
 import { ConsoleCapture, ExitCapture, LedgerHarness, scenarioObserved, scenarioResolved } from '@maat-tools/testing';
+import { StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import { Resolve } from '../../packages/cli/src/commands/resolve';
-import { Printer } from '../../packages/cli/src/printer';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
@@ -18,7 +18,7 @@ const FINDING: FindingRuleOutput = {
 };
 
 function buildResolve(ledger: LedgerHarness | null) {
-	return new Resolve(new Command(), BASE_CONFIG, new Kernel(), [], new Printer(), ledger?.backend ?? null);
+	return new Resolve(new Command(), BASE_CONFIG, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
 const exit = new ExitCapture();

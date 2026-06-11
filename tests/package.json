@@ -19,6 +19,7 @@
     "@maat-tools/kernel": "workspace:*",
     "@maat-tools/presets-ts": "workspace:*",
     "@maat-tools/testing": "workspace:*",
+    "@maat-tools/utils": "workspace:*",
     "commander": "14.0.3"
   }
 }

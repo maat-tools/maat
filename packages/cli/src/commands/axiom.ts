@@ -70,7 +70,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 
 	private async declare(options: DeclareOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. An axiom cannot be recorded without a ledger.\n');
+			this.presenter.error('No ledger configured. An axiom cannot be recorded without a ledger.\n');
 			process.exit(1);
 		}
 
@@ -78,7 +78,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			const existing = await this.ledger.getAxiomByFingerprint(options.id);
 
 			if (existing?.active) {
-				this.printer.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.\n`);
+				this.presenter.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.\n`);
 				process.exit(1);
 			}
 		}
@@ -96,7 +96,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			}
 
 			if (invalidFingerprints.length > 0) {
-				this.printer.error(
+				this.presenter.error(
 					`The following fingerprints do not correspond to any known findings in the ledger: ${invalidFingerprints.join(', ')}. ` +
 						`Please verify the fingerprints or omit them if you want to declare the axiom without linking it to specific findings.\n`,
 				);
@@ -114,32 +114,32 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(fingerprints.length === 0 ? {} : { fingerprints }),
 		});
 
-		this.printer.success(`Axiom "${options.id}" declared.\n`);
-		this.printer.detail('scope:', options.scope);
-		this.printer.detail('\nclaim:', options.claim);
+		this.presenter.success(`Axiom "${options.id}" declared.\n`);
+		this.presenter.detail('scope:', options.scope);
+		this.presenter.detail('\nclaim:', options.claim);
 		if (options.note) {
-			this.printer.detail('note:', options.note);
+			this.presenter.detail('note:', options.note);
 		}
 		if (fingerprints.length > 0) {
-			this.printer.detail('fingerprints:', fingerprints.join(', '));
+			this.presenter.detail('fingerprints:', fingerprints.join(', '));
 		}
 	}
 
 	private async lifecycle(type: AxiomLifecycleStatus, options: LifecycleOptions): Promise<void> {
 		if (!this.isLedgerProvided()) {
-			this.printer.error('No ledger configured. Axiom lifecycle commands require a ledger.\n');
+			this.presenter.error('No ledger configured. Axiom lifecycle commands require a ledger.\n');
 			process.exit(1);
 		}
 
 		const axiom = await this.ledger.getAxiomByFingerprint(options.id);
 
 		if (!axiom) {
-			this.printer.error(`Axiom "${options.id}" not found in the ledger.\n`);
+			this.presenter.error(`Axiom "${options.id}" not found in the ledger.\n`);
 			process.exit(1);
 		}
 
 		if (!axiom.active) {
-			this.printer.error(`Axiom "${options.id}" is already inactive.\n`);
+			this.presenter.error(`Axiom "${options.id}" is already inactive.\n`);
 			process.exit(1);
 		}
 
@@ -150,9 +150,9 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 
-		this.printer.warn(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.\n`);
+		this.presenter.warn(`Axiom "${options.id}" ${LIFECYCLE_VERBS[type]}.\n`);
 		if (options.reason) {
-			this.printer.detail('reason:', options.reason);
+			this.presenter.detail('reason:', options.reason);
 		}
 	}
 }

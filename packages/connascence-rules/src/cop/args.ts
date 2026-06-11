@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type RuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { FUNCTION_SIGNATURES_CAPABILITY, type FunctionSignature } from '@maat-tools/vocabulary';
 
 export type CoPArgsRuleOptions = {

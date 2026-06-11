@@ -1,4 +1,4 @@
-import type { Collector, Enricher, RuleOutput, Rule } from '@maat-tools/contracts';
+import type { Collector, Enricher, Rule, RuleOutput } from '@maat-tools/contracts';
 import { Kernel } from '@maat-tools/kernel';
 import '../facts';
 

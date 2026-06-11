@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type RuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { ALGORITHMIC_BINDINGS_CAPABILITY, type AlgorithmicBinding } from '@maat-tools/vocabulary';
 
 const UNIVERSAL_NOISE_BINDING_KEYS = new Set([',', '/', '\\']);

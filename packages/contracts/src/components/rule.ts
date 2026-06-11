@@ -6,41 +6,41 @@ export const RULE_SET_BRAND = Symbol.for('maat.RuleSet');
 export const RULE_BUILDER_BRAND = Symbol.for('maat.RuleBuilder');
 
 export type RuleOutput = {
-    ruleId: string;
-    ruleIdentifier: Record<string, unknown>;
-    message: string;
-    artifacts: Artifact[];
+	ruleId: string;
+	ruleIdentifier: Record<string, unknown>;
+	message: string;
+	artifacts: Artifact[];
 };
 
 export interface Rule<TNeeds extends keyof FactRegistry = keyof FactRegistry> {
-    readonly instanceId: string;
-    readonly id: string;
-    readonly needFacts: readonly TNeeds[];
-    evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): RuleOutput[];
-    describeArtifact(artifact: Artifact): Record<string, string>;
+	readonly instanceId: string;
+	readonly id: string;
+	readonly needFacts: readonly TNeeds[];
+	evaluate(facts: { [K in TNeeds]: FactRegistry[K] }): RuleOutput[];
+	describeArtifact(artifact: Artifact): Record<string, string>;
 }
 
 export interface RuleBuilder {
-    build(): Rule;
+	build(): Rule;
 }
 
 export type BrandedRuleFactory<TOptions = Record<string, never>> = RuleFactory<TOptions> & {
-    readonly [RULE_FACTORY_BRAND]: true;
+	readonly [RULE_FACTORY_BRAND]: true;
 };
 
 export type RuleFactory<TOptions = Record<string, never>> = (options?: TOptions) => Rule;
 
 export type RuleSet = {
-    // biome-ignore lint/suspicious/noExplicitAny: factories have heterogeneous option types
-    readonly factories: readonly BrandedRuleFactory<any>[];
+	// biome-ignore lint/suspicious/noExplicitAny: factories have heterogeneous option types
+	readonly factories: readonly BrandedRuleFactory<any>[];
 };
 
 export type BrandedRuleSet = RuleSet & {
-    readonly [RULE_SET_BRAND]: true;
+	readonly [RULE_SET_BRAND]: true;
 };
 
 export type BrandedRuleBuilder = RuleBuilder & {
-    readonly [RULE_BUILDER_BRAND]: true;
+	readonly [RULE_BUILDER_BRAND]: true;
 };
 
 export function defineRule<TOptions = Record<string, never>>(
@@ -60,7 +60,6 @@ export function defineRuleSet(factories: BrandedRuleFactory<any>[]): BrandedRule
 export function defineRuleBuilder<T extends RuleBuilder>(builder: T): T {
 	return Object.assign(builder, { [RULE_BUILDER_BRAND]: true as const });
 }
-
 
 export function isRuleFactory(fn: unknown): fn is BrandedRuleFactory<Record<string, unknown>> {
 	return typeof fn === 'function' && (fn as unknown as Record<symbol, unknown>)[RULE_FACTORY_BRAND] === true;

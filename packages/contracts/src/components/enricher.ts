@@ -9,23 +9,23 @@ export type EnricherFactory<
 > = (config: TConfig) => Enricher<TNeeds, TProduces>;
 
 export interface Enricher<
-    TNeeds extends keyof FactRegistry = keyof FactRegistry,
-    TProduces extends keyof FactRegistry = keyof FactRegistry,
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
 > {
-    readonly id: string;
-    readonly needFacts: readonly TNeeds[];
-    readonly provideFacts: readonly TProduces[];
-    enrich(
-        facts?: { [K in TNeeds]: FactRegistry[K] },
-    ): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
+	readonly id: string;
+	readonly needFacts: readonly TNeeds[];
+	readonly provideFacts: readonly TProduces[];
+	enrich(
+		facts?: { [K in TNeeds]: FactRegistry[K] },
+	): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
 }
 
 export type BrandedEnricherFactory<
-    TConfig,
-    TNeeds extends keyof FactRegistry = keyof FactRegistry,
-    TProduces extends keyof FactRegistry = keyof FactRegistry,
+	TConfig,
+	TNeeds extends keyof FactRegistry = keyof FactRegistry,
+	TProduces extends keyof FactRegistry = keyof FactRegistry,
 > = EnricherFactory<TConfig, TNeeds, TProduces> & {
-    readonly [ENRICHER_FACTORY_BRAND]: true;
+	readonly [ENRICHER_FACTORY_BRAND]: true;
 };
 
 export function defineEnricher<

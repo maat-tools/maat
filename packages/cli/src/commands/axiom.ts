@@ -75,7 +75,9 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 
 		const fingerprints = parseFingerprints(options.fingerprints);
 		if (fingerprints.length > 0) {
-			const existingFindings = await Promise.all(fingerprints.map((fingerprint) => this.ledger.getFindingByFingerprint(fingerprint)));
+			const existingFindings = await Promise.all(
+				fingerprints.map((fingerprint) => this.ledger.getFindingByFingerprint(fingerprint)),
+			);
 			const invalidFingerprints = fingerprints.filter((_, index) => !existingFindings[index]);
 
 			if (invalidFingerprints.length > 0) {

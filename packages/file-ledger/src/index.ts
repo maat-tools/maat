@@ -130,9 +130,9 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 		return text.trim().length === 0
 			? []
 			: text
-				.split('\n')
-				.filter(Boolean)
-				.map((line) => JSON.parse(line));
+					.split('\n')
+					.filter(Boolean)
+					.map((line) => JSON.parse(line));
 	}
 }
 

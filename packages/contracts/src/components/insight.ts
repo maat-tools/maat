@@ -4,27 +4,27 @@ export const INSIGHT_FACTORY_BRAND = Symbol.for('maat.InsightFactory');
 export const INSIGHT_SET_BRAND = Symbol.for('maat.InsightSet');
 
 export type BrandedInsightFactory<TOptions = Record<string, never>> = InsightFactory<TOptions> & {
-    readonly [INSIGHT_FACTORY_BRAND]: true;
+	readonly [INSIGHT_FACTORY_BRAND]: true;
 };
 
 export type InsightSet = {
-    readonly factories: readonly BrandedInsightFactory<unknown>[];
+	readonly factories: readonly BrandedInsightFactory<unknown>[];
 };
 
 export type BrandedInsightSet = InsightSet & {
-    readonly [INSIGHT_SET_BRAND]: true;
+	readonly [INSIGHT_SET_BRAND]: true;
 };
 
 export type InsightResult = {
-    insightId: string;
-    message: string;
-    data: unknown;
+	insightId: string;
+	message: string;
+	data: unknown;
 };
 
 export interface Insight {
-    readonly id: string;
-    readonly needRules: readonly string[];
-    analyze(findings: Finding[]): InsightResult[];
+	readonly id: string;
+	readonly needRules: readonly string[];
+	analyze(findings: Finding[]): InsightResult[];
 }
 
 export type InsightFactory<TOptions = Record<string, never>> = (options?: TOptions) => Insight;

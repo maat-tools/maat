@@ -3,26 +3,25 @@ import type { FactRegistry } from '../registry';
 export const COLLECTOR_FACTORY_BRAND = Symbol.for('maat.CollectorFactory');
 
 export interface Collector<TKeys extends keyof FactRegistry = keyof FactRegistry> {
-    readonly id: string;
-    readonly provideFacts: readonly TKeys[];
-    collect(): Promise<Pick<FactRegistry, TKeys>>;
+	readonly id: string;
+	readonly provideFacts: readonly TKeys[];
+	collect(): Promise<Pick<FactRegistry, TKeys>>;
 }
 
 export type AnyCollector = Omit<Collector<never>, 'provideFacts' | 'collect'> & {
-    readonly provideFacts: readonly string[];
-    collect(): Promise<unknown>;
+	readonly provideFacts: readonly string[];
+	collect(): Promise<unknown>;
 };
 
 export type CollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = (
-    config: TConfig,
+	config: TConfig,
 ) => Collector<TKeys>;
 
-
 export type BrandedCollectorFactory<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry> = CollectorFactory<
-    TConfig,
-    TKeys
+	TConfig,
+	TKeys
 > & {
-    readonly [COLLECTOR_FACTORY_BRAND]: true;
+	readonly [COLLECTOR_FACTORY_BRAND]: true;
 };
 
 export function defineCollector<TConfig, TKeys extends keyof FactRegistry = keyof FactRegistry>(

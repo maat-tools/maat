@@ -4,7 +4,7 @@ import {
 	type GitCommit,
 	type GitFileChange,
 } from '@maat-tools/collector-git';
-import { type Artifact, defineRule, type RuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { isMatch } from '@maat-tools/utils';
 
 declare module '@maat-tools/contracts' {

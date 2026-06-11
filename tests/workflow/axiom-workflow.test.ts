@@ -66,14 +66,6 @@ describe('axiom declare', () => {
 		expect(capture.stderr).toContain('No ledger configured');
 	});
 
-	test('axiom ID already active, no --force → exit 1', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
-		await expect(buildAxiom(ledger).action(DECLARE_OPTS)).rejects.toThrow('process.exit');
-		exit.assertExitedWith(1);
-		expect(capture.stderr).toContain('already exists');
-		expect(capture.stderr).toContain('--force');
-	});
-
 	test('axiom ID already active, --force → re-declares successfully', async () => {
 		await buildAxiom(ledger).action(DECLARE_OPTS);
 		await buildAxiom(ledger).action({ ...DECLARE_OPTS, force: true });

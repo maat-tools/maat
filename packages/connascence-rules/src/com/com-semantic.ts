@@ -1,4 +1,4 @@
-import { type Artifact, defineRule, type RuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRule, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { COM_ENRICHER_FACT_KEY, type CoMCandidate } from '@maat-tools/enricher-llm/com';
 
 export type CoMSemanticRuleOptions = {

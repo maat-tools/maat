@@ -1,4 +1,4 @@
-import { type Artifact, defineRuleBuilder, type RuleOutput, type Rule } from '@maat-tools/contracts';
+import { type Artifact, defineRuleBuilder, type Rule, type RuleOutput } from '@maat-tools/contracts';
 import { isMatch } from '@maat-tools/utils';
 import { DEPENDS_ON_CAPABILITY, type DependsOn } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';

@@ -272,7 +272,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 			await ledger.append({
 				type: FindingStatus.OBSERVED,
-				
+
 				...common,
 			});
 		}

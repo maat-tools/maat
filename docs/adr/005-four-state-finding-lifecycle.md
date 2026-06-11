@@ -1,7 +1,9 @@
 # ADR-005: Finding lifecycle plus axiom
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-012](012-self-contained-ledger-events.md)  
 **Date:** 2026-05-12
+
+> **Note (2026-06-11):** the "baseline is a flag, not a state" decision no longer holds. Ledger events are now self-contained and the latest event per fingerprint is the current state, which makes `finding.baselined` a state in the finding lifecycle. The corresponding axiom `finding-lifecycle-states` was superseded by `ledger-self-contained-events` in the ledger.
 
 ## Context
 

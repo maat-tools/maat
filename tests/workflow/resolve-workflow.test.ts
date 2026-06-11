@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
@@ -10,7 +10,7 @@ import { Resolve } from '../../packages/cli/src/commands/resolve';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
-const FINDING: FindingRuleOutput = {
+const FINDING: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-a' },
 	message: 'finding a',
@@ -55,7 +55,7 @@ describe('resolve', () => {
 		await buildResolve(ledger).action({ fingerprint: fp });
 		exit.assertNotExited();
 		const record = await ledger.backend.getFindingByFingerprint(fp);
-		expect(record?.state).toBe(FindingStatus.RESOLVED);
+		expect(record?.type).toBe(FindingStatus.RESOLVED);
 		expect(capture.stdout).toContain(`"${fp}" resolved`);
 	});
 
@@ -65,6 +65,6 @@ describe('resolve', () => {
 		exit.assertNotExited();
 		expect(capture.stderr).toContain('already resolved');
 		const record = await ledger.backend.getFindingByFingerprint(fp);
-		expect(record?.state).toBe(FindingStatus.RESOLVED);
+		expect(record?.type).toBe(FindingStatus.RESOLVED);
 	});
 });

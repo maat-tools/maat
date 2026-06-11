@@ -50,7 +50,6 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			.requiredOption('--claim <claim>', 'The invariant being asserted')
 			.option('--note <note>', 'Optional rationale or references')
 			.option('--fingerprints <fingerprints>', 'Comma-separated finding fingerprints this axiom covers')
-			.option('--force', 'Re-declare even if the axiom id already exists in the ledger')
 			.action((options: DeclareOptions) => this.declare(options));
 
 		cmd
@@ -74,26 +73,10 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		if (!options.force) {
-			const existing = await this.ledger.getAxiomByFingerprint(options.id);
-
-			if (existing?.active) {
-				this.presenter.error(`Axiom "${options.id}" already exists in the ledger. Use --force to re-declare.\n`);
-				process.exit(1);
-			}
-		}
-
 		const fingerprints = parseFingerprints(options.fingerprints);
-
 		if (fingerprints.length > 0) {
-			const invalidFingerprints: string[] = [];
-
-			for (const fingerprint of fingerprints) {
-				const finding = await this.ledger.getFindingByFingerprint(fingerprint);
-				if (!finding) {
-					invalidFingerprints.push(fingerprint);
-				}
-			}
+			const existingFindings = await Promise.all(fingerprints.map((fingerprint) => this.ledger.getFindingByFingerprint(fingerprint)));
+			const invalidFingerprints = fingerprints.filter((_, index) => !existingFindings[index]);
 
 			if (invalidFingerprints.length > 0) {
 				this.presenter.error(
@@ -107,7 +90,7 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		await this.ledger.append({
 			type: FindingStatus.AXIOM_DECLARED,
 			timestamp: new Date().toISOString(),
-			axiom_id: options.id,
+			axiomId: options.id,
 			scope: options.scope,
 			claim: options.claim,
 			...(options.note === undefined ? {} : { note: options.note }),
@@ -132,21 +115,24 @@ export class Axiom extends MaatCommandBase implements MaatCommand {
 		}
 
 		const axiom = await this.ledger.getAxiomByFingerprint(options.id);
-
 		if (!axiom) {
 			this.presenter.error(`Axiom "${options.id}" not found in the ledger.\n`);
 			process.exit(1);
 		}
 
-		if (!axiom.active) {
-			this.presenter.error(`Axiom "${options.id}" is already inactive.\n`);
+		if (axiom.type !== FindingStatus.AXIOM_DECLARED) {
+			this.presenter.error(`Axiom "${options.id}" is already inactive(revoked or superseded).\n`);
 			process.exit(1);
 		}
 
 		await this.ledger.append({
 			type,
 			timestamp: new Date().toISOString(),
-			axiom_id: options.id,
+			axiomId: options.id,
+			scope: axiom.scope,
+			claim: axiom.claim,
+			...(axiom.note === undefined ? {} : { note: axiom.note }),
+			...(axiom.fingerprints === undefined ? {} : { fingerprints: axiom.fingerprints }),
 			...(options.reason === undefined ? {} : { reason: options.reason }),
 		});
 

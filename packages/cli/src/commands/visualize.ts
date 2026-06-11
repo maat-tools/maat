@@ -1,4 +1,4 @@
-import { type Finding, type FindingRecord, FindingStatus } from '@maat-tools/contracts';
+import { type Finding, type FindingEvent, FindingStatus } from '@maat-tools/contracts';
 import type { MaatCommand } from '.';
 import { MaatCommandBase } from './base';
 
@@ -13,20 +13,20 @@ type Group = 'resolved' | 'observed' | 'baselined';
 
 const GROUP_ORDER: Group[] = ['resolved', 'observed', 'baselined'];
 
-function classify(record: FindingRecord): Group {
-	if (record.state === FindingStatus.RESOLVED) {
+function classify(record: FindingEvent): Group {
+	if (record.type === FindingStatus.RESOLVED) {
 		return 'resolved';
 	}
-	if (record.baselined) {
+	if (record.type === FindingStatus.BASELINED) {
 		return 'baselined';
 	}
 	return 'observed';
 }
 
-function toFinding(record: FindingRecord): Finding {
+function toFinding(record: FindingEvent): Finding {
 	return {
-		ruleId: record.rule_id,
-		instanceId: record.instance_id,
+		ruleId: record.ruleId,
+		instanceId: record.instanceId,
 		message: record.message,
 		fingerprint: record.fingerprint,
 		artifacts: [...record.artifacts],
@@ -40,12 +40,12 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
-		const allFindings = await this.ledger.getAllFindings();
-		const allAxioms = await this.ledger.getAllAxioms();
+		const allFindings = await this.ledger.getAllFindingsState();
+		const allAxioms = await this.ledger.getAllAxiomsState();
 
 		const activeGroups = filter ? new Set(filter.split(',').map((s) => s.trim() as Group)) : new Set(GROUP_ORDER);
 
-		const grouped = new Map<Group, FindingRecord[]>();
+		const grouped = new Map<Group, FindingEvent[]>();
 		for (const group of GROUP_ORDER) {
 			if (activeGroups.has(group)) {
 				grouped.set(
@@ -82,7 +82,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			this.presenter.section(heading);
 			for (const r of records) {
 				this.presenter.log(`  ${r.fingerprint.slice(0, 8)}`);
-				this.presenter.info(` [${r.rule_id}]`);
+				this.presenter.info(` [${r.ruleId}]`);
 				this.presenter.log(` ${r.message}`);
 			}
 		}
@@ -93,7 +93,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			this.presenter.section(heading);
 			for (const axiom of allAxioms) {
 				const note = axiom.note ? ` — ${axiom.note}` : '';
-				this.presenter.info(`\n${axiom.axiom_id}`);
+				this.presenter.info(`\n${axiom.axiomId}`);
 				this.presenter.bold(` [${axiom.scope}]`);
 				this.presenter.log(` ${axiom.claim}${note}`);
 			}

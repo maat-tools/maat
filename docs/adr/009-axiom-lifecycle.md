@@ -30,7 +30,7 @@ Both `superseded` and `revoked` set `active: false` on the axiom record. The dif
 
 ```ts
 {
-  axiom_id: string;          // stable identifier
+  axiomId: string;          // stable identifier
   scope: string;             // what area of the codebase this covers
   claim: string;             // the manual assertion
   note?: string;             // optional context

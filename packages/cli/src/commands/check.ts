@@ -1,7 +1,7 @@
 import {
-	type AxiomRecord,
+	type AxiomEvent,
 	type Finding,
-	type FindingRecord,
+	type FindingEvent,
 	FindingStatus,
 	type LedgerBackend,
 } from '@maat-tools/contracts';
@@ -100,8 +100,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			return;
 		}
 
-		const axioms = await this.ledger.getAllAxioms();
-		const findings = await this.ledger.getAllFindings();
+		const axioms = await this.ledger.getAllAxiomsState();
+		const findings = await this.ledger.getAllFindingsState();
 		const analysis = await this.analyzeLedgerState(axioms, findings, currentFingerprints);
 		if (options.ledger === true) {
 			await this.syncLedgerEvents(this.ledger, findings, currentFindings, currentFingerprints, analysis);
@@ -109,7 +109,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const ledgerByFingerprint = new Map(findings.map((r) => [r.fingerprint, r]));
 		const reconciled = currentFindings.map((f) => {
 			const record = ledgerByFingerprint.get(f.fingerprint);
-			if (f.requiresVerification && record?.state === FindingStatus.OBSERVED) {
+			if (f.requiresVerification && record?.type === FindingStatus.OBSERVED) {
 				return { ...f, requiresVerification: false };
 			}
 			return f;
@@ -163,8 +163,8 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	}
 
 	private async analyzeLedgerState(
-		axioms: AxiomRecord[],
-		findings: FindingRecord[],
+		axioms: AxiomEvent[],
+		findings: FindingEvent[],
 		currentFingerprints: Set<string>,
 	): Promise<LedgerAnalysis> {
 		const baselinedFingerprints = new Set<string>();
@@ -177,7 +177,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const now = Date.now();
 
 		for (const axiom of axioms) {
-			if (axiom.active) {
+			if (axiom.type === FindingStatus.AXIOM_DECLARED) {
 				activeAxiomCount++;
 				if (axiom.fingerprints) {
 					for (const fp of axiom.fingerprints) {
@@ -188,22 +188,21 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		for (const record of findings) {
-			if (record.baselined) {
-				const expired =
-					record.baseline_expires_at !== undefined && new Date(record.baseline_expires_at).getTime() <= now;
+			if (record.type === FindingStatus.BASELINED) {
+				const expired = new Date(record.expiresAt).getTime() <= now;
 				if (expired) {
 					hasExpiredBaselines = true;
 				} else {
 					baselinedFingerprints.add(record.fingerprint);
 				}
 			}
-			if (record.state === FindingStatus.RESOLVED && currentFingerprints.has(record.fingerprint)) {
+			if (record.type === FindingStatus.RESOLVED && currentFingerprints.has(record.fingerprint)) {
 				hasRegressions = true;
 			}
-			if (record.state === FindingStatus.UNVERIFIED && currentFingerprints.has(record.fingerprint)) {
+			if (record.type === FindingStatus.UNVERIFIED && currentFingerprints.has(record.fingerprint)) {
 				requiringVerificationFingerprints.add(record.fingerprint);
 			}
-			if (record.state === FindingStatus.REVOKED && currentFingerprints.has(record.fingerprint)) {
+			if (record.type === FindingStatus.REVOKED && currentFingerprints.has(record.fingerprint)) {
 				revokedFingerprints.add(record.fingerprint);
 			}
 		}
@@ -221,7 +220,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private async syncLedgerEvents(
 		ledger: LedgerBackend,
-		findings: FindingRecord[],
+		findings: FindingEvent[],
 		currentFindings: Finding[],
 		currentFingerprints: Set<string>,
 		analysis: LedgerAnalysis,
@@ -236,11 +235,15 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			if (currentFingerprints.has(record.fingerprint)) {
 				continue;
 			}
-			if (record.state === FindingStatus.OBSERVED && !record.baselined) {
+			if (record.type === FindingStatus.OBSERVED) {
 				await ledger.append({
 					type: FindingStatus.RESOLVED,
 					timestamp,
 					fingerprint: record.fingerprint,
+					ruleId: record.ruleId,
+					instanceId: record.instanceId,
+					message: record.message,
+					artifacts: record.artifacts,
 				});
 			}
 		}
@@ -249,19 +252,19 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			const common = {
 				timestamp,
 				fingerprint: finding.fingerprint,
-				rule_id: finding.ruleId,
-				instance_id: finding.instanceId,
+				ruleId: finding.ruleId,
+				instanceId: finding.instanceId,
 				message: finding.message,
 				artifacts: finding.artifacts,
 			};
 
 			if (finding.requiresVerification) {
 				const existing = findingsByFingerprint.get(finding.fingerprint);
-				if (existing?.state !== FindingStatus.OBSERVED) {
+				if (existing?.type !== FindingStatus.OBSERVED) {
 					await ledger.append({
 						type: FindingStatus.UNVERIFIED,
 						...common,
-						requires_verification: true,
+						requiresVerification: true,
 					});
 				}
 				continue;
@@ -269,6 +272,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 			await ledger.append({
 				type: FindingStatus.OBSERVED,
+				
 				...common,
 			});
 		}

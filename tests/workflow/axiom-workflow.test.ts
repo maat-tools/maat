@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import { FindingStatus } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
@@ -10,7 +10,7 @@ import { Axiom } from '../../packages/cli/src/commands/axiom';
 
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 
-const FINDING: FindingRuleOutput = {
+const FINDING: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'finding-a' },
 	message: 'finding a',
@@ -93,7 +93,7 @@ describe('axiom declare', () => {
 		await buildAxiom(ledger).action(DECLARE_OPTS);
 		exit.assertNotExited();
 		const axiom = await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id);
-		expect(axiom?.active).toBe(true);
+		expect(axiom?.type).toBe(FindingStatus.AXIOM_DECLARED);
 		expect(axiom?.claim).toBe(DECLARE_OPTS.claim);
 		expect(capture.stdout).toContain(`"${DECLARE_OPTS.id}" declared`);
 	});
@@ -132,13 +132,13 @@ describe('axiom supersede / revoke', () => {
 		await buildAxiom(ledger).action(DECLARE_OPTS);
 		await supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id });
 		exit.assertNotExited();
-		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.active).toBe(false);
+		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.type).toBe(FindingStatus.AXIOM_SUPERSEDED);
 	});
 
 	test('revoke active axiom → active: false', async () => {
 		await buildAxiom(ledger).action(DECLARE_OPTS);
 		await revoke(buildAxiom(ledger), { id: DECLARE_OPTS.id });
 		exit.assertNotExited();
-		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.active).toBe(false);
+		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.type).toBe(FindingStatus.AXIOM_REVOKED);
 	});
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import { generateFingerprint } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
 import { Kernel } from '@maat-tools/kernel';
@@ -16,7 +16,7 @@ import { StdoutPresenter } from '@maat-tools/utils';
 import { Command } from 'commander';
 import { Check } from '../../packages/cli/src/commands/check';
 
-const RULE_OUTPUT: FindingRuleOutput = {
+const RULE_OUTPUT: RuleOutput = {
 	ruleId: 'test@v1',
 	ruleIdentifier: { id: 'test-finding' },
 	message: 'test finding',
@@ -26,7 +26,7 @@ const RULE_OUTPUT: FindingRuleOutput = {
 const BASE_CONFIG: MaatConfig = { collectors: [], rules: [] };
 const STRICT_CONFIG: MaatConfig = { collectors: [], rules: [], check: { strict: true } };
 
-function buildKernel(findings: FindingRuleOutput[] = []) {
+function buildKernel(findings: RuleOutput[] = []) {
 	const kernel = new Kernel();
 	kernel.registerCollector(makeCollector([]));
 	kernel.registerRule({
@@ -59,7 +59,7 @@ function buildProbabilisticKernel() {
 	return kernel;
 }
 
-function buildCheck(findings: FindingRuleOutput[], ledger: LedgerHarness | null, config: MaatConfig = BASE_CONFIG) {
+function buildCheck(findings: RuleOutput[], ledger: LedgerHarness | null, config: MaatConfig = BASE_CONFIG) {
 	return new Check(new Command(), config, buildKernel(findings), [], new StdoutPresenter(), ledger?.backend ?? null);
 }
 
@@ -132,7 +132,7 @@ describe('check — with ledger', () => {
 			generateFingerprint(RULE_OUTPUT.ruleId, RULE_OUTPUT.ruleIdentifier),
 		);
 		expect(record).not.toBeNull();
-		expect(record?.state).toBe('finding.observed');
+		expect(record?.type).toBe('finding.observed');
 	});
 
 	test('active baselined finding → hidden, strict mode does not exit', async () => {

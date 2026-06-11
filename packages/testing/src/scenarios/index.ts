@@ -1,10 +1,10 @@
-import type { FindingRuleOutput } from '@maat-tools/contracts';
+import type { RuleOutput } from '@maat-tools/contracts';
 import { FindingStatus, generateFingerprint } from '@maat-tools/contracts';
 import type { LedgerHarness } from '../harness/ledger';
 
 export async function scenarioObserved(
 	harness: LedgerHarness,
-	output: FindingRuleOutput,
+	output: RuleOutput,
 	instanceId?: string,
 ): Promise<string> {
 	const fingerprint = generateFingerprint(output.ruleId, output.ruleIdentifier);
@@ -12,8 +12,8 @@ export async function scenarioObserved(
 		type: FindingStatus.OBSERVED,
 		timestamp: new Date().toISOString(),
 		fingerprint,
-		rule_id: output.ruleId,
-		instance_id: instanceId ?? output.ruleId,
+		ruleId: output.ruleId,
+		instanceId: instanceId ?? output.ruleId,
 		message: output.message,
 		artifacts: output.artifacts,
 	});
@@ -22,7 +22,7 @@ export async function scenarioObserved(
 
 export async function scenarioBaselined(
 	harness: LedgerHarness,
-	output: FindingRuleOutput,
+	output: RuleOutput,
 	daysFromNow = 30,
 ): Promise<string> {
 	const fingerprint = await scenarioObserved(harness, output);
@@ -31,24 +31,32 @@ export async function scenarioBaselined(
 		type: FindingStatus.BASELINED,
 		timestamp: new Date().toISOString(),
 		fingerprint,
-		expires_at: expiresAt,
+		ruleId: output.ruleId,
+		instanceId: output.ruleId,
+		message: output.message,
+		artifacts: output.artifacts,
+		expiresAt: expiresAt,
 	});
 	return fingerprint;
 }
 
-export async function scenarioResolved(harness: LedgerHarness, output: FindingRuleOutput): Promise<string> {
+export async function scenarioResolved(harness: LedgerHarness, output: RuleOutput): Promise<string> {
 	const fingerprint = await scenarioObserved(harness, output);
 	await harness.backend.append({
 		type: FindingStatus.RESOLVED,
 		timestamp: new Date().toISOString(),
 		fingerprint,
+		ruleId: output.ruleId,
+		instanceId: output.ruleId,
+		message: output.message,
+		artifacts: output.artifacts,
 	});
 	return fingerprint;
 }
 
 export async function scenarioUnverified(
 	harness: LedgerHarness,
-	output: FindingRuleOutput,
+	output: RuleOutput,
 	reason?: string,
 ): Promise<string> {
 	const fingerprint = generateFingerprint(output.ruleId, output.ruleIdentifier);
@@ -56,11 +64,11 @@ export async function scenarioUnverified(
 		type: FindingStatus.UNVERIFIED,
 		timestamp: new Date().toISOString(),
 		fingerprint,
-		rule_id: output.ruleId,
-		instance_id: output.ruleId,
+		ruleId: output.ruleId,
+		instanceId: output.ruleId,
 		message: output.message,
 		artifacts: output.artifacts,
-		requires_verification: true,
+		requiresVerification: true,
 		...(reason !== undefined ? { reason } : {}),
 	});
 	return fingerprint;

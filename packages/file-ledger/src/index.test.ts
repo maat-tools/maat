@@ -7,8 +7,8 @@ const OBSERVED = {
 	type: FindingStatus.OBSERVED,
 	timestamp: new Date().toISOString(),
 	fingerprint: 'fp1',
-	rule_id: 'rule@v1',
-	instance_id: 'rule@v1',
+	ruleId: 'rule@v1',
+	instanceId: 'rule@v1',
 	message: 'test finding',
 	artifacts: [],
 } as const;
@@ -17,13 +17,34 @@ const OBSERVED_2 = {
 	type: FindingStatus.OBSERVED,
 	timestamp: new Date().toISOString(),
 	fingerprint: 'fp2',
-	rule_id: 'rule@v1',
-	instance_id: 'rule@v1',
+	ruleId: 'rule@v1',
+	instanceId: 'rule@v1',
 	message: 'second finding',
 	artifacts: [],
 } as const;
 
 const BASELINE_EXPIRES = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+const BASELINED = {
+	type: FindingStatus.BASELINED,
+	timestamp: new Date().toISOString(),
+	fingerprint: 'fp1',
+	ruleId: 'rule@v1',
+	instanceId: 'rule@v1',
+	message: 'test finding',
+	artifacts: [],
+	expiresAt: BASELINE_EXPIRES,
+} as const;
+
+const RESOLVED = {
+	type: FindingStatus.RESOLVED,
+	timestamp: new Date().toISOString(),
+	fingerprint: 'fp1',
+	ruleId: 'rule@v1',
+	instanceId: 'rule@v1',
+	message: 'test finding',
+	artifacts: [],
+} as const;
 
 const harness = new LedgerHarness();
 
@@ -55,22 +76,22 @@ describe('not-initialized guards', () => {
 	});
 
 	test('getNotBaselinedFindings throws', async () => {
-		await expect(uninit().getNotBaselinedFindings()).rejects.toThrow('not initialized');
+		await expect(uninit().getNotBaselinedFindingsState()).rejects.toThrow('not initialized');
 	});
 
 	test('getAllAxioms throws', async () => {
-		await expect(uninit().getAllAxioms()).rejects.toThrow('not initialized');
+		await expect(uninit().getAllAxiomsState()).rejects.toThrow('not initialized');
 	});
 
 	test('getAllFindings throws', async () => {
-		await expect(uninit().getAllFindings()).rejects.toThrow('not initialized');
+		await expect(uninit().getAllFindingsState()).rejects.toThrow('not initialized');
 	});
 });
 
 describe('lifecycle', () => {
 	test('fresh ledger has no findings and no axioms', async () => {
-		expect(await harness.backend.getAllFindings()).toEqual([]);
-		expect(await harness.backend.getAllAxioms()).toEqual([]);
+		expect(await harness.backend.getAllFindingsState()).toEqual([]);
+		expect(await harness.backend.getAllAxiomsState()).toEqual([]);
 	});
 
 	test('initialize twice throws', async () => {
@@ -83,30 +104,25 @@ describe('append reflects immediately', () => {
 		await harness.backend.append(OBSERVED);
 		const record = await harness.backend.getFindingByFingerprint('fp1');
 		expect(record).not.toBeNull();
-		expect(record?.rule_id).toBe('rule@v1');
+		expect(record?.ruleId).toBe('rule@v1');
 		expect(record?.message).toBe('test finding');
-		expect(record?.state).toBe(FindingStatus.OBSERVED);
+		expect(record?.type).toBe(FindingStatus.OBSERVED);
 	});
 
 	test('second event on the same fingerprint is reflected without re-initialize', async () => {
 		await harness.backend.append(OBSERVED);
-		await harness.backend.append({
-			type: FindingStatus.BASELINED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-			expires_at: BASELINE_EXPIRES,
-		});
+		await harness.backend.append(BASELINED);
 		const record = await harness.backend.getFindingByFingerprint('fp1');
-		expect(record?.baselined).toBe(true);
-		expect(record?.baseline_expires_at).toBe(BASELINE_EXPIRES);
+		expect(record?.type).toBe(FindingStatus.BASELINED);
+		expect(record?.type === FindingStatus.BASELINED && record.expiresAt).toBe(BASELINE_EXPIRES);
 	});
 
-	test('append generates and persists entry_id automatically', async () => {
+	test('append generates and persists entryId automatically', async () => {
 		await harness.backend.append(OBSERVED);
 		const line = (await Bun.file(harness.path).text()).trim();
-		const event = JSON.parse(line) as { entry_id: string };
-		expect(typeof event.entry_id).toBe('string');
-		expect(event.entry_id.length).toBeGreaterThan(0);
+		const event = JSON.parse(line) as { entryId: string };
+		expect(typeof event.entryId).toBe('string');
+		expect(event.entryId.length).toBeGreaterThan(0);
 	});
 });
 
@@ -114,47 +130,62 @@ describe('finding states', () => {
 	test('observed finding has correct fields', async () => {
 		await harness.backend.append(OBSERVED);
 		const record = await harness.backend.getFindingByFingerprint('fp1');
-		expect(record?.state).toBe(FindingStatus.OBSERVED);
-		expect(record?.baselined).toBe(false);
+		expect(record?.type).toBe(FindingStatus.OBSERVED);
 		expect(record?.artifacts).toEqual([]);
 	});
 
-	test('baselined finding is marked baselined with expiry', async () => {
+	test('baselined finding is the latest event with expiry', async () => {
 		await harness.backend.append(OBSERVED);
-		await harness.backend.append({
-			type: FindingStatus.BASELINED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-			expires_at: BASELINE_EXPIRES,
-		});
+		await harness.backend.append(BASELINED);
 		const record = await harness.backend.getFindingByFingerprint('fp1');
-		expect(record?.baselined).toBe(true);
-		expect(record?.baseline_expires_at).toBe(BASELINE_EXPIRES);
+		expect(record?.type).toBe(FindingStatus.BASELINED);
+		expect(record?.type === FindingStatus.BASELINED && record.expiresAt).toBe(BASELINE_EXPIRES);
 	});
 
 	test('resolved finding reflects state', async () => {
 		await harness.backend.append(OBSERVED);
-		await harness.backend.append({
-			type: FindingStatus.RESOLVED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-		});
+		await harness.backend.append(RESOLVED);
 		const record = await harness.backend.getFindingByFingerprint('fp1');
-		expect(record?.state).toBe(FindingStatus.RESOLVED);
+		expect(record?.type).toBe(FindingStatus.RESOLVED);
 	});
 
 	test('getNotBaselinedFindings excludes baselined findings', async () => {
 		await harness.backend.append(OBSERVED);
 		await harness.backend.append(OBSERVED_2);
-		await harness.backend.append({
-			type: FindingStatus.BASELINED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-			expires_at: BASELINE_EXPIRES,
-		});
-		const results = await harness.backend.getNotBaselinedFindings();
+		await harness.backend.append(BASELINED);
+		const results = await harness.backend.getNotBaselinedFindingsState();
 		expect(results).toHaveLength(1);
 		expect(results[0]?.fingerprint).toBe('fp2');
+	});
+
+	test('re-observing a finding under a non-expired baseline is rejected', async () => {
+		await harness.backend.append(OBSERVED);
+		await harness.backend.append(BASELINED);
+		await expect(harness.backend.append(OBSERVED)).rejects.toThrow('invalid transition');
+		const record = await harness.backend.getFindingByFingerprint('fp1');
+		expect(record?.type).toBe(FindingStatus.BASELINED);
+	});
+
+	test('re-observing a finding after the baseline expired is allowed', async () => {
+		await harness.backend.append(OBSERVED);
+		await harness.backend.append({
+			...BASELINED,
+			expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+		});
+		await harness.backend.append(OBSERVED);
+		const record = await harness.backend.getFindingByFingerprint('fp1');
+		expect(record?.type).toBe(FindingStatus.OBSERVED);
+	});
+
+	test('getNotBaselinedFindings includes expired baselines', async () => {
+		await harness.backend.append(OBSERVED);
+		await harness.backend.append({
+			...BASELINED,
+			expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+		});
+		const results = await harness.backend.getNotBaselinedFindingsState();
+		expect(results).toHaveLength(1);
+		expect(results[0]?.fingerprint).toBe('fp1');
 	});
 });
 
@@ -165,49 +196,48 @@ describe('axiom states', () => {
 		await harness.backend.append({
 			type: FindingStatus.AXIOM_DECLARED,
 			timestamp: new Date().toISOString(),
-			axiom_id: AXIOM_ID,
+			axiomId: AXIOM_ID,
 			scope: 'kernel',
 			claim: 'Kernel is always pure',
 		});
-		const axioms = await harness.backend.getAllAxioms();
+		const axioms = await harness.backend.getAllAxiomsState();
 		expect(axioms).toHaveLength(1);
-		expect(axioms[0]?.axiom_id).toBe(AXIOM_ID);
-		expect(axioms[0]?.active).toBe(true);
+		expect(axioms[0]?.axiomId).toBe(AXIOM_ID);
+		expect(axioms[0]?.type).toBe(FindingStatus.AXIOM_DECLARED);
 		expect(axioms[0]?.claim).toBe('Kernel is always pure');
 	});
 
-	test('revoked axiom has active: false', async () => {
+	test('revoked axiom keeps its declaration data', async () => {
 		await harness.backend.append({
 			type: FindingStatus.AXIOM_DECLARED,
 			timestamp: new Date().toISOString(),
-			axiom_id: AXIOM_ID,
+			axiomId: AXIOM_ID,
 			scope: 'kernel',
 			claim: 'Kernel is always pure',
 		});
 		await harness.backend.append({
 			type: FindingStatus.AXIOM_REVOKED,
 			timestamp: new Date().toISOString(),
-			axiom_id: AXIOM_ID,
+			axiomId: AXIOM_ID,
+			scope: 'kernel',
+			claim: 'Kernel is always pure',
 		});
 		const axiom = await harness.backend.getAxiomByFingerprint(AXIOM_ID);
-		expect(axiom?.active).toBe(false);
+		expect(axiom?.type).toBe(FindingStatus.AXIOM_REVOKED);
+		expect(axiom?.claim).toBe('Kernel is always pure');
 	});
 });
 
 describe('NDJSON round-trip', () => {
 	test('new backend instance reads state written by another instance', async () => {
 		await harness.backend.append(OBSERVED);
-		await harness.backend.append({
-			type: FindingStatus.RESOLVED,
-			timestamp: new Date().toISOString(),
-			fingerprint: 'fp1',
-		});
+		await harness.backend.append(RESOLVED);
 
 		const fresh = new FilePathLedgerBackend({ path: harness.path });
 		await fresh.initialize();
 
-		const findings = await fresh.getAllFindings();
+		const findings = await fresh.getAllFindingsState();
 		expect(findings).toHaveLength(1);
-		expect(findings[0]?.state).toBe(FindingStatus.RESOLVED);
+		expect(findings[0]?.type).toBe(FindingStatus.RESOLVED);
 	});
 });

@@ -17,5 +17,9 @@ Use this when the claim is not wrong, but a newer axiom or automated rule is now
 
 | Option | Purpose |
 |---|---|
-| `--id <id>` | Axiom id to supersede. |
+| `--id <id>` | **Required.** Axiom id to supersede. |
 | `--reason <reason>` | Optional explanation for supersession. |
+
+## Errors
+
+`maat axiom supersede` requires a configured ledger. The command exits with an error when no ledger is configured, when the axiom id is not found in the ledger, or when the axiom is already inactive (revoked or superseded).

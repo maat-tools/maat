@@ -31,7 +31,7 @@ type GitCommit = {
 type GitFileChange = {
 	hash: string;
 	path: string;
-	status: GitFileStatus; // Added | Modified | Deleted | Renamed | Copied
+	status: GitHumanReadableFileStatus; // 'Added' | 'Modified' | 'Deleted' | 'Renamed' | 'Copied'
 	oldPath?: string;      // present for Renamed and Copied
 };
 ```
@@ -77,6 +77,6 @@ export default defineConfig({
 
 ## Notes
 
-- The collector shell-invokes `git log` in the configured `repoPath`. Git must be available in `PATH`.
+- The collector runs `git log` directly (via `execFile`, without a shell) in the configured `repoPath`. Git must be available in `PATH`.
 - Renamed files carry `oldPath` so rules can follow file identity across renames.
 - The collector returns all history matching the filter. Rules are responsible for applying their own time-window logic on top of the collected facts.

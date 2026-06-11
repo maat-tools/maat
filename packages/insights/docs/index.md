@@ -17,12 +17,10 @@ During `maat check`, insights receive all current findings from that run, includ
 ## Usage
 
 ```ts
-import insights from '@maat-tools/insights';
-
 export default defineConfig({
 	collectors: [ /* ... */ ],
 	rules: [ /* ... */ ],
-	insights: [insights],
+	insights: ['@maat-tools/insights'],
 });
 ```
 

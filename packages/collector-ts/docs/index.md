@@ -11,7 +11,7 @@ Collects structural and semantic facts from TypeScript source files.
 | Fact | Type | Description |
 |---|---|---|
 | `constants` | `Constant[]` | Every string or numeric literal found in source files, with its value, kind, and location |
-| `dependsOn` | `DependsOn[]` | Every import declaration, normalized to package boundaries when crossing packages |
+| `dependsOn` | `DependsOn[]` | Every import declaration, with relative specifiers resolved to project-relative file paths |
 | `functionSignatures` | `FunctionSignature[]` | Every top-level function and class method, with its parameter list and export status |
 | `positionalSources` | `PositionalSource[]` | Functions and variables that return or hold positional data (tuples or fixed-shape arrays) |
 | `positionalAccesses` | `PositionalAccess[]` | Index-based (`arr[0]`) and destructuring accesses to positional data |
@@ -46,7 +46,7 @@ type DependsOn = {
 };
 ```
 
-Cross-package relative imports (e.g. `../../pkg-b/src/index`) are rewritten so `to.path` holds the destination package name (e.g. `@scope/pkg-b`). Rules that enforce package-level boundaries see package names, not filesystem paths.
+For relative imports (e.g. `../../pkg-b/src/index`), `to.path` holds the resolved project-relative file path (e.g. `packages/pkg-b/src/index`) and `to.isExternal` is `false`. For external specifiers (package names and Node built-ins), `to.path` keeps the specifier as written and `to.package.name` holds it as well. `from.package` carries the name and root path of the nearest `package.json` above the importing file, which lets rules map package names back to filesystem boundaries.
 
 ### `FunctionSignature`
 
@@ -54,10 +54,21 @@ Cross-package relative imports (e.g. `../../pkg-b/src/index`) are rewritten so `
 type FunctionSignature = {
   file: string;
   name: string;
-  parameters: { name: string; type: string; position: number }[];
+  input: {
+    parameters: { name: string; type: string; position: number }[];
+    heterogeneous: boolean; // true when parameters have more than one distinct type
+  };
+  output: {
+    returnType: string;
+    heterogeneous: boolean; // true when the return type holds more than one distinct type
+    returnSites: {
+      value: string; // the returned expression text, or 'void'
+      location: { file: string; line: number; column?: number };
+      guardSnippet?: string; // surrounding code of the return statement, up to 300 chars
+    }[];
+  };
   location: { file: string; line: number; column?: number };
   exported: boolean;
-  heterogeneous: boolean; // true when parameters have more than one distinct type
 };
 ```
 
@@ -115,10 +126,10 @@ Emitted when a call site matches one of the matchers in `algorithmicPatterns`. `
 ```ts
 type CallGraph = {
   nodes: {
-    id: string;
+    id: string; // '<file>:<line>:<column>'
     file: string;
-    name: string;
-    kind: 'function' | 'method' | 'class' | 'module';
+    name: string; // synthetic (e.g. 'function_12') — Jelly does not report source names
+    kind: 'function' | 'method' | 'class' | 'module'; // only 'function' is produced today
     location: { file: string; line: number; column?: number };
   }[];
   edges: {
@@ -129,7 +140,7 @@ type CallGraph = {
 };
 ```
 
-Built using [Jelly](https://github.com/cs-au-dk/jelly) for whole-program points-to analysis. `nodes` are named callable units; `edges` are directed caller-to-callee relationships. Jelly ships as a regular dependency of this package — installing `@maat-tools/collector-ts` is all that is needed; there is no separate install step. See [Call graph runtime](#call-graph-runtime) for runtime requirements.
+Built using [Jelly](https://github.com/cs-au-dk/jelly) for whole-program points-to analysis. `nodes` are callable units identified by position; `edges` are directed caller-to-callee relationships. The `kind` union is reserved for future refinement — the mapper currently emits every node as `kind: 'function'` with a synthetic name. Jelly ships as a regular dependency of this package — installing `@maat-tools/collector-ts` is all that is needed; there is no separate install step. See [Call graph runtime](#call-graph-runtime) for runtime requirements.
 
 ## Options
 
@@ -148,7 +159,7 @@ type TSInput = {
 | Option | Default | Meaning |
 |---|---|---|
 | `tsConfigFilePath` | — | Path(s) to `tsconfig.json`. Accepts a single path, an array, or glob patterns |
-| `exclude` | `['**/*.test.ts', '**/*.spec.ts']` | Glob patterns for files to skip, matched against paths relative to `process.cwd()` |
+| `exclude` | `[]` (no exclusions) | Glob patterns for files to skip, matched against paths relative to `process.cwd()` |
 | `algorithmicPatterns` | `[]` | Pattern definitions for the `algorithmicBindings` fact. See [`@maat-tools/presets-ts`](/plugins/presets-ts/) for ready-made patterns |
 | `callGraph.maxIndirections` | — | Maximum number of call indirections Jelly follows during analysis |
 | `callGraph.timeout` | — | Time limit in seconds for Jelly's analysis pass. When the limit is hit, Jelly stops and emits the graph computed so far, so `callGraph` may be incomplete |
@@ -222,5 +233,5 @@ export default defineConfig({
 - **TypeScript only.** This collector targets `.ts` and `.tsx` files. It relies on TypeScript AST constructs and should not be used for plain `.js` files.
 - All file paths in emitted facts are relative to `process.cwd()`, which the CLI sets to the config file's directory before collectors run.
 - Files included in multiple tsconfigs are processed once. Deduplication is by absolute file path.
-- The collector uses [ts-morph](https://ts-morph.com/) for AST parsing. It does not type-check — it only reads the AST. Cold-start time scales with the number of source files loaded.
+- The collector uses [ts-morph](https://ts-morph.com/) for AST parsing. It does not run full project diagnostics, but it does query the TypeScript type checker in places (return types of function signatures, element types of positional sources). Cold-start time scales with the number of source files loaded.
 - The call graph is built by Jelly separately from the ts-morph pass. If the Jelly subprocess fails (for example, the runtime is older than Node.js 22), the run fails with Jelly's error output — `callGraph` is never silently empty. A `callGraph.timeout` hit is not a failure: the partial graph is returned.

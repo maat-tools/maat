@@ -23,20 +23,21 @@ Built-in rules for detecting connascence in source code. The taxonomy and defini
 | [`com-semantic`](./com-semantic.md) | [Connascence of Meaning](https://connascence.io/meaning.html) | Detect functions that return the same value with different meanings (requires LLM enricher) | Required |
 | [`cop-args`](./cop-args.md) | [Connascence of Position](https://connascence.io/position.html) | Detect functions with too many or boolean positional parameters | Optional |
 | [`cop-struct`](./cop-struct.md) | [Connascence of Position](https://connascence.io/position.html) | Detect index-based access to arrays and tuples | Optional |
-| [`coa-technical`](./coa-technical.md) | [Connascence of Algorithm](https://connascence.io/algorithm.html) | Detect complementary operations sharing an invariant without a shared abstraction | Required |
+| [`coa-technical`](./coa-technical.md) | [Connascence of Algorithm](https://connascence.io/algorithm.html) | Detect complementary operations sharing an invariant without a shared abstraction | Optional (rule options) — but the collector must be configured with `algorithmicPatterns` or no facts exist |
 
 ## Usage
 
-Load all rules at once using the default export:
+Load the default rule set by package name:
 
 ```ts
 import { defineConfig } from '@maat-tools/core';
-import connascenceRules from '@maat-tools/connascence-rules';
 
 export default defineConfig({
-	rules: [connascenceRules],
+	rules: ['@maat-tools/connascence-rules'],
 });
 ```
+
+The default set contains `com`, `cop-args`, `cop-struct`, and `coa-technical`. It does **not** include `com-semantic`, which must be configured individually (it requires an enricher and a mandatory `threshold` option).
 
 Use the `rule()` helper to configure individual rules:
 
@@ -45,7 +46,7 @@ import { defineConfig, rule } from '@maat-tools/core';
 
 export default defineConfig({
 	rules: [
-		rule('@maat-tools/connascence-rules/cop', { maxArgumentsAllowed: 3 }),
+		rule('@maat-tools/connascence-rules/cop-args', { maxArgumentsAllowed: 3 }),
 		rule('@maat-tools/connascence-rules/com', { threshold: 4 }),
 	],
 });
@@ -55,11 +56,11 @@ Or import rules directly:
 
 ```ts
 import com from '@maat-tools/connascence-rules/com';
-import cop from '@maat-tools/connascence-rules/cop';
+import copArgs from '@maat-tools/connascence-rules/cop-args';
 
 export default defineConfig({
 	rules: [
-		cop({ maxArgumentsAllowed: 3 }),
+		copArgs({ maxArgumentsAllowed: 3 }),
 		com({ threshold: 4, ignoreValues: ['pending'] }),
 	],
 });

@@ -31,12 +31,16 @@ maat axiom declare \
 
 | Option | Purpose |
 |---|---|
-| `--id <id>` | Stable slug identifying the axiom. |
-| `--scope <scope>` | Architectural scope the axiom applies to. |
-| `--claim <claim>` | Invariant or exception being asserted. |
+| `--id <id>` | **Required.** Stable slug identifying the axiom. |
+| `--scope <scope>` | **Required.** Architectural scope the axiom applies to. |
+| `--claim <claim>` | **Required.** Invariant or exception being asserted. |
 | `--note <note>` | Optional rationale or references. |
-| `--fingerprints <fingerprints>` | Comma-separated finding fingerprints covered by the axiom. |
-| `--force` | Re-declare even if the axiom id already exists. |
+| `--fingerprints <fingerprints>` | Comma-separated finding fingerprints covered by the axiom. Each fingerprint must already exist in the ledger; the command exits with an error otherwise. |
+| `--force` | Re-declare an id that currently has an active axiom. A revoked or superseded id can be re-declared without `--force`. |
+
+## Ledger requirement
+
+`maat axiom declare` requires a configured ledger. Without one, the command exits with an error.
 
 ## When to use it
 

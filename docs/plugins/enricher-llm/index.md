@@ -2,7 +2,7 @@
 
 LLM-backed enrichers that consume deterministic facts from collectors and produce facts that require human verification.
 
-**Status:** This package is pre-1.0. The shared types are stable, but individual enrichers may still be stubs.
+**Status:** This package is pre-1.0. The shared types are stable; the COM enricher is the first fully implemented enricher.
 
 ## What it does
 
@@ -12,7 +12,7 @@ The kernel handles this automatically:
 
 - Any finding that depends on an enriched fact is marked with `requiresVerification: true`.
 - The CLI displays a `[Verify]` badge.
-- The finding never breaks strict builds and never goes to the ledger until a human verifies it.
+- The finding never breaks strict builds. With `maat check --ledger`, it is appended to the ledger as a `finding.unverified` event; it only becomes an observed finding after a human confirms it with `maat verify --fingerprint <fp>` (or is discarded with `--revoke`).
 
 ## Shared types
 
@@ -56,37 +56,52 @@ type LLMConfig = {
 ### `EnricherLLMInput`
 
 ```ts
-type EnricherLLMInput = LLMConfig
+type EnricherLLMInput = KnownLLMConfig // from '@maat-tools/utils'
 ```
 
-## Connascence of Algorithm (COA) enricher
+`KnownLLMConfig` is the union of all known provider/model configurations. Today that is:
 
 ```ts
-import coa from '@maat-tools/enricher-llm/coa'
-
-export default defineConfig({
-  collectors: ['@maat-tools/collector-ts'],
-  enrichers: [
-    ['@maat-tools/enricher-llm/coa', {
-      provider: 'vertex',
-      model: 'gemini-3-5-flash',
-    }],
-  ],
-  rules: ['@maat-tools/connascence-rules'],
-})
+{
+  provider: 'vertex'
+  model: 'gemini-3-5-flash'
+  extra?: { project?: string; location?: string }
+  timeoutMs?: number
+}
 ```
 
-**Note:** The COA enricher is currently a stub. It returns empty results while the semantic similarity implementation is being refined.
+The type marks `extra` as optional, but the Vertex Gemini model throws at construction time if `extra.project` and `extra.location` are not provided — always pass both.
+
+## Available enrichers
+
+| Enricher | Id | Needs | Provides | Feeds |
+|---|---|---|---|---|
+| [Connascence of Meaning (COM)](/plugins/enricher-llm/com) | `maat-tools/enricher-llm/com@v1` | `functionSignatures` | `comCandidates` | [`com-semantic`](/plugins/connascence-rules/com-semantic) |
+
+Each enricher has its own page with configuration and fact shapes.
+
+## Caching: always on {#caching-always-on}
+
+**Every LLM response is cached, unconditionally.** There is no flag to enable or disable it.
+
+Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. If nothing changed — same code, same prompt, same model — the cached result is used and **the LLM is never called again** for that item. Only items whose key changed trigger new calls; entries are per-item, not per-batch, so one changed function re-asks about one function, not the whole batch. Stale entries for items that no longer exist are pruned automatically.
+
+This has two consequences worth relying on:
+
+- **Cost and latency are paid once per change**, not once per run. A CI run over unchanged code makes zero LLM calls.
+- **Re-runs are reproducible.** Commit `.maat/enricher-cache/` with your repository and every environment — CI included — gets the exact same enriched facts without network access or repeated cost.
+
+The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
 
 ## Tradeoffs
 
 ### Cost and latency
 
-LLM calls add latency and cost to every run. Maat automatically caches every LLM response at `.maat/enricher-cache/`, keyed by content hash, model version, and prompt instructions. Cache entries are per-item (not per-batch), so only changed code triggers new LLM calls. Commit `.maat/enricher-cache/` for reproducible runs across CI environments.
+LLM calls add latency and cost when code changes. The [always-on cache](#caching-always-on) means unchanged items never trigger calls, so the cost scales with how much changed, not with how often you run.
 
 ### Determinism
 
-**This package does not break Maat's determinism guarantee.** Rules remain pure and deterministic. The probabilistic nature is contained in the facts, and the system marks the findings that depend on them. See the [Enrichers guide](/guide/enrichers) for the full explanation.
+**This package does not break maat's determinism guarantee.** Rules remain pure and deterministic. The probabilistic nature is contained in the facts, and the system marks the findings that depend on them. See the [Enrichers guide](/guide/enrichers) for the full explanation.
 
 ### Verification overhead
 

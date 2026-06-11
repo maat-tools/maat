@@ -2,6 +2,10 @@ import { defineConfig, type HeadConfig } from 'vitepress'
 
 const gaMeasurementId = process.env.GA_MEASUREMENT_ID
 
+// Set by the Pages workflow to the release tag (e.g. "v0.2.0") so the site
+// states which published version it documents. Absent in local dev.
+const docsVersion = process.env.MAAT_DOCS_VERSION
+
 const gaHead: HeadConfig[] = gaMeasurementId
   ? [
       [
@@ -27,12 +31,12 @@ const guideAndPluginSidebar = [
     text: 'Guide',
     items: [
       { text: 'Getting started', link: '/guide/getting-started' },
-      { text: 'Fitness functions', link: '/guide/fitness-functions' },
       { text: 'Greenfield and brownfield', link: '/guide/adoption' },
-      { text: 'Determinism', link: '/guide/determinism' },
-      { text: 'ADRs vs Axioms', link: '/guide/adrs-vs-axioms' },
+      { text: 'Repeatable results (determinism)', link: '/guide/determinism' },
+      { text: 'AI-assisted facts (enrichers)', link: '/guide/enrichers' },
+      { text: 'Fitness functions', link: '/guide/fitness-functions' },
+      { text: 'ADRs vs axioms', link: '/guide/adrs-vs-axioms' },
       { text: 'Plugin system', link: '/guide/plugins' },
-      { text: 'Enrichers', link: '/guide/enrichers' },
       {
         text: 'LLM models',
         link: '/guide/llm-models',
@@ -101,7 +105,7 @@ const guideAndPluginSidebar = [
         collapsed: false,
         items: [
           {
-            text: 'Coupling',
+            text: 'Layers and boundaries',
             link: '/plugins/coupling-rules/',
             collapsed: false,
             items: [
@@ -109,43 +113,43 @@ const guideAndPluginSidebar = [
             ],
           },
           {
-            text: 'Connascence',
+            text: 'Hidden coupling (connascence)',
             link: '/plugins/connascence-rules/',
             collapsed: false,
             items: [
               {
-                text: 'com',
+                text: 'Shared meaning',
                 collapsed: false,
                 items: [
-                  { text: 'com', link: '/plugins/connascence-rules/com' },
-                  { text: 'com-semantic', link: '/plugins/connascence-rules/com-semantic' },
+                  { text: 'Duplicated magic values (com)', link: '/plugins/connascence-rules/com' },
+                  { text: 'Duplicated concepts, AI-read (com-semantic)', link: '/plugins/connascence-rules/com-semantic' },
                 ],
               },
               {
-                text: 'cop',
+                text: 'Order-dependent code',
                 link: '/plugins/connascence-rules/cop',
                 collapsed: false,
                 items: [
-                  { text: 'cop-args', link: '/plugins/connascence-rules/cop-args' },
-                  { text: 'cop-struct', link: '/plugins/connascence-rules/cop-struct' },
+                  { text: 'Positional arguments (cop-args)', link: '/plugins/connascence-rules/cop-args' },
+                  { text: 'Index-based access (cop-struct)', link: '/plugins/connascence-rules/cop-struct' },
                 ],
               },
               {
-                text: 'coa',
+                text: 'Paired algorithms',
                 link: '/plugins/connascence-rules/coa-technical',
                 collapsed: false,
                 items: [
-                  { text: 'coa-technical', link: '/plugins/connascence-rules/coa-technical' },
+                  { text: 'Encode/decode drift (coa-technical)', link: '/plugins/connascence-rules/coa-technical' },
                 ],
               },
             ],
           },
           {
-            text: 'Git',
+            text: 'Git history',
             link: '/plugins/git-rules/',
             collapsed: false,
             items: [
-              { text: 'churn', link: '/plugins/git-rules/churn' },
+              { text: 'Files that churn (churn)', link: '/plugins/git-rules/churn' },
             ],
           },
         ],
@@ -163,6 +167,7 @@ const guideAndPluginSidebar = [
         collapsed: false,
         items: [
           { text: 'LLM enrichers', link: '/plugins/enricher-llm/' },
+          { text: 'Shared meaning, AI-read (com)', link: '/plugins/enricher-llm/com' },
         ],
       },
       {
@@ -170,7 +175,14 @@ const guideAndPluginSidebar = [
         link: '/plugins/insights/',
         collapsed: false,
         items: [
-          { text: 'erosion', link: '/plugins/insights/erosion' },
+          { text: 'Erosion over time (erosion)', link: '/plugins/insights/erosion' },
+        ],
+      },
+      {
+        text: 'Ledger backends',
+        collapsed: false,
+        items: [
+          { text: 'File ledger (NDJSON)', link: '/plugins/file-ledger/' },
         ],
       },
     ],
@@ -196,7 +208,7 @@ const guideAndPluginSidebar = [
 
 export default defineConfig({
   title: 'maat',
-  description: 'Turn implicit architecture knowledge into deterministic checks.',
+  description: 'Linters check lines. maat checks the agreements your team made about the codebase.',
   base: '/maat/',
 
   head: [
@@ -212,6 +224,9 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Commands', link: '/commands/' },
       { text: 'Plugins', link: '/plugins/' },
+      ...(docsVersion
+        ? [{ text: docsVersion, link: 'https://github.com/maat-tools/maat/releases' }]
+        : []),
     ],
 
     sidebar: {

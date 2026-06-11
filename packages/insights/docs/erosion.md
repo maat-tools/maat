@@ -1,7 +1,7 @@
 # `erosion`
 
 ::: info Needs
-Findings from `git/churn@v1` — from [`@maat-tools/git-rules`](../git-rules/) — and any `coupling/pure-imports:*` or `coupling/layer-imports:*` rule — from [`@maat-tools/coupling-rules`](../coupling-rules/).
+Findings from `maat-tools/git-rules/churn@v1` — from [`@maat-tools/git-rules`](../git-rules/) — and any `maat-tools/coupling-rules/pure-imports@v1` or `maat-tools/coupling-rules/layer-imports@v1` rule instance — from [`@maat-tools/coupling-rules`](../coupling-rules/).
 :::
 
 `erosion` identifies hot architectural debt: boundaries that are simultaneously high-churn and violating layer constraints. Neither signal alone tells the full story: churning code might be healthy, and a violation might be dormant. The combination — volatile code that is also architecturally out of bounds — is where active decay concentrates.
@@ -10,8 +10,8 @@ Findings from `git/churn@v1` — from [`@maat-tools/git-rules`](../git-rules/) �
 
 For each run the insight:
 
-1. Collects high-churn files from `git/churn@v1`.
-2. Collects boundaries named in coupling violation rule IDs, such as `@acme/payments` or `./src/payments/**`.
+1. Collects high-churn files from `maat-tools/git-rules/churn@v1` findings.
+2. Collects boundaries named in coupling violation rule instance IDs, such as `@acme/payments` or `src/payments/**`.
 3. Matches churn files to those boundaries.
 4. Ranks matching boundaries by total churn descending.
 5. Reports the hottest file and an example leaking import so the output points at the active pressure, not only the boundary name.
@@ -26,25 +26,29 @@ type ErosionOptions = Record<string, never>;
 
 `erosion` has no options.
 
-Path-mode layer rules are matched directly:
+The boundary is taken from the coupling rule's instance ID, which has the form `<ruleId>:<target>` (e.g. `maat-tools/coupling-rules/layer-imports@v1:src/payments/**`). Targets never start with `./` — `layer()` rejects relative-path targets.
+
+Path-mode boundaries are matched directly — churn file paths are tested against the target glob:
 
 ```
-coupling/layer-imports:./src/payments/**@v1
+maat-tools/coupling-rules/layer-imports@v1:src/payments/**
 └─ matches churn in src/payments/**
 ```
 
-Name-mode layer rules match churn paths that contain the boundary's last segment, with violation files as a fallback:
+Name-mode boundaries are resolved through the violating import's package facts: when the violation's `from.package.name` equals the boundary, the match glob becomes `<from.package.rootPath>/**`:
 
 ```
-coupling/layer-imports:@acme/payments@v1
-└─ boundary segment payments
-   └─ matches churn in packages/payments/** or src/payments/**
+maat-tools/coupling-rules/layer-imports@v1:@acme/payments
+└─ violating import comes from package @acme/payments rooted at packages/payments
+   └─ matches churn in packages/payments/**
 ```
+
+If no violation carries package facts for the boundary, the package name itself is used as the glob — which matches no file paths, so the boundary reports no churn.
 
 ## Configuration
 
 ```ts
-import erosion from '@maat-tools/insights/erosion';
+import { layer } from '@maat-tools/coupling-rules';
 
 export default defineConfig({
 	collectors: [
@@ -53,8 +57,8 @@ export default defineConfig({
 	],
 	rules: [
 		['@maat-tools/git-rules/churn', { threshold: 5, windowDays: 90 }],
-		layer('@acme/payments').allows('@acme/core-typings'),
-		layer('./src/billing/**').allows('./src/shared/**'),
+		layer('@acme/payments').allows('@acme/core-typings').build(),
+		layer('src/billing/**').allows('src/shared/**').build(),
 	],
 	insights: ['@maat-tools/insights/erosion'],
 });
@@ -65,7 +69,7 @@ If `@acme/payments` has 3 churning files totalling 27 changes and also imports s
 ```txt
 INSIGHTS (1)
 ────────────
-  [erosion@v1] hot architectural debt in 1 boundary(s): @acme/payments (27 changes across 3 hot files, 1 boundary violation; hottest packages/payments/src/processor.ts (12 changes); leaking @acme/legacy-db)
+  [maat-tools/erosion@v1] hot architectural debt in 1 boundary(s): @acme/payments (27 changes across 3 hot files, 1 boundary violation; hottest packages/payments/src/processor.ts (12 changes); leaking @acme/legacy-db)
 ```
 
 ## When It Does Not Fire

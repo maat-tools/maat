@@ -10,14 +10,16 @@
 
 The rule groups collected constants by value, then reports a finding when the same value appears in enough distinct files.
 
-Ignored values:
+Values that never reach the rule:
 
-- Empty and whitespace-only values.
-- Universal low-signal values: `true`, `false`, `null`.
-- Import specifiers, because imports are structural references rather than magic values.
+- Keywords such as `true`, `false`, `null`, and `undefined` — the collector only collects string and numeric literals, so these are never facts in the first place.
+- Import specifiers, because imports are structural references rather than magic values (also excluded at collection time, along with property/method signature names and `typeof` comparisons).
+
+Values the rule itself ignores:
+
 - Any value listed in `ignoreValues`.
 
-Language-specific keywords (`undefined` in JS/TS, `None` in Python, `nil` in Ruby) and common numeric literals (`0`, `1`, `-1`) are **not** filtered by default, because their noisiness is domain-dependent. Pass them via `ignoreValues` if needed.
+Everything else counts — including empty and whitespace-only strings and common numeric literals (`0`, `1`, `-1`). Their noisiness is domain-dependent, so they are **not** filtered by default; pass them via `ignoreValues` if needed.
 
 ::: details What this rule detects
 
@@ -40,7 +42,7 @@ export const FILTER_KEY = "customer_status"
 Finding:
 
 ```txt
-"customer_status" appears in 3 files — possible Connascence of Meaning
+"customer_status" (string) appears in 3 files — possible Connascence of Meaning
 ```
 
 :::
@@ -77,7 +79,7 @@ export default defineConfig({
 If `"customer_status"` appears in three files, the rule reports:
 
 ```txt
-"customer_status" appears in 3 files - possible Connascence of Meaning
+"customer_status" (string) appears in 3 files — possible Connascence of Meaning
 ```
 
 ## Limitations
@@ -86,7 +88,7 @@ This rule detects **structural spread** — the same literal appearing in many f
 
 The classic example from the original definition is a function that returns `None` (or `null`) both when an object is not found and when a database error occurs. Both call sites must silently remember which meaning applies. Static literal scanning cannot distinguish these cases because there is no syntactic signal separating the two intents.
 
-Detecting semantic ambiguity would require tracking the same value across multiple **usage contexts** (e.g. a value returned in one place and checked in a condition elsewhere, with different surrounding logic). That pattern is detectable in principle — the `Constant` shape already carries a `context` field — but it produces false positives and belongs in a dedicated rule rather than here.
+Detecting semantic ambiguity would require tracking the same value across multiple **usage contexts** (e.g. a value returned in one place and checked in a condition elsewhere, with different surrounding logic). That pattern is detectable in principle, but it produces false positives and belongs in a dedicated rule rather than here.
 
 The companion rule [`com-semantic`](./com-semantic.md) detects this function-level semantic ambiguity using LLM analysis. It identifies functions that return the same value from multiple sites where each site carries a different meaning — the classic case described above. It requires the `@maat-tools/enricher-llm/com` enricher and produces probabilistic findings that need human verification.
 

@@ -34,8 +34,7 @@
   },
   "dependencies": {
     "@maat-tools/contracts": "workspace:*",
-    "@maat-tools/utils": "workspace:*",
-    "ulid": "3.0.2"
+    "@maat-tools/utils": "workspace:*"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

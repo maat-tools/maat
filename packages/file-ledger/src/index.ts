@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { access, appendFile } from 'node:fs/promises';
 import {
 	type AxiomEvent,
 	defineLedgerBackend,
@@ -10,6 +8,7 @@ import {
 	type LedgerEventInput,
 } from '@maat-tools/contracts';
 import { LedgerBackendBase, type LedgerSnapshot } from '@maat-tools/core';
+import { appendToFile, pathExists, readFileContent } from '@maat-tools/utils';
 
 export type {
 	AxiomEvent,
@@ -57,7 +56,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 
 		try {
 			const event = this.stampEvent(input);
-			await appendFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8');
+			await appendToFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8');
 			this.cache = this.applyEventLastWriteWins(this.cache, event);
 		} catch (err) {
 			throw new Error(`FilePathLedgerBackend: failed to append event: ${(err as Error).message}`);
@@ -117,15 +116,13 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
-		const exists = await access(this.options.path)
-			.then(() => true)
-			.catch(() => false);
+		const exists = await pathExists(this.options.path);
 
 		if (!exists) {
 			return [];
 		}
 
-		const text = readFileSync(this.options.path, 'utf-8');
+		const text = await readFileContent(this.options.path, 'utf-8');
 
 		return text.trim().length === 0
 			? []

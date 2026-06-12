@@ -181,7 +181,7 @@ describe('LayerRule.describeArtifact()', () => {
 	test('dependsOn artifact → returns file and dependency', () => {
 		const dep = makeDep('@maat-tools/kernel', 'uuid');
 		const described = rule.describeArtifact({ kind: 'dependsOn', data: dep });
-		expect(described.file).toBe(dep.from.path);
+		expect(described.file).toBe(`${dep.from.path}:${dep.from.location.line}:${dep.from.location.column}`);
 		expect(described.dependency).toBe('uuid');
 	});
 

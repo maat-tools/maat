@@ -1,3 +1,4 @@
+import { Pure } from '@maat-tools/coupling-rules';
 import { defineConfig, rule } from './packages/core/src';
 import { layer } from './packages/coupling-rules/src/layer';
 
@@ -27,11 +28,11 @@ export default defineConfig({
 
 		rule('@maat-tools/connascence-rules/cop-struct'),
 
-		layer('@maat-tools/contracts').allows('node:crypto').build(),
-		layer('@maat-tools/vocabulary').allows('@maat-tools/contracts', 'node:crypto').build(),
+		layer('@maat-tools/contracts').is(Pure).build(),
+		layer('@maat-tools/vocabulary').allows('@maat-tools/contracts').build(),
 		layer('@maat-tools/kernel').allows('@maat-tools/contracts', 'node:crypto').build(),
 
-		layer('@maat-tools/core').allows('@maat-tools/contracts', 'node:crypto', 'ulid', 'node:util').build(),
+		layer('@maat-tools/core').allows('@maat-tools/contracts', '@maat-tools/utils').build(),
 	],
 	ledger: ['@maat-tools/file-ledger', { path: './.maat/maat-ledger.ndjson' }],
 });

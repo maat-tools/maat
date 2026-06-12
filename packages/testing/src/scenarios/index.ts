@@ -1,5 +1,6 @@
 import type { RuleOutput } from '@maat-tools/contracts';
-import { FindingStatus, generateFingerprint } from '@maat-tools/contracts';
+import { FindingStatus } from '@maat-tools/contracts';
+import { generateFingerprint } from '@maat-tools/kernel';
 import type { LedgerHarness } from '../harness/ledger';
 
 export async function scenarioObserved(

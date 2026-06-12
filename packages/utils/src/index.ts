@@ -1,17 +1,21 @@
 export { dump } from './dump';
 export {
+	appendToFile,
 	findMaatConfig,
 	getCurrentDir,
 	getDirname,
 	getFilepathFromCurrentDir,
 	getFileURL,
 	importFileDynamically,
+	pathExists,
+	readFileContent,
 	requireFile,
 	resolveModule,
 	resolvePath,
 	resolveSymbol,
-} from './file-system';
-export { isMatch } from './glob';
+} from './file-system/file-system';
+export { isMatch } from './file-system/glob';
+export { generateId } from './id-generator';
 export {
 	GeminiAIModel,
 	type KnownLLMConfig,

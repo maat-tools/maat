@@ -5,7 +5,6 @@ import {
 	type EnricherRegistry,
 	type FindingEvent,
 	FindingStatus,
-	generateFingerprint,
 	type Insight,
 	type LedgerBackend,
 	type LedgerBackendRegistry,
@@ -14,7 +13,7 @@ import {
 	type Rule,
 	type RuleRegistry,
 } from '@maat-tools/contracts';
-import { ulid } from 'ulid';
+import { generateId } from '@maat-tools/utils';
 
 type RegistryTuples<R> = { [K in keyof R]: [K, R[K]] }[keyof R];
 
@@ -55,12 +54,6 @@ export function rule<K extends keyof RuleRegistry>(
 	return (options.length > 0 ? [id, options[0]] : id) as unknown as RuleEntry;
 }
 
-export abstract class RuleBase {
-	public generateFingerprint(ruleId: string, ruleIdentifier: Record<string, unknown>): string {
-		return generateFingerprint(ruleId, ruleIdentifier);
-	}
-}
-
 export type LedgerSnapshot = {
 	readonly lastEntryId: string | null;
 	readonly findings: Record<string, FindingEvent>;
@@ -78,7 +71,7 @@ export function isAxiomEvent(event: LedgerEvent): event is AxiomEvent {
 }
 
 export abstract class LedgerBackendBase implements LedgerBackend {
-	private readonly runId = ulid();
+	private readonly runId = generateId();
 
 	public abstract initialize(): Promise<void>;
 	public abstract append(event: LedgerEventInput): Promise<void>;
@@ -89,7 +82,7 @@ export abstract class LedgerBackendBase implements LedgerBackend {
 	public abstract getNotBaselinedFindingsState(): Promise<FindingEvent[]>;
 
 	protected stampEvent(input: LedgerEventInput): LedgerEvent {
-		return { entryId: ulid(), runId: this.runId, ...input };
+		return { entryId: generateId(), runId: this.runId, ...input };
 	}
 
 	protected assertValidTransition(current: LedgerEvent | undefined, input: LedgerEventInput): void {

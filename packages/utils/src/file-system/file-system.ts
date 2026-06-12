@@ -1,4 +1,4 @@
-import { access } from 'node:fs/promises';
+import { access, appendFile, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,7 +16,7 @@ function* ancestorDirs(startDir: string): Generator<string> {
 	}
 }
 
-async function pathExists(filePath: string): Promise<boolean> {
+export async function pathExists(filePath: string): Promise<boolean> {
 	try {
 		await access(filePath);
 
@@ -99,6 +99,14 @@ export function resolveModule(path: string, moduleName: string) {
 	return createRequire(path).resolve(moduleName);
 }
 
-export function requireFile(path: string) {
-	return createRequire(import.meta.url)(path);
+export function requireFile(path: string, from: string) {
+	return createRequire(from)(path);
+}
+
+export async function readFileContent(path: string, encoding: BufferEncoding = 'utf-8'): Promise<string> {
+	return readFile(path, { encoding });
+}
+
+export async function appendToFile(path: string, content: string, encoding: BufferEncoding = 'utf-8'): Promise<void> {
+	return appendFile(path, content, { encoding });
 }

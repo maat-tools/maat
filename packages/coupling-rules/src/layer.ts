@@ -72,7 +72,7 @@ class PureLayerRule implements Rule<'dependsOn'> {
 		}
 		const dep = artifact.data as DependsOn;
 
-		return { file: dep.from.path, dependency: dep.to.path };
+		return { file: `${dep.from.path}:${dep.from.location.line}:${dep.from.location.column}`, dependency: dep.to.path };
 	}
 }
 
@@ -126,7 +126,7 @@ class LayerRule implements Rule<'dependsOn'> {
 		}
 		const dep = artifact.data as DependsOn;
 
-		return { file: dep.from.path, dependency: dep.to.path };
+		return { file: `${dep.from.path}:${dep.from.location.line}:${dep.from.location.column}`, dependency: dep.to.path };
 	}
 
 	private isAllowed(dep: DependsOn): boolean {

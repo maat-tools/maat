@@ -1,11 +1,7 @@
-import {
-	type Collector,
-	type Enricher,
-	type FactRegistry,
-	type Finding,
-	generateFingerprint,
-	type Rule,
-} from '@maat-tools/contracts';
+import type { Collector, Enricher, FactRegistry, Finding, Rule } from '@maat-tools/contracts';
+import { generateFingerprint } from './fingerprint';
+
+export { generateFingerprint };
 
 type StoredCollector = {
 	readonly id: string;

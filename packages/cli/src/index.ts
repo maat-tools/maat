@@ -26,7 +26,7 @@ import { Verify } from './commands/verify';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
 
-const { version } = requireFile('../package.json') as { version: string };
+const { version } = requireFile('../package.json', import.meta.url) as { version: string };
 
 type PluginEntry = string | [string, Record<string, unknown>];
 

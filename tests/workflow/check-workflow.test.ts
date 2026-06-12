@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { RuleOutput } from '@maat-tools/contracts';
-import { generateFingerprint } from '@maat-tools/contracts';
 import type { MaatConfig } from '@maat-tools/core';
-import { Kernel } from '@maat-tools/kernel';
+import { generateFingerprint, Kernel } from '@maat-tools/kernel';
 import {
 	ConsoleCapture,
 	ExitCapture,

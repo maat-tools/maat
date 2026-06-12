@@ -7,7 +7,15 @@ type ResolveOptions = {
 };
 
 export class Resolve extends MaatCommandBase implements MaatCommand {
-	public async action({ fingerprint }: ResolveOptions) {
+	public register(): void {
+		this.cli
+			.command('resolve')
+			.description('Mark a finding fingerprint as intentionally fixed')
+			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
+			.action((options: ResolveOptions) => this.action(options));
+	}
+
+	private async action({ fingerprint }: ResolveOptions) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot resolve without a ledger.\n');
 			process.exit(1);
@@ -37,13 +45,5 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 		});
 
 		this.presenter.log(`Finding "${fingerprint}" resolved.\n`);
-	}
-
-	public register(): void {
-		this.cli
-			.command('resolve')
-			.description('Mark a finding fingerprint as intentionally fixed')
-			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
-			.action((options: ResolveOptions) => this.action(options));
 	}
 }

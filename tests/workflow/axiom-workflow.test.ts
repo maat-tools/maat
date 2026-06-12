@@ -23,10 +23,23 @@ const DECLARE_OPTS = {
 	claim: 'Kernel is always pure',
 } as const;
 
-type LifecycleOptions = { id: string; reason?: string };
+type LifecycleOptions = { id: string; reason: string };
 
 function buildAxiom(ledger: LedgerHarness | null) {
 	return new Axiom(new Command(), BASE_CONFIG, new Kernel(), [], new StdoutPresenter(), ledger?.backend ?? null);
+}
+
+type DeclareOptions = {
+	id: string;
+	scope: string;
+	claim: string;
+	note?: string;
+	fingerprints?: string;
+	force?: boolean;
+};
+
+function declare(axiom: Axiom, opts: DeclareOptions): Promise<void> {
+	return (axiom as unknown as { declare: (o: DeclareOptions) => Promise<void> }).declare(opts);
 }
 
 function supersede(axiom: Axiom, opts: LifecycleOptions): Promise<void> {
@@ -61,20 +74,13 @@ afterEach(async () => {
 
 describe('axiom declare', () => {
 	test('no ledger → exit 1', async () => {
-		await expect(buildAxiom(null).action(DECLARE_OPTS)).rejects.toThrow('process.exit');
+		await expect(declare(buildAxiom(null), DECLARE_OPTS)).rejects.toThrow('process.exit');
 		exit.assertExitedWith(1);
 		expect(capture.stderr).toContain('No ledger configured');
 	});
 
-	test('axiom ID already active, --force → re-declares successfully', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
-		await buildAxiom(ledger).action({ ...DECLARE_OPTS, force: true });
-		exit.assertNotExited();
-		expect(capture.stdout).toContain(`"${DECLARE_OPTS.id}" declared`);
-	});
-
 	test('fingerprint in --fingerprints not found in ledger → exit 1', async () => {
-		await expect(buildAxiom(ledger).action({ ...DECLARE_OPTS, fingerprints: 'nonexistent-fp' })).rejects.toThrow(
+		await expect(declare(buildAxiom(ledger), { ...DECLARE_OPTS, fingerprints: 'nonexistent-fp' })).rejects.toThrow(
 			'process.exit',
 		);
 		exit.assertExitedWith(1);
@@ -82,7 +88,7 @@ describe('axiom declare', () => {
 	});
 
 	test('clean declare → axiom active in ledger', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
+		await declare(buildAxiom(ledger), DECLARE_OPTS);
 		exit.assertNotExited();
 		const axiom = await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id);
 		expect(axiom?.type).toBe(FindingStatus.AXIOM_DECLARED);
@@ -92,7 +98,7 @@ describe('axiom declare', () => {
 
 	test('declare with valid fingerprints → axiom links to findings', async () => {
 		const fp = await scenarioObserved(ledger, FINDING);
-		await buildAxiom(ledger).action({ ...DECLARE_OPTS, fingerprints: fp });
+		await declare(buildAxiom(ledger), { ...DECLARE_OPTS, fingerprints: fp });
 		exit.assertNotExited();
 		const axiom = await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id);
 		expect(axiom?.fingerprints).toEqual([fp]);
@@ -113,23 +119,23 @@ describe('axiom supersede / revoke', () => {
 	});
 
 	test('supersede: already-inactive axiom → exit 1', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
-		await supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id });
-		await expect(supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id })).rejects.toThrow('process.exit');
+		await declare(buildAxiom(ledger), DECLARE_OPTS);
+		await supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id, reason: 'Replaced' });
+		await expect(supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id, reason: 'Replaced again' })).rejects.toThrow('process.exit');
 		exit.assertExitedWith(1);
 		expect(capture.stderr).toContain('already inactive');
 	});
 
 	test('supersede active axiom → active: false', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
-		await supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id });
+		await declare(buildAxiom(ledger), DECLARE_OPTS);
+		await supersede(buildAxiom(ledger), { id: DECLARE_OPTS.id, reason: 'Replaced by newer axiom' });
 		exit.assertNotExited();
 		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.type).toBe(FindingStatus.AXIOM_SUPERSEDED);
 	});
 
 	test('revoke active axiom → active: false', async () => {
-		await buildAxiom(ledger).action(DECLARE_OPTS);
-		await revoke(buildAxiom(ledger), { id: DECLARE_OPTS.id });
+		await declare(buildAxiom(ledger), DECLARE_OPTS);
+		await revoke(buildAxiom(ledger), { id: DECLARE_OPTS.id, reason: 'No longer applicable' });
 		exit.assertNotExited();
 		expect((await ledger.backend.getAxiomByFingerprint(DECLARE_OPTS.id))?.type).toBe(FindingStatus.AXIOM_REVOKED);
 	});

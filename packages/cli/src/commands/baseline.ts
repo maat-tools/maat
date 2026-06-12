@@ -10,7 +10,32 @@ type BaselineOptions = {
 };
 
 export class Baseline extends MaatCommandBase implements MaatCommand {
-	public async action(options: BaselineOptions = {}) {
+	private resolveExpiresIn(raw: string | undefined): number | null {
+		if (!raw) {
+			return BASELINE_DEFAULT_DAYS;
+		}
+
+		const days = Number(raw);
+		if (!Number.isInteger(days) || Number.isNaN(days)) {
+			this.presenter.error(`--expires-in must be an integer number of days.\n`);
+
+			return null;
+		}
+		if (days < 1) {
+			this.presenter.error(`--expires-in must be at least 1 day. Got: ${days}.\n`);
+
+			return null;
+		}
+		if (days > BASELINE_MAX_DAYS) {
+			this.presenter.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.\n`);
+
+			return null;
+		}
+
+		return days;
+	}
+
+	private async action(options: BaselineOptions = {}) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot baseline without a ledger.\n');
 			process.exit(1);
@@ -48,30 +73,6 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		);
 	}
 
-	private resolveExpiresIn(raw: string | undefined): number | null {
-		if (!raw) {
-			return BASELINE_DEFAULT_DAYS;
-		}
-
-		const days = Number(raw);
-		if (!Number.isInteger(days) || Number.isNaN(days)) {
-			this.presenter.error(`--expires-in must be an integer number of days.\n`);
-
-			return null;
-		}
-		if (days < 1) {
-			this.presenter.error(`--expires-in must be at least 1 day. Got: ${days}.\n`);
-
-			return null;
-		}
-		if (days > BASELINE_MAX_DAYS) {
-			this.presenter.error(`--expires-in must be at most ${BASELINE_MAX_DAYS} days. Got: ${days}.\n`);
-
-			return null;
-		}
-
-		return days;
-	}
 
 	public register(): void {
 		this.cli

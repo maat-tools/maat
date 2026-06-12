@@ -59,24 +59,24 @@ export type FindingRevokedEvent = FindingEventBase & {
 
 type AxiomEventBase = LedgerEntryBase & {
 	readonly axiomId: string;
+};
+
+export type AxiomDeclaredEvent = AxiomEventBase & {
+	readonly type: typeof FindingStatus.AXIOM_DECLARED;
 	readonly scope: string;
 	readonly claim: string;
 	readonly note?: string;
 	readonly fingerprints?: readonly string[];
 };
 
-export type AxiomDeclaredEvent = AxiomEventBase & {
-	readonly type: typeof FindingStatus.AXIOM_DECLARED;
-};
-
 export type AxiomSupersededEvent = AxiomEventBase & {
 	readonly type: typeof FindingStatus.AXIOM_SUPERSEDED;
-	readonly reason?: string;
+	readonly reason: string;
 };
 
 export type AxiomRevokedEvent = AxiomEventBase & {
 	readonly type: typeof FindingStatus.AXIOM_REVOKED;
-	readonly reason?: string;
+	readonly reason: string;
 };
 
 export type AxiomEvent = AxiomDeclaredEvent | AxiomSupersededEvent | AxiomRevokedEvent;

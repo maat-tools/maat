@@ -18,7 +18,7 @@ Use this when the claim is not wrong, but a newer axiom or automated rule is now
 | Option | Purpose |
 |---|---|
 | `--id <id>` | **Required.** Axiom id to supersede. |
-| `--reason <reason>` | Optional explanation for supersession. |
+| `--reason <reason>` | **Required.** Explanation for supersession. |
 
 ## Errors
 

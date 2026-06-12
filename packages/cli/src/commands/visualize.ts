@@ -34,7 +34,18 @@ function toFinding(record: FindingEvent): Finding {
 }
 
 export class Visualize extends MaatCommandBase implements MaatCommand {
-	public async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
+	public register(): void {
+		this.cli
+			.command('visualize')
+			.description('Display the current state of findings, axioms, and insights from the ledger')
+			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, resolved')
+			.option('--no-axioms', 'Hide declared axioms')
+			.option('--insights', 'Run insights against the current ledger state')
+			.option('--json', 'Output as JSON')
+			.action((options: VisualizeOptions) => this.action(options));
+	}
+
+	private async action({ filter, axioms, insights, json }: VisualizeOptions = {}) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot visualize without a ledger.\n');
 			process.exit(1);
@@ -115,16 +126,5 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		if (!hasOutput) {
 			this.presenter.log('No findings or axioms in the ledger.');
 		}
-	}
-
-	public register(): void {
-		this.cli
-			.command('visualize')
-			.description('Display the current state of findings, axioms, and insights from the ledger')
-			.option('--filter <states>', 'Comma-separated groups to show: observed, baselined, resolved')
-			.option('--no-axioms', 'Hide declared axioms')
-			.option('--insights', 'Run insights against the current ledger state')
-			.option('--json', 'Output as JSON')
-			.action((options: VisualizeOptions) => this.action(options));
 	}
 }

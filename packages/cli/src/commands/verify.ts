@@ -9,7 +9,19 @@ type VerifyOptions = {
 };
 
 export class Verify extends MaatCommandBase implements MaatCommand {
-	public async action({ fingerprint, revoke, reason }: VerifyOptions) {
+	
+
+	public register(): void {
+		this.cli
+			.command('verify')
+			.description('Verify a probabilistic finding as approved by a human')
+			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to verify')
+			.option('--revoke', 'Revoke a previous verification', false)
+			.option('--reason <reason>', 'Optional reason for the verification or revocation')
+			.action((options: VerifyOptions) => this.action(options));
+	}
+	
+	private async action({ fingerprint, revoke, reason }: VerifyOptions) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot verify without a ledger.\n');
 			process.exit(1);
@@ -62,15 +74,5 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 		});
 
 		this.presenter.log(`Finding "${fingerprint}" verified.\n`);
-	}
-
-	public register(): void {
-		this.cli
-			.command('verify')
-			.description('Verify a probabilistic finding as approved by a human')
-			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to verify')
-			.option('--revoke', 'Revoke a previous verification', false)
-			.option('--reason <reason>', 'Optional reason for the verification or revocation')
-			.action((options: VerifyOptions) => this.action(options));
 	}
 }

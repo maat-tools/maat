@@ -32,7 +32,19 @@ type LedgerAnalysis = {
 };
 
 export class Check extends MaatCommandBase implements MaatCommand {
-	public async action(options: CheckOptions = {}) {
+	
+	public register(): void {
+		this.cli
+			.command('check')
+			.description('Scan the codebase for architectural findings')
+			.option('--ledger', 'Save findings to the ledger')
+			.option('--show-baselined', 'Include baselined findings in output and exit code evaluation')
+			.option('--show <mode>', 'Choose output sections to show: all, findings, insights', 'all')
+			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
+			.action((options: CheckOptions) => this.action(options));
+	}
+
+	private async action(options: CheckOptions = {}) {
 		if (options.silent) {
 			this.presenter = this.presenter.asSilent();
 		}
@@ -141,16 +153,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		this.evaluateExitConditions(visibleFindings, analysis, { printSummary: displayMode !== 'insights' });
 	}
 
-	public register(): void {
-		this.cli
-			.command('check')
-			.description('Scan the codebase for architectural findings')
-			.option('--ledger', 'Save findings to the ledger')
-			.option('--show-baselined', 'Include baselined findings in output and exit code evaluation')
-			.option('--show <mode>', 'Choose output sections to show: all, findings, insights', 'all')
-			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
-			.action((options: CheckOptions) => this.action(options));
-	}
 
 	private resolveDisplayMode(show: string | undefined): CheckDisplayMode {
 		const mode = show ?? 'all';

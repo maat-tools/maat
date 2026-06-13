@@ -9,8 +9,6 @@ type VerifyOptions = {
 };
 
 export class Verify extends MaatCommandBase implements MaatCommand {
-	
-
 	public register(): void {
 		this.cli
 			.command('verify')
@@ -20,7 +18,7 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			.option('--reason <reason>', 'Optional reason for the verification or revocation')
 			.action((options: VerifyOptions) => this.action(options));
 	}
-	
+
 	private async action({ fingerprint, revoke, reason }: VerifyOptions) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot verify without a ledger.\n');

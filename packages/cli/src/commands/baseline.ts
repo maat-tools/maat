@@ -10,7 +10,6 @@ type BaselineOptions = {
 };
 
 export class Baseline extends MaatCommandBase implements MaatCommand {
-
 	public register(): void {
 		this.cli
 			.command('baseline')
@@ -85,6 +84,4 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 
 		return days;
 	}
-
-
 }

@@ -32,7 +32,6 @@ type LedgerAnalysis = {
 };
 
 export class Check extends MaatCommandBase implements MaatCommand {
-	
 	public register(): void {
 		this.cli
 			.command('check')
@@ -152,7 +151,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		this.evaluateExitConditions(visibleFindings, analysis, { printSummary: displayMode !== 'insights' });
 	}
-
 
 	private resolveDisplayMode(show: string | undefined): CheckDisplayMode {
 		const mode = show ?? 'all';

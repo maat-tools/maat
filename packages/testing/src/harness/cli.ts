@@ -14,6 +14,11 @@ export interface RunCliOptions {
 	env?: Record<string, string>;
 }
 
+export function stripAnsi(text: string): string {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape stripping
+	return text.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
 export function runCli(args: string[], options: RunCliOptions): CliResult {
 	const proc = Bun.spawnSync(['bun', 'run', CLI_ENTRY, ...args, '--config', options.config], {
 		cwd: MONOREPO_ROOT,

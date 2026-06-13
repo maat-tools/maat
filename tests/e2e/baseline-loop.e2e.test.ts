@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { LedgerHarness, runCli } from '@maat-tools/testing';
+import { LedgerHarness, runCli, stripAnsi } from '@maat-tools/testing';
 
 const SAMPLE_CONFIG = resolve(import.meta.dir, '../fixtures/sample-project/maat.config.ts');
 
@@ -11,16 +11,14 @@ type RawLedgerEntry = Record<string, unknown>;
 
 async function readLedgerEntries(ledgerPath: string): Promise<RawLedgerEntry[]> {
 	const content = await readFile(ledgerPath, 'utf-8');
-	if (!content.trim()) return [];
+	if (!content.trim()) {
+		return [];
+	}
 	return content
 		.trim()
 		.split('\n')
 		.filter(Boolean)
 		.map((line) => JSON.parse(line));
-}
-
-function stripAnsi(str: string): string {
-	return str.replace(/\u001B\[[0-9;]*m/g, '');
 }
 
 describe('maat — check → baseline → check loop', () => {
@@ -157,12 +155,12 @@ describe('maat — check → baseline → check loop', () => {
 				expect(base.exitCode).toBe(0);
 
 				const entries = await readLedgerEntries(ledger.path);
-				const baselined = entries.filter((e) => e['type'] === 'finding.baselined');
+				const baselined = entries.filter((e) => e.type === 'finding.baselined');
 				expect(baselined.length).toBeGreaterThan(0);
 
 				const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 				for (const entry of baselined) {
-					const expiresAt = new Date(entry['expiresAt'] as string).getTime();
+					const expiresAt = new Date(entry.expiresAt as string).getTime();
 					expect(expiresAt).toBeGreaterThanOrEqual(before + thirtyDaysMs - 2000);
 					expect(expiresAt).toBeLessThanOrEqual(after + thirtyDaysMs + 2000);
 				}
@@ -182,12 +180,12 @@ describe('maat — check → baseline → check loop', () => {
 				expect(base.exitCode).toBe(0);
 
 				const entries = await readLedgerEntries(ledger.path);
-				const baselined = entries.filter((e) => e['type'] === 'finding.baselined');
+				const baselined = entries.filter((e) => e.type === 'finding.baselined');
 				expect(baselined.length).toBeGreaterThan(0);
 
 				const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 				for (const entry of baselined) {
-					const expiresAt = new Date(entry['expiresAt'] as string).getTime();
+					const expiresAt = new Date(entry.expiresAt as string).getTime();
 					expect(expiresAt).toBeGreaterThanOrEqual(before + sevenDaysMs - 2000);
 					expect(expiresAt).toBeLessThanOrEqual(after + sevenDaysMs + 2000);
 				}
@@ -204,10 +202,10 @@ describe('maat — check → baseline → check loop', () => {
 				runCli(['baseline', '--expires-in', '15'], { config: SAMPLE_CONFIG, env });
 
 				const entries = await readLedgerEntries(ledger.path);
-				const baselined = entries.filter((e) => e['type'] === 'finding.baselined');
+				const baselined = entries.filter((e) => e.type === 'finding.baselined');
 				expect(baselined.length).toBeGreaterThan(1);
 
-				const expiresAtValues = new Set(baselined.map((e) => e['expiresAt']));
+				const expiresAtValues = new Set(baselined.map((e) => e.expiresAt));
 				expect(expiresAtValues.size).toBe(1);
 			},
 			TIMEOUT,
@@ -223,15 +221,50 @@ describe('maat — check → baseline → check loop', () => {
 				expect(base.exitCode).toBe(0);
 
 				const entries = await readLedgerEntries(ledger.path);
-				const baselined = entries.filter((e) => e['type'] === 'finding.baselined');
+				const baselined = entries.filter((e) => e.type === 'finding.baselined');
 				expect(baselined.length).toBeGreaterThan(0);
-				const ledgerDate = (baselined[0]!['expiresAt'] as string).slice(0, 10);
+				const ledgerDate = (baselined[0]?.expiresAt as string).slice(0, 10);
 
 				expect(base.stdout).toContain(ledgerDate);
 			},
 			TIMEOUT,
 		);
 	});
+
+	test(
+		'empty ledger → nothing to baseline, exit 0',
+		() => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+
+			const base = runCli(['baseline'], { config: SAMPLE_CONFIG, env });
+			expect(base.exitCode).toBe(0);
+			expect(base.stdout).toContain('Nothing to baseline');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'second baseline is a no-op and does not change existing expiry',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+
+			runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
+			runCli(['baseline', '--expires-in', '7'], { config: SAMPLE_CONFIG, env });
+
+			const firstEntries = await readLedgerEntries(ledger.path);
+			const firstExpiries = firstEntries.filter((e) => e.type === 'finding.baselined').map((e) => e.expiresAt);
+			expect(firstExpiries.length).toBeGreaterThan(0);
+
+			const second = runCli(['baseline', '--expires-in', '60'], { config: SAMPLE_CONFIG, env });
+			expect(second.exitCode).toBe(0);
+			expect(second.stdout).toContain('Nothing to baseline');
+
+			const secondEntries = await readLedgerEntries(ledger.path);
+			const secondExpiries = secondEntries.filter((e) => e.type === 'finding.baselined').map((e) => e.expiresAt);
+			expect(secondExpiries).toEqual(firstExpiries);
+		},
+		TIMEOUT,
+	);
 
 	test(
 		'no ledger configured → exit 1',
@@ -258,16 +291,16 @@ describe('maat — check → baseline → check loop', () => {
 				.filter(Boolean)
 				.map((l) => JSON.parse(l));
 
-			const baselined = entries.filter((e: RawLedgerEntry) => e['type'] === 'finding.baselined');
+			const baselined = entries.filter((e: RawLedgerEntry) => e.type === 'finding.baselined');
 			expect(baselined.length).toBeGreaterThan(0);
 
 			const expiredLines = entries.map((e: RawLedgerEntry) => {
-				if (e['type'] === 'finding.baselined') {
+				if (e.type === 'finding.baselined') {
 					return JSON.stringify({ ...e, expiresAt: new Date(Date.now() - 1000).toISOString() });
 				}
 				return JSON.stringify(e);
 			});
-			await writeFile(ledger.path, expiredLines.join('\n') + '\n', 'utf-8');
+			await writeFile(ledger.path, `${expiredLines.join('\n')}\n`, 'utf-8');
 
 			const check = runCli(['check'], { config: SAMPLE_CONFIG, env });
 			expect(check.exitCode).toBe(1);

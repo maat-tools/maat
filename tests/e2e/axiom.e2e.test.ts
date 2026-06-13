@@ -18,7 +18,16 @@ describe('maat axiom declare', () => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
 			const result = runCli(
-				['axiom', 'declare', '--id', 'ax-001', '--scope', 'kernel', '--claim', 'No direct DB calls outside repository layer'],
+				[
+					'axiom',
+					'declare',
+					'--id',
+					'ax-001',
+					'--scope',
+					'kernel',
+					'--claim',
+					'No direct DB calls outside repository layer',
+				],
 				{ config: SAMPLE_CONFIG, env },
 			);
 
@@ -36,7 +45,18 @@ describe('maat axiom declare', () => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
 			const result = runCli(
-				['axiom', 'declare', '--id', 'ax-note', '--scope', 'api', '--claim', 'All endpoints require auth', '--note', 'ADR-0042'],
+				[
+					'axiom',
+					'declare',
+					'--id',
+					'ax-note',
+					'--scope',
+					'api',
+					'--claim',
+					'All endpoints require auth',
+					'--note',
+					'ADR-0042',
+				],
 				{ config: SAMPLE_CONFIG, env },
 			);
 
@@ -52,7 +72,18 @@ describe('maat axiom declare', () => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
 			const result = runCli(
-				['axiom', 'declare', '--id', 'ax-bad-fp', '--scope', 'kernel', '--claim', 'Test', '--fingerprints', 'nonexistent-fp-123'],
+				[
+					'axiom',
+					'declare',
+					'--id',
+					'ax-bad-fp',
+					'--scope',
+					'kernel',
+					'--claim',
+					'Test',
+					'--fingerprints',
+					'nonexistent-fp-123',
+				],
 				{ config: SAMPLE_CONFIG, env },
 			);
 
@@ -65,10 +96,9 @@ describe('maat axiom declare', () => {
 	test(
 		'exits 1 without a ledger configured',
 		() => {
-			const result = runCli(
-				['axiom', 'declare', '--id', 'ax-no-ledger', '--scope', 'kernel', '--claim', 'Test'],
-				{ config: SAMPLE_CONFIG },
-			);
+			const result = runCli(['axiom', 'declare', '--id', 'ax-no-ledger', '--scope', 'kernel', '--claim', 'Test'], {
+				config: SAMPLE_CONFIG,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('No ledger configured');
@@ -87,9 +117,20 @@ describe('maat axiom declare', () => {
 			const fingerprintMatch = check.stdout.match(/\b[a-f0-9]{64}\b/);
 			expect(fingerprintMatch).not.toBeNull();
 
-			const fingerprint = fingerprintMatch![0];
+			const fingerprint = fingerprintMatch?.[0] as string;
 			const result = runCli(
-				['axiom', 'declare', '--id', 'ax-with-fp', '--scope', 'core', '--claim', 'Known violation accepted', '--fingerprints', fingerprint],
+				[
+					'axiom',
+					'declare',
+					'--id',
+					'ax-with-fp',
+					'--scope',
+					'core',
+					'--claim',
+					'Known violation accepted',
+					'--fingerprints',
+					fingerprint,
+				],
 				{ config: SAMPLE_CONFIG, env },
 			);
 
@@ -112,15 +153,15 @@ describe('maat axiom supersede', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-sup', '--scope', 'kernel', '--claim', 'Old claim'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-sup', '--scope', 'kernel', '--claim', 'Old claim'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
-			const result = runCli(
-				['axiom', 'supersede', '--id', 'ax-sup', '--reason', 'Replaced by ADR-0099'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'supersede', '--id', 'ax-sup', '--reason', 'Replaced by ADR-0099'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(0);
 			expect(result.stderr).toContain('ax-sup');
@@ -135,10 +176,10 @@ describe('maat axiom supersede', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			const result = runCli(
-				['axiom', 'supersede', '--id', 'nonexistent-axiom', '--reason', 'Not needed'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'supersede', '--id', 'nonexistent-axiom', '--reason', 'Not needed'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('not found');
@@ -151,19 +192,16 @@ describe('maat axiom supersede', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-inactive', '--scope', 'kernel', '--claim', 'Test'],
-				{ config: SAMPLE_CONFIG, env },
-			);
-			runCli(
-				['axiom', 'supersede', '--id', 'ax-inactive', '--reason', 'Replaced'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-inactive', '--scope', 'kernel', '--claim', 'Test'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
+			runCli(['axiom', 'supersede', '--id', 'ax-inactive', '--reason', 'Replaced'], { config: SAMPLE_CONFIG, env });
 
-			const result = runCli(
-				['axiom', 'supersede', '--id', 'ax-inactive', '--reason', 'Replaced again'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'supersede', '--id', 'ax-inactive', '--reason', 'Replaced again'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('inactive');
@@ -174,10 +212,9 @@ describe('maat axiom supersede', () => {
 	test(
 		'exits 1 without a ledger configured',
 		() => {
-			const result = runCli(
-				['axiom', 'supersede', '--id', 'ax-no-ledger', '--reason', 'Test'],
-				{ config: SAMPLE_CONFIG },
-			);
+			const result = runCli(['axiom', 'supersede', '--id', 'ax-no-ledger', '--reason', 'Test'], {
+				config: SAMPLE_CONFIG,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('No ledger configured');
@@ -197,15 +234,15 @@ describe('maat axiom revoke', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-revoke', '--scope', 'kernel', '--claim', 'Test claim'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-revoke', '--scope', 'kernel', '--claim', 'Test claim'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
-			const result = runCli(
-				['axiom', 'revoke', '--id', 'ax-revoke', '--reason', 'No longer applicable'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'revoke', '--id', 'ax-revoke', '--reason', 'No longer applicable'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(0);
 			expect(result.stderr).toContain('ax-revoke');
@@ -219,10 +256,10 @@ describe('maat axiom revoke', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			const result = runCli(
-				['axiom', 'revoke', '--id', 'nonexistent-axiom', '--reason', 'Not needed'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'revoke', '--id', 'nonexistent-axiom', '--reason', 'Not needed'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('not found');
@@ -235,19 +272,16 @@ describe('maat axiom revoke', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-revoked', '--scope', 'kernel', '--claim', 'Test'],
-				{ config: SAMPLE_CONFIG, env },
-			);
-			runCli(
-				['axiom', 'revoke', '--id', 'ax-revoked', '--reason', 'Deprecated'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-revoked', '--scope', 'kernel', '--claim', 'Test'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
+			runCli(['axiom', 'revoke', '--id', 'ax-revoked', '--reason', 'Deprecated'], { config: SAMPLE_CONFIG, env });
 
-			const result = runCli(
-				['axiom', 'revoke', '--id', 'ax-revoked', '--reason', 'Deprecated again'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			const result = runCli(['axiom', 'revoke', '--id', 'ax-revoked', '--reason', 'Deprecated again'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('inactive');
@@ -258,10 +292,7 @@ describe('maat axiom revoke', () => {
 	test(
 		'exits 1 without a ledger configured',
 		() => {
-			const result = runCli(
-				['axiom', 'revoke', '--id', 'ax-no-ledger', '--reason', 'Test'],
-				{ config: SAMPLE_CONFIG },
-			);
+			const result = runCli(['axiom', 'revoke', '--id', 'ax-no-ledger', '--reason', 'Test'], { config: SAMPLE_CONFIG });
 
 			expect(result.exitCode).toBe(1);
 			expect(result.stderr).toContain('No ledger configured');
@@ -282,7 +313,16 @@ describe('maat axiom lifecycle — check and visualize integration', () => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
 			runCli(
-				['axiom', 'declare', '--id', 'ax-integration', '--scope', 'kernel', '--claim', 'All services must use repository layer'],
+				[
+					'axiom',
+					'declare',
+					'--id',
+					'ax-integration',
+					'--scope',
+					'kernel',
+					'--claim',
+					'All services must use repository layer',
+				],
 				{ config: SAMPLE_CONFIG, env },
 			);
 
@@ -298,10 +338,10 @@ describe('maat axiom lifecycle — check and visualize integration', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-viz', '--scope', 'kernel', '--claim', 'No direct DB calls'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-viz', '--scope', 'kernel', '--claim', 'No direct DB calls'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			const result = runCli(['visualize'], { config: SAMPLE_CONFIG, env });
 			expect(result.exitCode).toBe(0);
@@ -316,14 +356,14 @@ describe('maat axiom lifecycle — check and visualize integration', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-super-check', '--scope', 'kernel', '--claim', 'Old claim'],
-				{ config: SAMPLE_CONFIG, env },
-			);
-			runCli(
-				['axiom', 'supersede', '--id', 'ax-super-check', '--reason', 'Updated policy'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-super-check', '--scope', 'kernel', '--claim', 'Old claim'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
+			runCli(['axiom', 'supersede', '--id', 'ax-super-check', '--reason', 'Updated policy'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			const result = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
 			expect(result.exitCode).toBe(1);
@@ -336,14 +376,14 @@ describe('maat axiom lifecycle — check and visualize integration', () => {
 		() => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };
 
-			runCli(
-				['axiom', 'declare', '--id', 'ax-revoke-check', '--scope', 'kernel', '--claim', 'Deprecated claim'],
-				{ config: SAMPLE_CONFIG, env },
-			);
-			runCli(
-				['axiom', 'revoke', '--id', 'ax-revoke-check', '--reason', 'No longer valid'],
-				{ config: SAMPLE_CONFIG, env },
-			);
+			runCli(['axiom', 'declare', '--id', 'ax-revoke-check', '--scope', 'kernel', '--claim', 'Deprecated claim'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
+			runCli(['axiom', 'revoke', '--id', 'ax-revoke-check', '--reason', 'No longer valid'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
 
 			const result = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
 			expect(result.exitCode).toBe(1);

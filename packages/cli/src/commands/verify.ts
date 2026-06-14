@@ -26,15 +26,19 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 		}
 
 		const record = await this.ledger.getFindingByFingerprint(fingerprint);
-
 		if (!record) {
 			this.presenter.error(`No finding with fingerprint "${fingerprint}" found in the ledger.\n`);
 			process.exit(1);
 		}
 
-		if (revoke && record.type !== FindingStatus.UNVERIFIED) {
+		if (record.type === FindingStatus.OBSERVED) {
+			this.presenter.error(`Finding "${fingerprint}" is already verified.\n`);
+			process.exit(1);
+		}
+
+		if (record.type !== FindingStatus.UNVERIFIED) {
 			this.presenter.error(
-				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can have their verification revoked.\n`,
+				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can be verified or revoked.\n`,
 			);
 			process.exit(1);
 		}
@@ -48,17 +52,13 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 				instanceId: record.instanceId,
 				message: record.message,
 				artifacts: record.artifacts,
-				reason,
+				...(reason ? { reason } : {}),
 			});
 
 			this.presenter.log(`Finding "${fingerprint}" revoked.\n`);
 			return;
 		}
 
-		if (record.type === FindingStatus.OBSERVED) {
-			this.presenter.warn(`Finding "${fingerprint}" is already verified.\n`);
-			return;
-		}
 
 		await this.ledger.append({
 			type: FindingStatus.OBSERVED,
@@ -71,6 +71,6 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			reason,
 		});
 
-		this.presenter.log(`Finding "${fingerprint}" verified.\n`);
+		this.presenter.log(`Finding "${fingerprint}" verified(moved to OBSERVED).\n`);
 	}
 }

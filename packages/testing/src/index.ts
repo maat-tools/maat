@@ -5,4 +5,10 @@ export { ConsoleCapture } from './harness/console';
 export { LedgerHarness } from './harness/ledger';
 export { ExitCapture } from './harness/process';
 
-export { scenarioBaselined, scenarioObserved, scenarioResolved, scenarioUnverified } from './scenarios/index';
+export {
+	scenarioBaselined,
+	scenarioObserved,
+	scenarioResolved,
+	scenarioRevoked,
+	scenarioUnverified,
+} from './scenarios/index';

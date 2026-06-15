@@ -59,7 +59,6 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			return;
 		}
 
-
 		await this.ledger.append({
 			type: FindingStatus.OBSERVED,
 			timestamp: new Date().toISOString(),

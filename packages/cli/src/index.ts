@@ -98,7 +98,7 @@ class MaatCLI {
 		const start = performance.now();
 		process.on('exit', () => {
 			const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-			process.stderr.write(`${commandName} took ${elapsed}s\n`);
+			process.stderr.write(`\n${commandName} took ${elapsed}s\n`);
 		});
 	}
 

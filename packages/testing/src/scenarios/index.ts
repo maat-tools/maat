@@ -66,3 +66,18 @@ export async function scenarioUnverified(harness: LedgerHarness, output: RuleOut
 	});
 	return fingerprint;
 }
+
+export async function scenarioRevoked(harness: LedgerHarness, output: RuleOutput, reason?: string): Promise<string> {
+	const fingerprint = await scenarioObserved(harness, output);
+	await harness.backend.append({
+		type: FindingStatus.REVOKED,
+		timestamp: new Date().toISOString(),
+		fingerprint,
+		ruleId: output.ruleId,
+		instanceId: output.ruleId,
+		message: output.message,
+		artifacts: output.artifacts,
+		...(reason !== undefined ? { reason } : {}),
+	});
+	return fingerprint;
+}

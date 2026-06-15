@@ -1,4 +1,4 @@
-import type { Artifact, Finding, InsightResult, Rule } from '@maat-tools/contracts';
+import type { Artifact, AxiomDeclaredEvent, Finding, InsightResult, Rule } from '@maat-tools/contracts';
 import chalk from 'chalk';
 
 function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
@@ -51,7 +51,7 @@ export class StdoutPresenter {
 		process.stdout.write(`${chalk.dim('─'.repeat(heading.length))}\n`);
 	}
 
-	public findings(findings: Finding[], getRule: (id: string) => Rule | undefined): void {
+	public findingGroup(findings: Finding[], getRule: (id: string) => Rule | undefined): void {
 		if (this.silent || findings.length === 0) {
 			return;
 		}
@@ -63,8 +63,6 @@ export class StdoutPresenter {
 			byRule.set(f.ruleId, group);
 		}
 
-		this.section(`FINDINGS (${findings.length})`);
-
 		for (const [ruleId, group] of byRule) {
 			const rule = getRule(ruleId);
 			process.stdout.write(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)\n`);
@@ -75,6 +73,27 @@ export class StdoutPresenter {
 					process.stdout.write(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}\n`);
 				}
 			}
+		}
+	}
+
+	public findings(findings: Finding[], getRule: (id: string) => Rule | undefined): void {
+		if (this.silent || findings.length === 0) {
+			return;
+		}
+
+		this.section(`FINDINGS (${findings.length})`);
+		this.findingGroup(findings, getRule);
+	}
+
+	public axiomEntry(axiom: AxiomDeclaredEvent): void {
+		if (this.silent) {
+			return;
+		}
+		process.stdout.write(`\n  ${chalk.cyan(axiom.axiomId)}\n`);
+		process.stdout.write(`    ${chalk.bold('scope:')} ${axiom.scope}\n`);
+		process.stdout.write(`    ${chalk.bold('claim:')} ${axiom.claim}\n`);
+		if (axiom.note) {
+			process.stdout.write(`    ${chalk.bold('note:')} ${axiom.note}\n`);
 		}
 	}
 
@@ -93,6 +112,21 @@ export class StdoutPresenter {
 			return;
 		}
 		process.stdout.write(`  ${chalk.greenBright(`[${result.insightId}]`)} ${result.message}\n`);
+	}
+
+	public insightEntry(result: InsightResult): void {
+		if (this.silent) {
+			return;
+		}
+		process.stdout.write(`\n  ${chalk.greenBright(`[${result.insightId}]`)}\n`);
+		process.stdout.write(`    ${chalk.bold('message:')} ${result.message}\n`);
+		if (result.data !== undefined && result.data !== null) {
+			const dataStr = typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2);
+			process.stdout.write(`    ${chalk.bold('data:')}\n`);
+			for (const line of dataStr.split('\n')) {
+				process.stdout.write(`      ${line}\n`);
+			}
+		}
 	}
 
 	public json(data: unknown): void {

@@ -14,17 +14,19 @@ maat --config ./path/to/maat.config.ts visualize
 
 Findings are grouped as:
 
-- `resolved`;
 - `observed`;
-- `baselined`.
+- `baselined`;
+- `resolved`;
+- `unverified`;
+- `revoked`.
 
-Axioms are shown unless `--no-axioms` is passed.
+Axioms are shown unless `--no-axioms` is passed. Only active axioms are displayed; revoked and superseded axioms are hidden.
 
 ## Options
 
 | Option | Purpose |
 |---|---|
-| `--filter <states>` | Comma-separated groups to show: `observed`, `baselined`, `resolved`. |
+| `--filter <states>` | Comma-separated groups to show: `observed`, `baselined`, `resolved`, `unverified`, `revoked`. |
 | `--no-axioms` | Hide declared axioms. |
 | `--insights` | Run insights against the current ledger state. |
 | `--json` | Output as JSON. |

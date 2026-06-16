@@ -228,6 +228,37 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).not.toContain('called from');
 	});
+
+	test('multiple boolean params → single finding', () => {
+		const rule = new ConnascenceOfPositionArgsRule();
+		const findings = rule.evaluate({
+			functionSignatures: [
+				makeFunctionSignature({
+					input: makeInput([makeParam('a', 'boolean', 0), makeParam('b', 'boolean', 1)]),
+				}),
+			],
+		});
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toContain('contains boolean param');
+	});
+
+	test('optional boolean param is still flagged', () => {
+		const rule = new ConnascenceOfPositionArgsRule();
+		const findings = rule.evaluate({
+			functionSignatures: [
+				makeFunctionSignature({
+					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean | undefined', 1)]),
+				}),
+			],
+		});
+		expect(findings).toHaveLength(0);
+	});
+
+	test('missing functionSignatures capability → treated as empty', () => {
+		const rule = new ConnascenceOfPositionArgsRule();
+		const findings = rule.evaluate({ functionSignatures: undefined as unknown as FunctionSignature[] });
+		expect(findings).toHaveLength(0);
+	});
 });
 
 describe('ConnascenceOfPositionArgsRule.describeArtifact()', () => {

@@ -2,6 +2,8 @@ export type { CoATechnicalOptions } from './coa/technical';
 export { ConnascenceOfAlgorithmTechnicalRule, default as coaTechnical } from './coa/technical';
 export type { CoMRuleOptions } from './com/com';
 export { ConnascenceOfMeaningRule, default as com } from './com/com';
+export type { CoMSemanticRuleOptions } from './com/com-semantic';
+export { ConnascenceOfMeaningSemanticRule, default as comSemantic } from './com/com-semantic';
 export type { CoPArgsRuleOptions, CoPStructRuleOptions } from './cop';
 export {
 	ConnascenceOfPositionArgsRule,

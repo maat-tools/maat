@@ -36,13 +36,13 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 
 	public evaluate(facts: { git_commits: GitCommit[]; git_file_changes: GitFileChange[] }): RuleOutput[] {
 		const cutoff = Date.now() - this.windowMs;
+		const commits = facts.git_commits ?? [];
+		const fileChanges = facts.git_file_changes ?? [];
 
-		const hashesInWindow = new Set(
-			facts.git_commits.filter((c) => new Date(c.date).getTime() >= cutoff).map((c) => c.hash),
-		);
+		const hashesInWindow = new Set(commits.filter((c) => new Date(c.date).getTime() >= cutoff).map((c) => c.hash));
 
 		const changeCount = new Map<string, number>();
-		for (const change of facts.git_file_changes) {
+		for (const change of fileChanges) {
 			if (!hashesInWindow.has(change.hash)) {
 				continue;
 			}

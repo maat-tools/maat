@@ -292,7 +292,7 @@ describe('maat visualize', () => {
 	);
 
 	test(
-		'only active axioms are shown; revoked axioms are hidden',
+		'revoked axioms are shown and labelled with their status and reason',
 		() => {
 			declareAxiom(ledger);
 			const revokeResult = runCli(['axiom', 'revoke', '--id', 'ax-001', '--reason', 'no longer valid'], {
@@ -303,13 +303,17 @@ describe('maat visualize', () => {
 
 			const result = runCli(['visualize'], { config: SAMPLE_CONFIG, env: envFor(ledger) });
 			expect(result.exitCode).toBe(0);
-			expect(stripAnsi(result.stdout)).not.toContain('AXIOMS');
+			const stdout = stripAnsi(result.stdout);
+			expect(stdout).toContain('AXIOMS (1)');
+			expect(stdout).toContain('ax-001');
+			expect(stdout).toContain('status: revoked');
+			expect(stdout).toContain('reason: no longer valid');
 		},
 		TIMEOUT,
 	);
 
 	test(
-		'only active axioms are shown; superseded axioms are hidden',
+		'superseded and active axioms are both shown with their respective statuses',
 		() => {
 			declareAxiom(ledger);
 			runCli(['axiom', 'declare', '--id', 'ax-002', '--scope', 'kernel', '--claim', 'Kernel is pure v2'], {
@@ -325,9 +329,12 @@ describe('maat visualize', () => {
 			const result = runCli(['visualize'], { config: SAMPLE_CONFIG, env: envFor(ledger) });
 			expect(result.exitCode).toBe(0);
 			const stdout = stripAnsi(result.stdout);
-			expect(stdout).toContain('AXIOMS (1)');
+			expect(stdout).toContain('AXIOMS (2)');
+			expect(stdout).toContain('ax-001');
+			expect(stdout).toContain('status: superseded');
+			expect(stdout).toContain('reason: replaced by ax-002');
 			expect(stdout).toContain('ax-002');
-			expect(stdout).not.toContain('ax-001');
+			expect(stdout).toContain('status: active');
 		},
 		TIMEOUT,
 	);

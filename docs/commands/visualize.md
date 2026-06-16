@@ -20,7 +20,13 @@ Findings are grouped as:
 - `unverified`;
 - `revoked`.
 
-Axioms are shown unless `--no-axioms` is passed. Only active axioms are displayed; revoked and superseded axioms are hidden.
+Axioms are shown unless `--no-axioms` is passed. Every axiom is displayed and labelled with its current status:
+
+- `active` — a declared axiom that is still in force (shown in green);
+- `superseded` — replaced by a newer decision (shown in yellow);
+- `revoked` — no longer applicable (shown in red).
+
+Superseded and revoked axioms also display the `reason` recorded when they were changed.
 
 ## Options
 

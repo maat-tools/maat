@@ -61,7 +61,6 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 
 		const allFindingsState = await this.ledger.getAllFindingsState();
 		const allAxiomsState = await this.ledger.getAllAxiomsState();
-		const onlyActiveAxioms = allAxiomsState.filter((a) => a.type === FindingStatus.AXIOM_DECLARED);
 
 		if (filter) {
 			filter.split(',').forEach((group) => {
@@ -89,7 +88,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		if (json) {
 			const out = {
 				findings: Object.fromEntries(groupedFindings),
-				...(axioms ? { axioms: onlyActiveAxioms } : {}),
+				...(axioms ? { axioms: allAxiomsState } : {}),
 				...(insights && this.insights.length > 0
 					? { insights: await this.runInsightsIfEnabled(allFindingsState.map(toFinding)) }
 					: {}),
@@ -103,7 +102,7 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 		const onlyGroupsWithFindings = Array.from(groupedFindings.entries()).filter(([_, records]) => records.length > 0);
 		if (
 			onlyGroupsWithFindings.length === 0 &&
-			(!axioms || onlyActiveAxioms.length === 0) &&
+			(!axioms || allAxiomsState.length === 0) &&
 			(!insights || this.insights.length === 0)
 		) {
 			this.presenter.log('No findings or axioms in the ledger.');
@@ -116,12 +115,12 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 			this.presenter.findingGroup(records.map(toFinding), (id) => this.kernel.getRuleById(id));
 		}
 
-		if (axioms && onlyActiveAxioms.length > 0) {
-			const heading = `AXIOMS (${onlyActiveAxioms.length})`;
+		if (axioms && allAxiomsState.length > 0) {
+			const heading = `AXIOMS (${allAxiomsState.length})`;
 			this.presenter.section(heading);
-			this.presenter.log('Only active (excluding revoked and superseded) axioms are shown.\n');
+			this.presenter.log('Each axiom is labelled with its current status: active, superseded, or revoked.\n');
 
-			for (const axiom of onlyActiveAxioms) {
+			for (const axiom of allAxiomsState) {
 				this.presenter.axiomEntry(axiom);
 			}
 		}

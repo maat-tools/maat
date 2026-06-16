@@ -1,4 +1,11 @@
-import type { Artifact, AxiomDeclaredEvent, Finding, InsightResult, Rule } from '@maat-tools/contracts';
+import {
+	type Artifact,
+	type AxiomEvent,
+	type Finding,
+	FindingStatus,
+	type InsightResult,
+	type Rule,
+} from '@maat-tools/contracts';
 import chalk from 'chalk';
 
 function formatArtifact(artifact: Artifact, rule: Rule | undefined): string {
@@ -85,15 +92,42 @@ export class StdoutPresenter {
 		this.findingGroup(findings, getRule);
 	}
 
-	public axiomEntry(axiom: AxiomDeclaredEvent): void {
+	public axiomEntry(axiom: AxiomEvent): void {
 		if (this.silent) {
 			return;
 		}
-		process.stdout.write(`\n  ${chalk.cyan(axiom.axiomId)}\n`);
-		process.stdout.write(`    ${chalk.bold('scope:')} ${axiom.scope}\n`);
-		process.stdout.write(`    ${chalk.bold('claim:')} ${axiom.claim}\n`);
-		if (axiom.note) {
-			process.stdout.write(`    ${chalk.bold('note:')} ${axiom.note}\n`);
+		if (axiom.type === FindingStatus.AXIOM_DECLARED) {
+			process.stdout.write(`\n  ${chalk.cyan(axiom.axiomId)}\n`);
+			process.stdout.write(`    ${chalk.bold('scope:')} ${axiom.scope}\n`);
+			process.stdout.write(`    ${chalk.bold('claim:')} ${axiom.claim}\n`);
+			process.stdout.write(`    ${chalk.bold('status:')} ${chalk.green('active')}\n`);
+			if (axiom.note) {
+				process.stdout.write(`    ${chalk.bold('note:')} ${axiom.note}\n`);
+			}
+		}
+
+		if (axiom.type === FindingStatus.AXIOM_SUPERSEDED) {
+			process.stdout.write(`\n  ${chalk.yellow(axiom.axiomId)}\n`);
+			process.stdout.write(`    ${chalk.bold('reason:')} ${axiom.reason}\n`);
+			process.stdout.write(`    ${chalk.bold('status:')} ${chalk.yellow('superseded')}\n`);
+			if (axiom.scope) {
+				process.stdout.write(`    ${chalk.bold('scope:')} ${axiom.scope}\n`);
+			}
+			if (axiom.claim) {
+				process.stdout.write(`    ${chalk.bold('claim:')} ${axiom.claim}\n`);
+			}
+		}
+
+		if (axiom.type === FindingStatus.AXIOM_REVOKED) {
+			process.stdout.write(`\n  ${chalk.red(axiom.axiomId)}\n`);
+			process.stdout.write(`    ${chalk.bold('reason:')} ${axiom.reason}\n`);
+			process.stdout.write(`    ${chalk.bold('status:')} ${chalk.red('revoked')}\n`);
+			if (axiom.scope) {
+				process.stdout.write(`    ${chalk.bold('scope:')} ${axiom.scope}\n`);
+			}
+			if (axiom.claim) {
+				process.stdout.write(`    ${chalk.bold('claim:')} ${axiom.claim}\n`);
+			}
 		}
 	}
 

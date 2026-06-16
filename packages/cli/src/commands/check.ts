@@ -71,11 +71,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 						spinner?.update(`Enriching ${event.enricherId} (${event.index + 1}/${event.total})`);
 					}
 					if (event.type === 'enricher:done') {
-						totalLLMCosts.hasUsedLLM = true;
 						if (event.enriched.usedTokens) {
+							totalLLMCosts.hasUsedLLM = true;
 							totalLLMCosts.usedTokens += event.enriched.usedTokens;
 						}
 						if (event.enriched.cost) {
+							totalLLMCosts.hasUsedLLM = true;
 							totalLLMCosts.cost += event.enriched.cost;
 						}
 					}

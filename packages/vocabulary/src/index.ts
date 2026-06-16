@@ -101,7 +101,7 @@ export type AlgorithmicPatternMatcher = {
 	role: string;
 	functionPattern: string;
 	literalArgIndex?: number;
-	expressionKind?: 'template';
+	expressionKind?: 'call' | 'new' | 'template';
 };
 
 export type AlgorithmicPattern = {

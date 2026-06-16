@@ -63,7 +63,7 @@ export const dateFormatPattern: AlgorithmicPattern = {
 	roles: ['formatter', 'parser'],
 	matchers: [
 		{ role: 'formatter', functionPattern: '\\.toISOString$' },
-		{ role: 'parser', functionPattern: '^Date$', literalArgIndex: 0 },
+		{ role: 'parser', functionPattern: '^Date$', literalArgIndex: 0, expressionKind: 'new' },
 	],
 };
 

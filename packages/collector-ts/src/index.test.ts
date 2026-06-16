@@ -655,6 +655,39 @@ describe('TSCollector.collect() — algorithmicBindings fact', () => {
 		}
 	});
 
+	test('emits bindings for matching new expressions', async () => {
+		const tmpDir = resolve(import.meta.dir, '../../../tests/fixtures/new-expression-test');
+		const srcDir = resolve(tmpDir, 'src');
+		await mkdir(srcDir, { recursive: true });
+		const tsConfigPath = resolve(tmpDir, 'tsconfig.json');
+
+		await writeFile(tsConfigPath, JSON.stringify({ compilerOptions: {} }));
+		await writeFile(resolve(srcDir, 'parse.ts'), 'const d = new Date("2024-01-01");\n');
+		await writeFile(resolve(srcDir, 'call.ts'), 'const d = Date("2024-01-01");\n');
+
+		const collector = new TSCollector({
+			tsConfigFilePath: tsConfigPath,
+			algorithmicPatterns: [
+				{
+					id: 'date-format',
+					roles: ['parser'],
+					matchers: [{ role: 'parser', functionPattern: '^Date$', literalArgIndex: 0, expressionKind: 'new' }],
+				},
+			],
+		});
+		const { algorithmicBindings } = await collector.collect();
+
+		const newBinding = algorithmicBindings.find((b) => b.file.includes('parse'));
+		const callBinding = algorithmicBindings.find((b) => b.file.includes('call'));
+
+		expect(newBinding).toBeDefined();
+		expect(newBinding?.functionName).toBe('Date');
+		expect(newBinding?.bindingKey).toBe('2024-01-01');
+		expect(callBinding).toBeUndefined();
+
+		await rm(tmpDir, { recursive: true });
+	});
+
 	test('does not emit bindings for whitespace-only prefix/suffix in template literals', async () => {
 		const tmpDir = resolve(import.meta.dir, '../../../tests/fixtures/template-whitespace-test');
 		const srcDir = resolve(tmpDir, 'src');

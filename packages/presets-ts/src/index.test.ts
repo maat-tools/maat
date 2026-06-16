@@ -47,5 +47,8 @@ describe('presets-ts', () => {
 
 	test('dateFormatPattern has formatter and parser roles', () => {
 		expect(dateFormatPattern.roles).toEqual(['formatter', 'parser']);
+		expect(dateFormatPattern.matchers[0]?.role).toBe('formatter');
+		expect(dateFormatPattern.matchers[1]?.role).toBe('parser');
+		expect(dateFormatPattern.matchers[1]?.expressionKind).toBe('new');
 	});
 });

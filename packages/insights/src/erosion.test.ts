@@ -188,4 +188,135 @@ describe('ErosionInsight.analyze()', () => {
 		];
 		expect(insight.analyze(findings)).toHaveLength(0);
 	});
+
+	test('churn artifacts with invalid path or count are ignored', () => {
+		const insight = new ErosionInsight();
+		const findings: Finding[] = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			{
+				ruleId: 'maat-tools/git-rules/churn@v1',
+				instanceId: 'maat-tools/git-rules/churn@v1',
+				fingerprint: 'invalid',
+				message: 'invalid churn entry',
+				artifacts: [
+					{ kind: 'git-churn', data: { path: 123, count: 5 } },
+					{ kind: 'git-churn', data: { path: 'packages/cli/src/other.ts', count: 'many' } },
+					{ kind: 'git-churn', data: {} },
+				],
+			},
+			couplingFinding('@maat-tools/cli'),
+		];
+		const [result] = insight.analyze(findings);
+		const data = result?.data as Array<{ churnTotal: number; files: Array<{ path: string }> }>;
+		expect(data[0]?.churnTotal).toBe(10);
+		expect(data[0]?.files).toHaveLength(1);
+	});
+
+	test('multiple violations in the same boundary are grouped', () => {
+		const insight = new ErosionInsight();
+		const findings = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			couplingFinding('@maat-tools/cli', 'pure-imports', 'packages/cli/src/index.ts'),
+			couplingFinding('@maat-tools/cli', 'layer-imports', 'packages/cli/src/commands/check.ts'),
+		];
+		const [result] = insight.analyze(findings);
+		const data = result?.data as Array<{ violationCount: number; violations: unknown[] }>;
+		expect(data[0]?.violationCount).toBe(2);
+		expect(data[0]?.violations).toHaveLength(2);
+		expect(result?.message).toContain('2 boundary violations');
+	});
+
+	test('coupling finding without colon in instanceId is ignored', () => {
+		const insight = new ErosionInsight();
+		const findings: Finding[] = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			{
+				ruleId: 'maat-tools/coupling-rules/pure-imports@v1',
+				instanceId: 'maat-tools/coupling-rules/pure-imports@v1',
+				fingerprint: 'no-colon',
+				message: 'missing target boundary',
+				artifacts: [
+					{ kind: 'dependsOn', data: { from: { path: 'packages/cli/src/index.ts' }, to: { path: 'node:crypto' } } },
+				],
+			},
+		];
+		expect(insight.analyze(findings)).toHaveLength(0);
+	});
+
+	test('other coupling rule variants are ignored', () => {
+		const insight = new ErosionInsight();
+		const findings: Finding[] = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			{
+				ruleId: 'maat-tools/coupling-rules/structural@v1',
+				instanceId: 'maat-tools/coupling-rules/structural@v1:@maat-tools/cli',
+				fingerprint: 'other-variant',
+				message: 'other coupling variant',
+				artifacts: [
+					{
+						kind: 'dependsOn',
+						data: {
+							from: { path: 'packages/cli/src/index.ts', package: { name: '@maat-tools/cli' } },
+							to: { path: 'node:crypto' },
+						},
+					},
+				],
+			},
+		];
+		expect(insight.analyze(findings)).toHaveLength(0);
+	});
+
+	test('result message highlights hottest file and leaking dependency', () => {
+		const insight = new ErosionInsight();
+		const findings = [
+			churnFinding('packages/cli/src/index.ts', 12),
+			churnFinding('packages/cli/src/commands/check.ts', 5),
+			couplingFinding('@maat-tools/cli'),
+		];
+		const [result] = insight.analyze(findings);
+		expect(result?.message).toContain('hottest packages/cli/src/index.ts (12 changes)');
+		expect(result?.message).toContain('leaking node:crypto');
+	});
+
+	test('violation without dependency path omits leaking text', () => {
+		const insight = new ErosionInsight();
+		const findings: Finding[] = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			{
+				ruleId: 'maat-tools/coupling-rules/pure-imports@v1',
+				instanceId: 'maat-tools/coupling-rules/pure-imports@v1:packages/cli/**',
+				fingerprint: 'no-dep',
+				message: 'boundary violation',
+				artifacts: [{ kind: 'dependsOn', data: { from: { path: 'packages/cli/src/index.ts' }, to: {} } }],
+			},
+		];
+		const [result] = insight.analyze(findings);
+		expect(result?.message).toBeDefined();
+		expect(result?.message ?? '').not.toContain('leaking');
+		const data = result?.data as Array<{ violations: Array<{ dependency?: string }> }>;
+		expect(data[0]?.violations[0]?.dependency).toBeUndefined();
+	});
+
+	test('result message pluralizes hot files correctly', () => {
+		const insight = new ErosionInsight();
+		const singleFileFindings = [churnFinding('packages/cli/src/index.ts', 10), couplingFinding('@maat-tools/cli')];
+		const [singleResult] = insight.analyze(singleFileFindings);
+		expect(singleResult?.message).toContain('1 hot file');
+
+		const multiFileFindings = [
+			churnFinding('packages/cli/src/index.ts', 10),
+			churnFinding('packages/cli/src/commands/check.ts', 5),
+			couplingFinding('@maat-tools/cli'),
+		];
+		const [multiResult] = insight.analyze(multiFileFindings);
+		expect(multiResult?.message).toContain('2 hot files');
+	});
+
+	test('exposes id and required rules', () => {
+		const insight = new ErosionInsight();
+		expect(insight.id).toBe('maat-tools/erosion@v1');
+		expect(insight.needRules).toContain('maat-tools/git-rules/churn@v1');
+		expect(insight.needRules).toContain('maat-tools/coupling-rules/pure-imports@v1');
+		expect(insight.needRules).toContain('maat-tools/coupling-rules/layer-imports@v1');
+	});
 });

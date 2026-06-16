@@ -198,4 +198,32 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 		});
 		expect(desc.container).toBe('(module-level)');
 	});
+
+	test('minFiles=0 flags a complete pair in a single file', () => {
+		const rule = new ConnascenceOfAlgorithmTechnicalRule({ minFiles: 0 });
+		const bindings: AlgorithmicBinding[] = [
+			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
+			makeBinding('pack-unpack', 'unpacker', ':', { file: 'a.ts' }),
+		];
+		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		expect(findings).toHaveLength(1);
+	});
+
+	test('empty patterns option filters every pattern id', () => {
+		const rule = new ConnascenceOfAlgorithmTechnicalRule({ patterns: [] });
+		const bindings: AlgorithmicBinding[] = [
+			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
+			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts' }),
+		];
+		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		expect(findings).toHaveLength(0);
+	});
+
+	test('missing algorithmicBindings capability → treated as empty', () => {
+		const rule = new ConnascenceOfAlgorithmTechnicalRule();
+		const findings = rule.evaluate({
+			algorithmicBindings: undefined as unknown as AlgorithmicBinding[],
+		});
+		expect(findings).toHaveLength(0);
+	});
 });

@@ -50,11 +50,5 @@
 			"@maat-tools/cli": ["./packages/cli/src/index.ts"]
 		}
 	},
-	"exclude": [
-		"packages/*/fixtures",
-		"packages/*/dist",
-		"tests/fixtures",
-		"tests/e2e/tsconfig.json",
-		"tests/integration/tsconfig.json"
-	]
+	"exclude": ["packages/*/fixtures", "packages/*/dist", "tests/fixtures", "tests/e2e/tsconfig.json"]
 }

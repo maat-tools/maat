@@ -30,9 +30,6 @@ jobs:
       - name: Unit tests
         run: bun run test:unit
 
-      - name: Integration tests
-        run: bun run test:integration
-
       - name: E2E tests
         run: bun run test:e2e
 

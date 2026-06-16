@@ -108,7 +108,7 @@ export class Kernel {
 
 	public async run(options?: { onProgress?: (event: KernelProgressEvent) => void }): Promise<KernelResult> {
 		let facts: Partial<FactRegistry> = {};
-		const factsRequiringVerification = new Map<string, string[]>();
+		const factsRequiringVerification = new Map<string, (keyof FactRegistry)[]>();
 		const onProgress = options?.onProgress;
 
 		if (this.collectors.length === 0) {
@@ -138,7 +138,7 @@ export class Kernel {
 
 				if (enricher.needFacts.length === 0) {
 					const enriched = await enricher.enrich();
-					factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
+					factsRequiringVerification.set(enricher.id, [...enricher.provideFacts]);
 
 					onProgress?.({
 						type: 'enricher:done',
@@ -165,7 +165,7 @@ export class Kernel {
 				}
 
 				const enriched = await enricher.enrich(Object.fromEntries(enricher.needFacts.map((key) => [key, facts[key]])));
-				factsRequiringVerification.set(enricher.id, enricher.provideFacts as string[]);
+				factsRequiringVerification.set(enricher.id, [...enricher.provideFacts]);
 
 				onProgress?.({
 					type: 'enricher:done',

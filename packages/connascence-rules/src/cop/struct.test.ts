@@ -247,6 +247,41 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		expect(findings[0]?.ruleIdentifier).toHaveProperty('name', 'data');
 		expect(findings[0]?.ruleIdentifier).toHaveProperty('file', '/src/users.ts');
 	});
+
+	test('source with empty positions but heterogeneous flag is still evaluated', () => {
+		const rule = new ConnascenceOfPositionStructRule();
+		const source = makeSource({ name: 'data', positions: [], isHeterogeneous: true });
+		const access = makeAccess({ name: 'data', file: source.file, accessedIndex: 0 });
+		const findings = rule.evaluate({
+			positionalSources: [source],
+			positionalAccesses: [access],
+		});
+		expect(findings).toHaveLength(1);
+	});
+
+	test('cross-file access with origin matching source file but wrong name → no finding', () => {
+		const rule = new ConnascenceOfPositionStructRule();
+		const source = makeSource({ name: 'result', file: '/src/parser.ts' });
+		const access = makeAccess({
+			name: 'parsed',
+			file: '/src/consumer.ts',
+			origin: { file: '/src/parser.ts', name: 'differentName' },
+		});
+		const findings = rule.evaluate({
+			positionalSources: [source],
+			positionalAccesses: [access],
+		});
+		expect(findings).toHaveLength(0);
+	});
+
+	test('missing positional facts capabilities → treated as empty', () => {
+		const rule = new ConnascenceOfPositionStructRule();
+		const findings = rule.evaluate({
+			positionalSources: undefined as unknown as PositionalSource[],
+			positionalAccesses: undefined as unknown as PositionalAccess[],
+		});
+		expect(findings).toHaveLength(0);
+	});
 });
 
 describe('ConnascenceOfPositionStructRule.describeArtifact()', () => {

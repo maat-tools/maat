@@ -14,41 +14,57 @@ import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/sample-project/tsconfig.json');
 
-describe('TSCollector.collect() — dependsOn fact', () => {
-	test('provides dependsOn in provideFacts', () => {
+describe('TSCollector', () => {
+	test('advertises all supported facts', () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		expect(collector.provideFacts).toContain(DEPENDS_ON_CAPABILITY);
+		expect(collector.provideFacts).toEqual([
+			CONSTANTS_CAPABILITY,
+			DEPENDS_ON_CAPABILITY,
+			FUNCTION_SIGNATURES_CAPABILITY,
+			POSITIONAL_SOURCES_CAPABILITY,
+			POSITIONAL_ACCESSES_CAPABILITY,
+			ALGORITHMIC_BINDINGS_CAPABILITY,
+			CALL_GRAPH_CAPABILITY,
+		]);
 	});
 
-	test('provides constants in provideFacts', () => {
+	test('collect() returns every supported fact category', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		expect(collector.provideFacts).toContain(CONSTANTS_CAPABILITY);
+		const facts = await collector.collect();
+
+		expect(facts.dependsOn).toBeDefined();
+		expect(facts.constants).toBeDefined();
+		expect(facts.functionSignatures).toBeDefined();
+		expect(facts.positionalSources).toBeDefined();
+		expect(facts.positionalAccesses).toBeDefined();
+		expect(facts.algorithmicBindings).toBeDefined();
+		expect(facts.callGraph).toBeDefined();
 	});
 
-	test('emits dependsOn from source files', async () => {
+	test('collect() emits findings from the fixture project', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { dependsOn } = await collector.collect();
+		const { dependsOn, constants, functionSignatures, positionalSources, positionalAccesses } =
+			await collector.collect();
+
 		expect(dependsOn.length).toBeGreaterThan(0);
+		expect(constants.length).toBeGreaterThan(0);
+		expect(functionSignatures.length).toBeGreaterThan(0);
+		expect(positionalSources.length).toBeGreaterThan(0);
+		expect(positionalAccesses.length).toBeGreaterThan(0);
 	});
 
-	test('each dependsOn has from.path, to.path, and location', async () => {
+	test('emitted file paths are relative to process.cwd()', async () => {
 		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { dependsOn } = await collector.collect();
-		for (const dep of dependsOn) {
-			expect(typeof dep.from.path).toBe('string');
-			expect(isAbsolute(dep.from.path)).toBe(false);
-			expect(dep.from.path).not.toContain('\\');
-			expect(typeof dep.to.path).toBe('string');
-			expect(dep.from.location.file).toBe(dep.from.path);
-			expect(typeof dep.from.location.line).toBe('number');
-		}
-	});
+		const { constants, dependsOn, functionSignatures, positionalSources, positionalAccesses } =
+			await collector.collect();
 
-	test('emits source locations relative to process.cwd()', async () => {
-		const collector = new TSCollector({ tsConfigFilePath: FIXTURE_TSCONFIG });
-		const { constants, dependsOn } = await collector.collect();
-
-		const files = [...dependsOn.map((dep) => dep.from.path), ...constants.map((constant) => constant.location.file)];
+		const files = [
+			...dependsOn.map((dep) => dep.from.path),
+			...constants.map((constant) => constant.location.file),
+			...functionSignatures.map((fn) => fn.file),
+			...positionalSources.map((source) => source.file),
+			...positionalAccesses.map((access) => access.file),
+		];
 
 		expect(files).toContain(
 			relative(process.cwd(), resolve(import.meta.dir, '../../../tests/fixtures/sample-project/src/index.ts')).replace(

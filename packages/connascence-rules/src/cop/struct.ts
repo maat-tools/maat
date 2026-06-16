@@ -31,7 +31,8 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 		positionalSources: PositionalSource[];
 		positionalAccesses: PositionalAccess[];
 	}): RuleOutput[] {
-		const { positionalSources, positionalAccesses } = facts;
+		const positionalSources = facts.positionalSources ?? [];
+		const positionalAccesses = facts.positionalAccesses ?? [];
 		const accessMap = new Map<string, PositionalAccess[]>();
 
 		for (const acc of positionalAccesses) {

@@ -112,11 +112,9 @@ export class Kernel {
 		const onProgress = options?.onProgress;
 
 		if (this.collectors.length === 0) {
-			console.warn('No collectors registered. No facts will be collected.');
 			return { findings: [] };
 		}
 		if (this.rules.length === 0) {
-			console.warn('No rules registered. No findings will be produced.');
 			return { findings: [] };
 		}
 
@@ -155,7 +153,6 @@ export class Kernel {
 
 				const hasFacts = enricher.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
-					console.warn(`Enricher "${enricher.id}" skipped. Required facts are missing.`);
 					onProgress?.({
 						type: 'enricher:done',
 						enricherId: enricher.id,
@@ -191,8 +188,6 @@ export class Kernel {
 			this.rules.map(async (rule) => {
 				const hasFacts = rule.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
-					console.warn(`Rule "${rule.id}" skipped. Required facts are missing.`);
-
 					return [];
 				}
 

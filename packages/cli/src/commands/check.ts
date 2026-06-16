@@ -88,6 +88,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		if (!this.isLedgerProvided()) {
 			this.printLLMSummaryIfNecessary(totalLLMCosts);
 			this.presenter.findings(findingsFromTheCurrentRun, (id) => this.kernel.getRuleById(id));
+			if (actionableFindingsFromTheCurrentRun.length !== findingsFromTheCurrentRun.length) {
+				this.presenter.warn('Some findings are marked [Verify] but no ledger is configured, so they can\'t be verified or tracked. They\'re shown for visibility only. Configure a ledger in maat.config.ts to verify and track them.');
+			}
 			if (this.config.check?.strict && actionableFindingsFromTheCurrentRun.length > 0) {
 				this.presenter.error(
 					'One or more findings that violate the defined architecture detected. Please address these issues to comply with it.\n',

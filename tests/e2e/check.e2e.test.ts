@@ -113,6 +113,21 @@ describe('maat check — core behavior', () => {
 		expect(result.exitCode).toBe(1);
 		expect(stripAnsi(result.stderr).toLowerCase()).toContain('no rules');
 	});
+
+	test(
+		'unverified findings without a ledger are shown but flagged as not verifiable',
+		() => {
+			const result = runCli(['check'], { config: VERIFICATION_CONFIG });
+			expect(stripAnsi(result.stdout)).toContain('[Verify]');
+			expect(stripAnsi(result.stderr)).toContain('no ledger is configured');
+		},
+		TIMEOUT,
+	);
+
+	test('no note when there are no unverified findings and no ledger', () => {
+		const result = runCli(['check'], { config: SAMPLE_CONFIG });
+		expect(stripAnsi(result.stderr)).not.toContain('no ledger is configured');
+	});
 });
 
 describe('maat check — ledger state transitions', () => {

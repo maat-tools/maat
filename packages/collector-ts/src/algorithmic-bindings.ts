@@ -4,6 +4,7 @@ import {
 	type ClassDeclaration,
 	type FunctionDeclaration,
 	type MethodDeclaration,
+	type NewExpression,
 	type Node,
 	type SourceFile,
 	SyntaxKind,
@@ -130,21 +131,23 @@ function collectCallBindings(
 	role: string,
 	functionRegex: RegExp,
 	literalArgIndex: number | undefined,
+	expressionKind: 'call' | 'new',
 ): AlgorithmicBinding[] {
 	const bindings: AlgorithmicBinding[] = [];
+	const targetKind = expressionKind === 'new' ? SyntaxKind.NewExpression : SyntaxKind.CallExpression;
 
 	for (const node of sourceFile.getDescendants()) {
-		if (node.getKind() !== SyntaxKind.CallExpression) {
+		if (node.getKind() !== targetKind) {
 			continue;
 		}
-		const callNode = node as CallExpression;
-		const calledName = callNode.getExpression().getText();
+		const exprNode = node as CallExpression | NewExpression;
+		const calledName = exprNode.getExpression().getText();
 		if (!functionRegex.test(calledName)) {
 			continue;
 		}
 
 		if (literalArgIndex !== undefined) {
-			const arg = callNode.getArguments()[literalArgIndex];
+			const arg = exprNode.getArguments()[literalArgIndex];
 			if (!arg || arg.getKind() !== SyntaxKind.StringLiteral) {
 				continue;
 			}
@@ -156,7 +159,7 @@ function collectCallBindings(
 					functionName: calledName,
 					file,
 					node,
-					containingFunction: getContainingFunctionName(callNode),
+					containingFunction: getContainingFunctionName(exprNode),
 				}),
 			);
 		} else {
@@ -168,7 +171,7 @@ function collectCallBindings(
 					functionName: calledName,
 					file,
 					node,
-					containingFunction: getContainingFunctionName(callNode),
+					containingFunction: getContainingFunctionName(exprNode),
 				}),
 			);
 		}
@@ -202,6 +205,7 @@ export function collectAlgorithmicBindings(
 						matcher.role,
 						new RegExp(matcher.functionPattern),
 						matcher.literalArgIndex,
+						expressionKind,
 					),
 				);
 			}

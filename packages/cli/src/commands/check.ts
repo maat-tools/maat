@@ -1,10 +1,4 @@
-import {
-	type AxiomEvent,
-	type Finding,
-	type FindingEvent,
-	FindingStatus,
-	type LedgerBackend,
-} from '@maat-tools/contracts';
+import { type Finding, type FindingEvent, FindingStatus } from '@maat-tools/contracts';
 import type { KernelProgressEvent } from '@maat-tools/kernel';
 import { createSpinner } from '../spinner';
 import type { MaatCommand } from '.';
@@ -12,47 +6,62 @@ import { MaatCommandBase } from './base';
 
 type CheckOptions = {
 	ledger?: boolean;
-	showBaselined?: boolean;
-	show?: string;
 	silent?: boolean;
 };
 
-type CheckDisplayMode = 'all' | 'findings' | 'insights';
+type RegressionDetail = {
+	fingerprint: string;
+	message: string;
+	reason?: string;
+};
 
-const CHECK_DISPLAY_MODES = new Set<CheckDisplayMode>(['all', 'findings', 'insights']);
+type RegressionToVerifyDetail = {
+	fingerprint: string;
+	message: string;
+};
 
-type LedgerAnalysis = {
+type ExpiredBaselineDetail = {
+	fingerprint: string;
+	message: string;
+	expiredAt: string;
+};
+
+type LedgerReconcilation = {
 	baselinedFingerprints: Set<string>;
-	axiomExceptedFingerprints: Set<string>;
+	expiredBaselines: ExpiredBaselineDetail[];
 	requiringVerificationFingerprints: Set<string>;
 	revokedFingerprints: Set<string>;
-	activeAxiomCount: number;
-	hasRegressions: boolean;
-	hasExpiredBaselines: boolean;
+	regressions: RegressionDetail[];
+	regressionsToVerify: RegressionToVerifyDetail[];
+	automaticallyResolvedFingerprints: Set<string>;
+	newFindings: Set<string>;
 };
 
 export class Check extends MaatCommandBase implements MaatCommand {
-	public async action(options: CheckOptions = {}) {
-		if (options.silent) {
-			this.presenter = this.presenter.asSilent();
-		}
-		const displayMode = this.resolveDisplayMode(options.show);
+	public register(): void {
+		this.cli
+			.command('check')
+			.description('Scan the codebase for architectural findings')
+			.option('--ledger', 'Save findings to the ledger')
+			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
+			.action((options: CheckOptions) => this.action(options));
+	}
 
+	private async action(options: CheckOptions = {}) {
 		if (options.ledger === true && !this.isLedgerProvided()) {
 			this.presenter.error(
-				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to use this feature.\n',
+				'Ledger option enabled, but no ledger configured. Please configure a ledger in your maat.config.ts to be able to save findings.\n',
 			);
 			process.exit(1);
 		}
 
-		if (options.showBaselined && !this.isLedgerProvided()) {
-			this.presenter.error('--show-baselined requires a ledger to be configured.\n');
-			process.exit(1);
+		if (options.silent) {
+			this.presenter = this.presenter.asSilent();
 		}
 
 		const spinner = options.silent ? null : createSpinner();
-		const totalLLMCosts = { usedTokens: 0, cost: 0 };
-		const { findings: currentFindings } = await this.kernel
+		const totalLLMCosts = { usedTokens: 0, cost: 0, hasUsedLLM: false };
+		const { findings: findingsFromTheCurrentRun } = await this.kernel
 			.run({
 				onProgress: (event: KernelProgressEvent) => {
 					if (event.type === 'collector:start') {
@@ -63,9 +72,11 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					}
 					if (event.type === 'enricher:done') {
 						if (event.enriched.usedTokens) {
+							totalLLMCosts.hasUsedLLM = true;
 							totalLLMCosts.usedTokens += event.enriched.usedTokens;
 						}
 						if (event.enriched.cost) {
+							totalLLMCosts.hasUsedLLM = true;
 							totalLLMCosts.cost += event.enriched.cost;
 						}
 					}
@@ -73,339 +84,289 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			})
 			.finally(() => spinner?.stop());
 
-		const currentFingerprints = new Set(currentFindings.map((f) => f.fingerprint));
-		const actionableFindings = currentFindings.filter((f) => !f.requiresVerification);
-
+		const actionableFindingsFromTheCurrentRun = findingsFromTheCurrentRun.filter((f) => !f.requiresVerification);
 		if (!this.isLedgerProvided()) {
-			if (displayMode === 'all') {
-				this.printRunContext({ ledger: false });
-			}
-			if (displayMode === 'all' || displayMode === 'findings') {
-				this.presenter.findings(currentFindings, (id) => this.kernel.getRuleById(id));
-			}
-			if (displayMode === 'all' || displayMode === 'insights') {
-				await this.printInsights(currentFindings, { warnAboutScope: displayMode === 'all' });
-			}
-			if (totalLLMCosts.usedTokens > 0) {
-				this.presenter.info(
-					`\nLLM costs: $${totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
+			this.printLLMSummaryIfNecessary(totalLLMCosts);
+			this.presenter.findings(findingsFromTheCurrentRun, (id) => this.kernel.getRuleById(id));
+			if (actionableFindingsFromTheCurrentRun.length !== findingsFromTheCurrentRun.length) {
+				this.presenter.warn(
+					"Some findings are marked [Verify] but no ledger is configured, so they can't be verified or tracked. They're shown for visibility only. Configure a ledger in maat.config.ts to verify and track them.",
 				);
 			}
-			if (this.config.check?.strict && actionableFindings.length > 0) {
+			if (this.config.check?.strict && actionableFindingsFromTheCurrentRun.length > 0) {
 				this.presenter.error(
-					'One or more findings that require verification detected. Please address these issues to comply with the defined architecture.\n',
+					'One or more findings that violate the defined architecture detected. Please address these issues to comply with it.\n',
 				);
 				process.exit(1);
 			}
+
+			if (findingsFromTheCurrentRun.length === 0) {
+				this.presenter.log('No findings detected. Great job!');
+				return;
+			}
+
+			this.presenter.log(
+				`${findingsFromTheCurrentRun.length} finding(s) detected. Please review the output above for details.\n`,
+			);
 			return;
 		}
 
-		const axioms = await this.ledger.getAllAxiomsState();
-		const findings = await this.ledger.getAllFindingsState();
-		const analysis = await this.analyzeLedgerState(axioms, findings, currentFingerprints);
+		const allFindingsState = await this.ledger.getAllFindingsState();
+		const reconcilation = await this.reconcileCurrentRunWithLedgerState(allFindingsState, findingsFromTheCurrentRun);
+
 		if (options.ledger === true) {
-			await this.syncLedgerEvents(this.ledger, findings, currentFindings, currentFingerprints, analysis);
-		}
-		const ledgerByFingerprint = new Map(findings.map((r) => [r.fingerprint, r]));
-		const reconciled = currentFindings.map((f) => {
-			const record = ledgerByFingerprint.get(f.fingerprint);
-			if (f.requiresVerification && record?.type === FindingStatus.OBSERVED) {
-				return { ...f, requiresVerification: false };
-			}
-			return f;
-		});
-		const visibleFindings = options.showBaselined ? reconciled : this.getVisibleFindings(reconciled, analysis);
-
-		if (displayMode === 'all') {
-			this.printRunContext({
-				ledger: true,
-				writesLedger: options.ledger === true,
-				showBaselined: options.showBaselined === true,
-			});
+			await this.syncLedgerEvents(allFindingsState, findingsFromTheCurrentRun, reconcilation);
 		}
 
-		if (displayMode === 'all' || displayMode === 'findings') {
-			this.presenter.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
-		}
+		const visibleFindings = this.removeSkippedFindings(findingsFromTheCurrentRun, reconcilation);
 
-		if (displayMode === 'all' || displayMode === 'insights') {
-			await this.printInsights(reconciled, { warnAboutScope: displayMode === 'all' });
-		}
-
-		if (totalLLMCosts.usedTokens > 0) {
-			this.presenter.info(
-				`\nLLM costs: $${totalLLMCosts.cost === 0 ? '0.000000' : totalLLMCosts.cost.toFixed(6)} (${totalLLMCosts.usedTokens === 0 ? '0' : totalLLMCosts.usedTokens.toLocaleString()} tokens)\n`,
-			);
-		}
-
-		this.evaluateExitConditions(visibleFindings, analysis, { printSummary: displayMode !== 'insights' });
+		this.presenter.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
+		this.printLLMSummaryIfNecessary(totalLLMCosts);
+		this.evaluateExitConditions(visibleFindings, reconcilation, actionableFindingsFromTheCurrentRun);
 	}
 
-	public register(): void {
-		this.cli
-			.command('check')
-			.description('Scan the codebase for architectural findings')
-			.option('--ledger', 'Save findings to the ledger')
-			.option('--show-baselined', 'Include baselined findings in output and exit code evaluation')
-			.option('--show <mode>', 'Choose output sections to show: all, findings, insights', 'all')
-			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
-			.action((options: CheckOptions) => this.action(options));
+	private removeSkippedFindings(findings: Finding[], reconcilation: LedgerReconcilation): Finding[] {
+		return findings.filter(
+			(f) =>
+				!reconcilation.baselinedFingerprints.has(f.fingerprint) &&
+				!reconcilation.revokedFingerprints.has(f.fingerprint) &&
+				!reconcilation.automaticallyResolvedFingerprints.has(f.fingerprint),
+		);
 	}
 
-	private resolveDisplayMode(show: string | undefined): CheckDisplayMode {
-		const mode = show ?? 'all';
-		if (CHECK_DISPLAY_MODES.has(mode as CheckDisplayMode)) {
-			return mode as CheckDisplayMode;
-		}
-
-		this.presenter.error(`Invalid --show value "${mode}". Expected one of: all, findings, insights.\n`);
-		process.exit(1);
-	}
-
-	private async analyzeLedgerState(
-		axioms: AxiomEvent[],
-		findings: FindingEvent[],
-		currentFingerprints: Set<string>,
-	): Promise<LedgerAnalysis> {
+	private async reconcileCurrentRunWithLedgerState(
+		findingsFromLedger: FindingEvent[],
+		findingsFromTheCurrentRun: Finding[],
+	): Promise<LedgerReconcilation> {
 		const baselinedFingerprints = new Set<string>();
-		const axiomExceptedFingerprints = new Set<string>();
 		const requiringVerificationFingerprints = new Set<string>();
 		const revokedFingerprints = new Set<string>();
-		let hasRegressions = false;
-		let hasExpiredBaselines = false;
-		let activeAxiomCount = 0;
+		const automaticallyResolvedFingerprints = new Set<string>();
+		const newFindings = new Set<string>();
+
+		const regressions: RegressionDetail[] = [];
+		const regressionsToVerify: RegressionToVerifyDetail[] = [];
+		const expiredBaselines: ExpiredBaselineDetail[] = [];
+
 		const now = Date.now();
 
-		for (const axiom of axioms) {
-			if (axiom.type === FindingStatus.AXIOM_DECLARED) {
-				activeAxiomCount++;
-				if (axiom.fingerprints) {
-					for (const fp of axiom.fingerprints) {
-						axiomExceptedFingerprints.add(fp);
-					}
-				}
-			}
-		}
+		const findingsFromLedgerByFingerprint = new Map(findingsFromLedger.map((r) => [r.fingerprint, r]));
+		const findingsFromTheCurrentRunByFingerprint = new Map(findingsFromTheCurrentRun.map((f) => [f.fingerprint, f]));
 
-		for (const record of findings) {
+		for (const record of findingsFromLedger) {
+			const currentFinding = findingsFromTheCurrentRunByFingerprint.get(record.fingerprint);
 			if (record.type === FindingStatus.BASELINED) {
 				const expired = new Date(record.expiresAt).getTime() <= now;
+				const hasGone = !currentFinding;
 				if (expired) {
-					hasExpiredBaselines = true;
+					expiredBaselines.push({
+						fingerprint: record.fingerprint,
+						message: record.message,
+						expiredAt: record.expiresAt,
+					});
+					if (!hasGone) {
+						newFindings.add(record.fingerprint);
+					}
 				} else {
 					baselinedFingerprints.add(record.fingerprint);
 				}
+				if (hasGone) {
+					automaticallyResolvedFingerprints.add(record.fingerprint);
+				}
 			}
-			if (record.type === FindingStatus.RESOLVED && currentFingerprints.has(record.fingerprint)) {
-				hasRegressions = true;
+
+			const isARegression = record.type === FindingStatus.RESOLVED && currentFinding;
+			if (isARegression) {
+				if (currentFinding.requiresVerification) {
+					regressionsToVerify.push({
+						fingerprint: record.fingerprint,
+						message: currentFinding.message,
+					});
+				} else {
+					regressions.push({
+						fingerprint: record.fingerprint,
+						message: currentFinding.message,
+						reason: record.reason,
+					});
+				}
+				newFindings.add(record.fingerprint);
 			}
-			if (record.type === FindingStatus.UNVERIFIED && currentFingerprints.has(record.fingerprint)) {
+			if (record.type === FindingStatus.UNVERIFIED && currentFinding) {
 				requiringVerificationFingerprints.add(record.fingerprint);
 			}
-			if (record.type === FindingStatus.REVOKED && currentFingerprints.has(record.fingerprint)) {
+			if (record.type === FindingStatus.REVOKED && currentFinding) {
 				revokedFingerprints.add(record.fingerprint);
+			}
+			if ((record.type === FindingStatus.OBSERVED || record.type === FindingStatus.UNVERIFIED) && !currentFinding) {
+				automaticallyResolvedFingerprints.add(record.fingerprint);
 			}
 		}
 
+		[...findingsFromTheCurrentRunByFingerprint.keys()]
+			.filter((fp) => !findingsFromLedgerByFingerprint.has(fp))
+			.forEach((fp) => {
+				newFindings.add(fp);
+			});
+
 		return {
 			baselinedFingerprints,
-			axiomExceptedFingerprints,
-			activeAxiomCount,
-			hasRegressions,
-			hasExpiredBaselines,
+			expiredBaselines,
 			requiringVerificationFingerprints,
 			revokedFingerprints,
+			regressions,
+			regressionsToVerify,
+			automaticallyResolvedFingerprints,
+			newFindings,
 		};
 	}
 
+	private printLLMSummaryIfNecessary({
+		usedTokens,
+		cost,
+		hasUsedLLM,
+	}: {
+		usedTokens: number;
+		cost: number;
+		hasUsedLLM: boolean;
+	}): void {
+		if (hasUsedLLM) {
+			this.presenter.info(
+				`\nLLM costs: $${cost === 0 ? '0.000000' : cost.toFixed(6)} (${usedTokens === 0 ? '0' : usedTokens.toLocaleString()} tokens)\n`,
+			);
+		}
+	}
+
 	private async syncLedgerEvents(
-		ledger: LedgerBackend,
-		findings: FindingEvent[],
-		currentFindings: Finding[],
-		currentFingerprints: Set<string>,
-		analysis: LedgerAnalysis,
+		allFindingsFromLedger: FindingEvent[],
+		findingsFromTheCurrentRun: Finding[],
+		reconcilation: LedgerReconcilation,
 	): Promise<void> {
 		if (!this.isLedgerProvided()) {
 			throw new Error('Ledger is not configured');
 		}
-		const timestamp = new Date().toISOString();
-		const findingsByFingerprint = new Map(findings.map((r) => [r.fingerprint, r]));
 
-		for (const record of findings) {
-			if (currentFingerprints.has(record.fingerprint)) {
-				continue;
-			}
-			if (record.type === FindingStatus.OBSERVED) {
-				await ledger.append({
+		const timestamp = new Date().toISOString();
+		if (reconcilation.automaticallyResolvedFingerprints.size > 0) {
+			const findingsFromLedgerByFingerprint = new Map(allFindingsFromLedger.map((r) => [r.fingerprint, r]));
+			for (const fingerprint of reconcilation.automaticallyResolvedFingerprints) {
+				const finding = findingsFromLedgerByFingerprint.get(fingerprint);
+				if (!finding) {
+					this.presenter.warn(
+						`Finding with fingerprint "${fingerprint}" not found in ledger (While automatically resolving).`,
+					);
+					continue;
+				}
+
+				await this.ledger.append({
 					type: FindingStatus.RESOLVED,
 					timestamp,
-					fingerprint: record.fingerprint,
-					ruleId: record.ruleId,
-					instanceId: record.instanceId,
-					message: record.message,
-					artifacts: record.artifacts,
+					fingerprint: finding.fingerprint,
+					ruleId: finding.ruleId,
+					instanceId: finding.instanceId,
+					message: finding.message,
+					artifacts: finding.artifacts,
 				});
 			}
 		}
-
-		for (const finding of this.getActiveFindings(currentFindings, analysis)) {
-			const common = {
-				timestamp,
-				fingerprint: finding.fingerprint,
-				ruleId: finding.ruleId,
-				instanceId: finding.instanceId,
-				message: finding.message,
-				artifacts: finding.artifacts,
-			};
-
-			if (finding.requiresVerification) {
-				const existing = findingsByFingerprint.get(finding.fingerprint);
-				if (existing?.type !== FindingStatus.OBSERVED) {
-					await ledger.append({
-						type: FindingStatus.UNVERIFIED,
-						...common,
-						requiresVerification: true,
-					});
+		if (reconcilation.newFindings.size > 0) {
+			const findingsFromTheCurrentRunByFingerprint = new Map(findingsFromTheCurrentRun.map((f) => [f.fingerprint, f]));
+			for (const fingerprint of reconcilation.newFindings) {
+				const finding = findingsFromTheCurrentRunByFingerprint.get(fingerprint);
+				if (!finding) {
+					this.presenter.warn(
+						`Finding with fingerprint "${fingerprint}" not found in current findings (While adding new findings to ledger).`,
+					);
+					continue;
 				}
-				continue;
+
+				if (finding.requiresVerification) {
+					await this.ledger.append({
+						type: FindingStatus.UNVERIFIED,
+						timestamp,
+						fingerprint: finding.fingerprint,
+						ruleId: finding.ruleId,
+						instanceId: finding.instanceId,
+						message: finding.message,
+						artifacts: finding.artifacts,
+						requiresVerification: true,
+						reason: 'This finding requires verification. Please review and verify it.',
+					});
+					continue;
+				}
+				await this.ledger.append({
+					type: FindingStatus.OBSERVED,
+					timestamp,
+					fingerprint: finding.fingerprint,
+					ruleId: finding.ruleId,
+					instanceId: finding.instanceId,
+					message: finding.message,
+					artifacts: finding.artifacts,
+				});
 			}
-
-			await ledger.append({
-				type: FindingStatus.OBSERVED,
-
-				...common,
-			});
-		}
-	}
-
-	private printRunContext(
-		context:
-			| { ledger: false }
-			| {
-					ledger: true;
-					writesLedger: boolean;
-					showBaselined: boolean;
-			  },
-	): void {
-		const findingsScope =
-			context.ledger && !context.showBaselined
-				? 'active current findings; non-expired baselines and active axiom exceptions are hidden'
-				: 'all current findings from this run';
-		let ledgerScope = 'not configured; no baseline, axiom, or regression filtering is applied';
-		if (context.ledger) {
-			ledgerScope = context.writesLedger
-				? 'configured; this run reads state and writes observed/resolved events'
-				: 'configured; this run reads state only';
-		}
-
-		this.presenter.runContext([
-			'Rules run on current workspace facts collected during this check.',
-			`Ledger: ${ledgerScope}.`,
-			`Findings shown: ${findingsScope}.`,
-			'Insights run on requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions.',
-		]);
-	}
-
-	private async printInsights(findings: Finding[], options: { warnAboutScope: boolean }): Promise<void> {
-		if (options.warnAboutScope && this.insights.length > 0) {
-			this.presenter.warn(
-				'Insights analyze requested rule findings from all current findings, including findings hidden by baselines or active axiom exceptions. Insights are read-only and do not affect the check exit code.\n',
-			);
-		}
-
-		const results = await this.runInsightsIfEnabled(findings);
-		if (results.length === 0) {
-			return;
-		}
-		this.presenter.section(`INSIGHTS (${results.length})`);
-		for (const result of results) {
-			this.presenter.insight(result);
 		}
 	}
 
 	private evaluateExitConditions(
 		visibleFindings: Finding[],
-		analysis: LedgerAnalysis,
-		options: { printSummary: boolean },
+		reconcilation: LedgerReconcilation,
+		actionableFindingsFromTheCurrentRun: Finding[],
 	): void {
-		const { hasRegressions, hasExpiredBaselines, activeAxiomCount } = analysis;
+		const { regressions, regressionsToVerify, expiredBaselines } = reconcilation;
+		const hasFailures = regressions.length > 0 || regressionsToVerify.length > 0 || expiredBaselines.length > 0;
 
-		if (hasRegressions || hasExpiredBaselines) {
-			if (hasRegressions) {
-				this.presenter.error(
-					'One or more findings have reappeared after being marked as resolved. Please investigate these regressions.\n',
-				);
+		if (hasFailures) {
+			if (regressions.length > 0) {
+				this.presenter.error(this.formatRegressions(regressions));
 			}
-			if (hasExpiredBaselines) {
-				this.presenter.error(
-					"One or more baselined findings have expired. Please revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.\n",
-				);
+			if (regressionsToVerify.length > 0) {
+				this.presenter.error(this.formatRegressionsToVerify(regressionsToVerify));
+			}
+			if (expiredBaselines.length > 0) {
+				this.presenter.error(this.formatExpiredBaselines(expiredBaselines));
 			}
 			process.exit(1);
 		}
 
-		const actionableFindings = visibleFindings.filter((f) => !f.requiresVerification);
-
-		if (this.config.check?.strict && actionableFindings.length > 0) {
+		if (
+			this.config.check?.strict &&
+			this.removeSkippedFindings(actionableFindingsFromTheCurrentRun, reconcilation).length > 0
+		) {
 			this.presenter.error(
-				'One or more findings detected. Please address these issues to comply with the defined architecture.\n',
+				'One or more findings that violate the defined architecture detected. Please address these issues to comply with it.\n',
 			);
+			this.presenter.warn('Remember to use "maat baseline" to baseline any new findings that are accepted.\n');
 			process.exit(1);
-		}
-
-		if (!options.printSummary) {
-			return;
 		}
 
 		if (visibleFindings.length === 0) {
-			const summary =
-				activeAxiomCount > 0
-					? `No findings detected (${activeAxiomCount} active axiom(s)). Great job!\n`
-					: 'No findings detected. Great job!';
-			this.presenter.log(summary);
-		} else {
-			const summary =
-				activeAxiomCount > 0
-					? `${visibleFindings.length} finding(s) detected, ${activeAxiomCount} active axiom(s). Please review the output above for details.\n`
-					: `${visibleFindings.length} finding(s) detected. Please review the output above for details.\n`;
-			this.presenter.log(summary);
+			this.presenter.log('No findings detected. Great job!');
+			return;
 		}
+
+		this.presenter.log(`${visibleFindings.length} finding(s) detected. Please review the output above for details.\n`);
 	}
 
-	private getActiveFindings(
-		findings: Finding[],
-		analysis: Pick<
-			LedgerAnalysis,
-			| 'baselinedFingerprints'
-			| 'axiomExceptedFingerprints'
-			| 'requiringVerificationFingerprints'
-			| 'revokedFingerprints'
-		>,
-	): Finding[] {
-		return findings.filter(
-			(f) =>
-				!analysis.baselinedFingerprints.has(f.fingerprint) &&
-				!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
-				!analysis.requiringVerificationFingerprints.has(f.fingerprint) &&
-				!analysis.revokedFingerprints.has(f.fingerprint),
-		);
+	private formatRegressions(regressions: RegressionDetail[]): string {
+		const lines = regressions.map((regression) => {
+			const reason = regression.reason ? ` (reason: ${regression.reason})` : '';
+			return `  - ${regression.fingerprint}: ${regression.message}${reason}`;
+		});
+
+		return `One or more findings marked as resolved have reappeared (regression):\n\n${lines.join('\n')}\n\nPlease investigate these regressions.\n`;
 	}
 
-	private getVisibleFindings(
-		findings: Finding[],
-		analysis: Pick<
-			LedgerAnalysis,
-			| 'baselinedFingerprints'
-			| 'axiomExceptedFingerprints'
-			| 'requiringVerificationFingerprints'
-			| 'revokedFingerprints'
-		>,
-	): Finding[] {
-		return findings.filter(
-			(f) =>
-				!analysis.baselinedFingerprints.has(f.fingerprint) &&
-				!analysis.axiomExceptedFingerprints.has(f.fingerprint) &&
-				!analysis.revokedFingerprints.has(f.fingerprint),
-		);
+	private formatRegressionsToVerify(regressionsToVerify: RegressionToVerifyDetail[]): string {
+		const lines = regressionsToVerify.map((regression) => `  - ${regression.fingerprint}: ${regression.message}`);
+
+		return `One or more findings marked as resolved have reappeared as requiring verification (regression to verify):\n\n${lines.join('\n')}\n\nPlease verify them before treating them as confirmed regressions.\n`;
+	}
+
+	private formatExpiredBaselines(expiredBaselines: ExpiredBaselineDetail[]): string {
+		const lines = expiredBaselines.map((baseline) => {
+			const expiredAt = new Date(baseline.expiredAt).toISOString().slice(0, 10);
+			return `  - ${baseline.fingerprint}: ${baseline.message} (expired at ${expiredAt})`;
+		});
+
+		return `One or more baselined findings have expired:\n\n${lines.join('\n')}\n\nPlease revisit them: resolve, re-baseline with 'maat baseline', or address the underlying issues.\n`;
 	}
 }

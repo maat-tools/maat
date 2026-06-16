@@ -18,7 +18,7 @@ Use this when the claim should no longer be treated as true or useful.
 | Option | Purpose |
 |---|---|
 | `--id <id>` | **Required.** Axiom id to revoke. |
-| `--reason <reason>` | Optional explanation for revocation. |
+| `--reason <reason>` | **Required.** Explanation for revocation. |
 
 ## Errors
 

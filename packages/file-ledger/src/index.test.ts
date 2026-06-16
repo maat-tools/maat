@@ -219,6 +219,7 @@ describe('axiom states', () => {
 			type: FindingStatus.AXIOM_REVOKED,
 			timestamp: new Date().toISOString(),
 			axiomId: AXIOM_ID,
+			reason: 'No longer applies',
 			scope: 'kernel',
 			claim: 'Kernel is always pure',
 		});

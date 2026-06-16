@@ -24,9 +24,19 @@ When a finding disappears, maat does not assume the architecture was fixed. The 
 
 `maat resolve` records the human decision: "this fingerprint was fixed, and the same fingerprint should not come back."
 
-## What can be resolved
+## State transitions
 
-Any finding stored in the ledger can be resolved. Observed findings that disappear are also resolved automatically by `maat check --ledger` when they were not baselined.
+Not every ledger state can be resolved. The command checks the current state of the finding before appending a `finding.resolved` event:
+
+| Current state | Behavior |
+|---|---|
+| `observed` | Resolved. A `finding.resolved` event is appended. |
+| `baselined` | Resolved with a warning. The baseline is superseded by the resolution. |
+| `resolved` | Rejected (exit 1). The finding is already resolved. |
+| `revoked` | Rejected (exit 1). A revoked finding cannot be resolved. |
+| `unverified` | Rejected (exit 1). Use `maat verify` first to promote the finding to `observed`. |
+
+Observed findings that disappear are also resolved automatically by `maat check --ledger` when they were not baselined.
 
 ## Options
 

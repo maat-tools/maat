@@ -7,14 +7,21 @@ type ResolveOptions = {
 };
 
 export class Resolve extends MaatCommandBase implements MaatCommand {
-	public async action({ fingerprint }: ResolveOptions) {
+	public register(): void {
+		this.cli
+			.command('resolve')
+			.description('Mark a finding fingerprint as intentionally fixed')
+			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
+			.action((options: ResolveOptions) => this.action(options));
+	}
+
+	private async action({ fingerprint }: ResolveOptions) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot resolve without a ledger.\n');
 			process.exit(1);
 		}
 
 		const record = await this.ledger.getFindingByFingerprint(fingerprint);
-
 		if (!record) {
 			this.presenter.error(`No finding with fingerprint "${fingerprint}" found in the ledger.\n`);
 			process.exit(1);
@@ -22,8 +29,23 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 
 		if (record.type === FindingStatus.RESOLVED) {
 			this.presenter.warn(`Finding "${fingerprint}" is already resolved. Nothing to do.\n`);
+			process.exit(1);
+		}
 
-			return;
+		if (record.type === FindingStatus.REVOKED) {
+			this.presenter.warn(`Finding "${fingerprint}" has been revoked. Cannot resolve a revoked finding.\n`);
+			process.exit(1);
+		}
+
+		if (record.type === FindingStatus.UNVERIFIED) {
+			this.presenter.warn(`Finding "${fingerprint}" is currently unverified. Please use the verify command first.\n`);
+			process.exit(1);
+		}
+
+		if (record.type === FindingStatus.BASELINED) {
+			this.presenter.warn(
+				`Finding "${fingerprint}" is currently baselined. Just keep in mind that resolving it will mark it as resolved.\n`,
+			);
 		}
 
 		await this.ledger.append({
@@ -37,13 +59,5 @@ export class Resolve extends MaatCommandBase implements MaatCommand {
 		});
 
 		this.presenter.log(`Finding "${fingerprint}" resolved.\n`);
-	}
-
-	public register(): void {
-		this.cli
-			.command('resolve')
-			.description('Mark a finding fingerprint as intentionally fixed')
-			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to resolve')
-			.action((options: ResolveOptions) => this.action(options));
 	}
 }

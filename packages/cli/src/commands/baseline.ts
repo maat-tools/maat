@@ -10,9 +10,21 @@ type BaselineOptions = {
 };
 
 export class Baseline extends MaatCommandBase implements MaatCommand {
-	public async action(options: BaselineOptions = {}) {
+	public register(): void {
+		this.cli
+			.command('baseline')
+			.description('Baseline all currently observed findings, suppressing them from future check output')
+			.option(
+				'--expires-in <days>',
+				`Number of days before the baseline expires and must be revisited (1–${BASELINE_MAX_DAYS}, default: ${BASELINE_DEFAULT_DAYS})`,
+				String(BASELINE_DEFAULT_DAYS),
+			)
+			.action((options: BaselineOptions) => this.action(options));
+	}
+
+	private async action(options: BaselineOptions = {}) {
 		if (!this.isLedgerProvided()) {
-			this.presenter.error('No ledger configured. Cannot baseline without a ledger.\n');
+			this.presenter.error('No ledger configured. Cannot baseline without a ledger.');
 			process.exit(1);
 		}
 
@@ -26,7 +38,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		const toBaseline = await this.ledger.getNotBaselinedFindingsState();
 
 		if (toBaseline.length === 0) {
-			this.presenter.log('Nothing to baseline. All observed findings are already baselined.\n');
+			this.presenter.log('Nothing to baseline. All observed findings are already baselined.');
 			return;
 		}
 
@@ -71,17 +83,5 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 		}
 
 		return days;
-	}
-
-	public register(): void {
-		this.cli
-			.command('baseline')
-			.description('Baseline all currently observed findings, suppressing them from future check output')
-			.option(
-				'--expires-in <days>',
-				`Number of days before the baseline expires and must be revisited (1–${BASELINE_MAX_DAYS}, default: ${BASELINE_DEFAULT_DAYS})`,
-				String(BASELINE_DEFAULT_DAYS),
-			)
-			.action((options: BaselineOptions) => this.action(options));
 	}
 }

@@ -1,13 +1,10 @@
 # `maat check`
 
-Runs configured collectors and rules, prints current findings, and evaluates exit conditions.
+Runs the configured collectors and rules, prints the current findings, and evaluates exit conditions. When a ledger is configured it also reconciles those findings against the decisions recorded in the ledger; `--ledger` additionally records new ledger events.
 
 ```bash
 maat check
 maat check --ledger
-maat check --show insights
-maat check --show findings
-maat check --show-baselined
 maat check --silent
 
 # With a custom config file:
@@ -17,52 +14,60 @@ maat -c ./maat.config.ts check --ledger
 
 ## What it does
 
-Without a ledger, `maat check` reports whatever the kernel finds in the current repository state. If `check.strict` is enabled, any finding that does not require verification makes the command fail; `[Verify]` findings never break builds.
+Rules always run against the current repository facts. What happens next depends on whether a ledger is configured.
 
-With a ledger configured, `maat check` compares current findings against recorded decisions:
+### When no ledger is configured
 
-- unexpired baselines are hidden from normal output;
-- active axioms can hide covered fingerprints;
-- resolved findings that reappear are treated as regressions.
+`maat check` reports whatever the kernel finds in the current repository state.
 
-Rules always run against current repository facts. The ledger is applied after rules finish.
+- If `check.strict` is enabled (the default), any finding that does not require verification fails the command.
+- `[Verify]` findings (those marked `requiresVerification`) never break the build.
+- When there are no findings it prints `No findings detected. Great job!`; otherwise it prints how many findings were detected.
 
-Insights run after that over all current findings from the same check, including current findings that are hidden from normal output because they are baselined or covered by an active axiom. This is intentional: a baseline suppresses enforcement, but it is still architectural debt and can matter for summaries, prioritization, and erosion-style analysis. Insights are read-only and do not affect the check exit code.
+### When a ledger is configured
 
-When configured insights run and `--show` is `all`, `maat check` prints a warning that they analyze all current findings, including findings hidden by baselines or active axiom exceptions. With `--show findings` or `--show insights`, the warning is not printed.
+`maat check` **reconciles** the current findings against the recorded decisions — whether or not `--ledger` is passed. Reconciliation affects both output and exit code:
 
-`--show-baselined` still only changes the current check output. It unhides all reconciled findings present in this run — baselined, axiom-excepted, and revoked; it does not print findings that exist only in the ledger and no longer appear in the current repository state. Use `maat visualize` when you need to inspect ledger state.
+- unexpired baselines are hidden from output;
+- revoked findings that reappear are hidden from output;
+- findings recorded as `resolved` that reappear are treated as **regressions** (shown and failing);
+- expired baselines fail the command;
+- probabilistic `[Verify]` findings are tracked separately and never break the build on their own.
+
+Without `--ledger`, this reconciliation is **read-only**: the ledger is consulted but no events are written. Pass `--ledger` to also record events (see below).
 
 ## Recording findings
 
-`--ledger` appends events to the configured ledger:
+`--ledger` records new events to the configured ledger after reconciliation. It appends:
 
-- `finding.observed` for active findings present in this run;
-- `finding.unverified` for new probabilistic findings (those marked `requiresVerification`) that have not been verified yet;
-- `finding.resolved` for previously observed, unbaselined findings that no longer appear in the current run.
+- `finding.observed` — for active findings present in this run, including a **regression**: a finding previously recorded as `resolved` that reappears. A regression also fails the command (see [Exit behavior](#exit-behavior)); re-recording it as `observed` instead of leaving it `resolved` is what lets you act on it again — address it, or accept it with `maat baseline` — rather than it staying stuck.
+- `finding.unverified` — for new probabilistic findings (`requiresVerification`) that have not been verified yet.
+- `finding.resolved` — for any previously recorded finding that no longer appears in the current run. This includes observed and unverified findings, **and baselined findings whose underlying finding has disappeared** (whether the baseline was still active or already expired) — they are auto-resolved instead of lingering until the baseline expires.
 
 ```bash
 maat check --ledger
 ```
 
-Use this before `maat baseline` or `maat resolve`; both commands need the fingerprint to already exist in the ledger.
+### First run
+
+On a fresh ledger, the first `maat check --ledger` records every current finding as `observed`. In strict mode this run still **fails** — recording is not the same as accepting — and `check` reminds you to run [`maat baseline`](baseline.md). Baselining the recorded findings makes the current state your starting point; subsequent checks then pass while still enforcing anything new.
 
 ## Options
 
 | Option | Purpose |
 |---|---|
-| `--ledger` | Save current findings to the configured ledger. |
-| `--show <mode>` | Choose output sections: `all` (default), `findings`, or `insights`. This only controls printed sections; exit behavior and ledger writes are unchanged. |
-| `--show-baselined` | Include all reconciled findings from the current run — baselined, axiom-excepted, and revoked — in output and exit code evaluation. Requires a configured ledger. |
-| `--silent` | Suppress console output while preserving the command exit code. |
+| `--ledger` | Record findings to the configured ledger. Reconciliation against the ledger happens automatically when one is configured; this flag controls **writing**. Errors if no ledger is configured. |
+| `--silent` | Suppress normal console output while preserving the exit code. Configuration errors (such as `--ledger` without a configured ledger) are still reported. |
 
 ## Exit behavior
 
 `maat check` exits non-zero when:
 
-- a resolved fingerprint reappears;
+- a resolved finding reappears (regression);
+- a resolved probabilistic finding reappears (regression to verify);
 - a baseline has expired;
 - `check.strict` is enabled and visible findings that do not require verification remain;
 - `--ledger` is passed but no ledger is configured;
-- `--show-baselined` is passed but no ledger is configured;
-- `--show` receives a value other than `all`, `findings`, or `insights`.
+- the configuration registers no collectors or no rules (reported as `No collectors configured.` / `No rules configured.`).
+
+Regressions and expired baselines are broken promises: they fail the command **regardless of `check.strict`**, even in non-strict mode. The regression and expired-baseline errors name each offending fingerprint and message (and, for regressions, the recorded resolution reason when available) so they can be located quickly.

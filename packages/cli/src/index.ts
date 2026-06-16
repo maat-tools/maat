@@ -74,6 +74,15 @@ class MaatCLI {
 		this.configFilePath = loadedConfig.filePath;
 		process.chdir(loadedConfig.rootDir);
 
+		if (loadedConfig.config.collectors.length === 0) {
+			this.presenter.error('No collectors configured.\n');
+			process.exit(1);
+		}
+		if (loadedConfig.config.rules.length === 0) {
+			this.presenter.error('No rules configured.\n');
+			process.exit(1);
+		}
+
 		await this.registerCollectors(loadedConfig.config);
 		await this.registerEnrichers(loadedConfig.config);
 		await this.registerRules(loadedConfig.config);
@@ -98,7 +107,7 @@ class MaatCLI {
 		const start = performance.now();
 		process.on('exit', () => {
 			const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-			process.stderr.write(`${commandName} took ${elapsed}s\n`);
+			process.stderr.write(`\n${commandName} took ${elapsed}s\n`);
 		});
 	}
 

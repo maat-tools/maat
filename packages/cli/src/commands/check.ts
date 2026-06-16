@@ -151,16 +151,19 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			const currentFinding = findingsFromTheCurrentRunByFingerprint.get(record.fingerprint);
 			if (record.type === FindingStatus.BASELINED) {
 				const expired = new Date(record.expiresAt).getTime() <= now;
+				const hasGone = !currentFinding;
 				if (expired) {
 					expiredBaselines.push({
 						fingerprint: record.fingerprint,
 						message: record.message,
 						expiredAt: record.expiresAt,
 					});
+					if (!hasGone) {
+						newFindings.add(record.fingerprint);
+					}
 				} else {
 					baselinedFingerprints.add(record.fingerprint);
 				}
-				const hasGone = !currentFinding;
 				if (hasGone) {
 					automaticallyResolvedFingerprints.add(record.fingerprint);
 				}

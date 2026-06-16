@@ -350,6 +350,37 @@ describe('maat check — ledger state transitions', () => {
 	);
 
 	test(
+		'expired baseline whose finding is still present is re-observed (not locked in BASELINED)',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+
+			runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
+			runCli(['baseline', '--expires-in', '1'], { config: SAMPLE_CONFIG, env });
+
+			const entries = await readLedgerEvents(ledger.path);
+			const baselined = entries.filter((e) => e.type === FindingStatus.BASELINED);
+			expect(baselined.length).toBeGreaterThan(0);
+
+			const expiredAt = new Date(Date.now() - 1000).toISOString();
+			const expiredLines = entries.map((e) =>
+				e.type === FindingStatus.BASELINED ? JSON.stringify({ ...e, expiresAt: expiredAt }) : JSON.stringify(e),
+			);
+			await writeFile(ledger.path, `${expiredLines.join('\n')}\n`, 'utf-8');
+
+			const check = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
+			expect(check.exitCode).toBe(1);
+			expect(stripAnsi(check.stderr)).toContain('expired');
+
+			// A lapsed baseline must be written back as OBSERVED so the finding can be
+			// re-baselined/resolved later instead of being stuck as BASELINED forever.
+			const fingerprint = String((baselined[0] as Record<string, unknown>).fingerprint);
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe(FindingStatus.OBSERVED);
+		},
+		TIMEOUT,
+	);
+
+	test(
 		'revoked finding that reappears is hidden from output',
 		async () => {
 			const env = { MAAT_TEST_LEDGER: ledger.path };

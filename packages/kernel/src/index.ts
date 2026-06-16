@@ -113,9 +113,11 @@ export class Kernel {
 
 		if (this.collectors.length === 0) {
 			console.warn('No collectors registered. No facts will be collected.');
+			return { findings: [] };
 		}
 		if (this.rules.length === 0) {
 			console.warn('No rules registered. No findings will be produced.');
+			return { findings: [] };
 		}
 
 		const collectedResults = await Promise.all(

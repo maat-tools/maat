@@ -302,7 +302,7 @@ describe('maat — check → baseline → check loop', () => {
 			});
 			await writeFile(ledger.path, `${expiredLines.join('\n')}\n`, 'utf-8');
 
-			const check = runCli(['check'], { config: SAMPLE_CONFIG, env });
+			const check = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
 			expect(check.exitCode).toBe(1);
 			expect(stripAnsi(check.stderr)).toContain('expired');
 		},

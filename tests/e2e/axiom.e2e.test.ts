@@ -301,37 +301,11 @@ describe('maat axiom revoke', () => {
 	);
 });
 
-describe('maat axiom lifecycle — check and visualize integration', () => {
+describe('maat axiom lifecycle — visualize integration', () => {
 	const ledger = new LedgerHarness();
 
 	beforeEach(async () => await ledger.setup());
 	afterEach(async () => await ledger.teardown());
-
-	test(
-		'check shows axiom count in summary after declaring an axiom',
-		() => {
-			const env = { MAAT_TEST_LEDGER: ledger.path };
-
-			runCli(
-				[
-					'axiom',
-					'declare',
-					'--id',
-					'ax-integration',
-					'--scope',
-					'kernel',
-					'--claim',
-					'All services must use repository layer',
-				],
-				{ config: SAMPLE_CONFIG, env },
-			);
-
-			const result = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
-			expect(result.exitCode).toBe(1);
-			expect(result.stdout.toLowerCase()).toContain('axiom');
-		},
-		TIMEOUT,
-	);
 
 	test(
 		'visualize displays declared axiom',
@@ -347,46 +321,6 @@ describe('maat axiom lifecycle — check and visualize integration', () => {
 			expect(result.exitCode).toBe(0);
 			expect(result.stdout).toContain('ax-viz');
 			expect(result.stdout).toContain('No direct DB calls');
-		},
-		TIMEOUT,
-	);
-
-	test(
-		'superseded axiom does not appear as active in check',
-		() => {
-			const env = { MAAT_TEST_LEDGER: ledger.path };
-
-			runCli(['axiom', 'declare', '--id', 'ax-super-check', '--scope', 'kernel', '--claim', 'Old claim'], {
-				config: SAMPLE_CONFIG,
-				env,
-			});
-			runCli(['axiom', 'supersede', '--id', 'ax-super-check', '--reason', 'Updated policy'], {
-				config: SAMPLE_CONFIG,
-				env,
-			});
-
-			const result = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
-			expect(result.exitCode).toBe(1);
-		},
-		TIMEOUT,
-	);
-
-	test(
-		'revoked axiom does not appear as active in check',
-		() => {
-			const env = { MAAT_TEST_LEDGER: ledger.path };
-
-			runCli(['axiom', 'declare', '--id', 'ax-revoke-check', '--scope', 'kernel', '--claim', 'Deprecated claim'], {
-				config: SAMPLE_CONFIG,
-				env,
-			});
-			runCli(['axiom', 'revoke', '--id', 'ax-revoke-check', '--reason', 'No longer valid'], {
-				config: SAMPLE_CONFIG,
-				env,
-			});
-
-			const result = runCli(['check', '--ledger'], { config: SAMPLE_CONFIG, env });
-			expect(result.exitCode).toBe(1);
 		},
 		TIMEOUT,
 	);

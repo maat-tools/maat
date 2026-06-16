@@ -72,11 +72,15 @@ export type AxiomDeclaredEvent = AxiomEventBase & {
 export type AxiomSupersededEvent = AxiomEventBase & {
 	readonly type: typeof FindingStatus.AXIOM_SUPERSEDED;
 	readonly reason: string;
+	readonly scope?: string;
+	readonly claim?: string;
 };
 
 export type AxiomRevokedEvent = AxiomEventBase & {
 	readonly type: typeof FindingStatus.AXIOM_REVOKED;
 	readonly reason: string;
+	readonly scope?: string;
+	readonly claim?: string;
 };
 
 export type AxiomEvent = AxiomDeclaredEvent | AxiomSupersededEvent | AxiomRevokedEvent;

@@ -239,4 +239,173 @@ describe('maat verify', () => {
 		},
 		TIMEOUT,
 	);
+
+	test(
+		'--reopen on a revoked finding → transitions back to unverified',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioRevoked(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(0);
+
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe('finding.unverified');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reopen on a finding that is not revoked → exit 1',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioObserved(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr).toLowerCase()).toContain('revoked');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--revoke and --reopen together → exit 1 before touching the ledger',
+		() => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+
+			// "anything" is not in the ledger: the conflict must be rejected before lookup.
+			const result = runCli(['verify', '--fingerprint', 'anything', '--revoke', '--reopen'], {
+				config: SAMPLE_CONFIG,
+				env,
+			});
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr).toLowerCase()).toContain('together');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reopen on an unverified finding → exit 1 and does not change state',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioUnverified(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr)).toContain('not revoked');
+
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe('finding.unverified');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reopen on a baselined finding → exit 1',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioBaselined(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr)).toContain('not revoked');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reopen on a resolved finding → exit 1',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioResolved(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr)).toContain('not revoked');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reopen restores requiresVerification and announces the reopen',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioRevoked(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(0);
+			expect(result.stdout.toLowerCase()).toContain('reopened');
+
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe('finding.unverified');
+			expect(event.requiresVerification).toBe(true);
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--reason on reopen is persisted in the unverified event',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioRevoked(ledger, FINDING);
+
+			const result = runCli(
+				['verify', '--fingerprint', fingerprint, '--reopen', '--reason', 'reopened for re-review'],
+				{
+					config: SAMPLE_CONFIG,
+					env,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe('finding.unverified');
+			expect(event.reason).toBe('reopened for re-review');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'a revoked finding can be reopened and then re-verified',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioRevoked(ledger, FINDING);
+
+			const reopen = runCli(['verify', '--fingerprint', fingerprint, '--reopen'], { config: SAMPLE_CONFIG, env });
+			expect(reopen.exitCode).toBe(0);
+
+			const verify = runCli(['verify', '--fingerprint', fingerprint], { config: SAMPLE_CONFIG, env });
+			expect(verify.exitCode).toBe(0);
+
+			const event = await lastEventForFingerprint(ledger.path, fingerprint);
+			expect(event.type).toBe('finding.observed');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--revoke on a baselined finding → exit 1',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioBaselined(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--revoke'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr)).toContain('not in an unverified state');
+		},
+		TIMEOUT,
+	);
+
+	test(
+		'--revoke on a resolved finding → exit 1',
+		async () => {
+			const env = { MAAT_TEST_LEDGER: ledger.path };
+			const fingerprint = await scenarioResolved(ledger, FINDING);
+
+			const result = runCli(['verify', '--fingerprint', fingerprint, '--revoke'], { config: SAMPLE_CONFIG, env });
+			expect(result.exitCode).toBe(1);
+			expect(stripAnsi(result.stderr)).toContain('not in an unverified state');
+		},
+		TIMEOUT,
+	);
 });

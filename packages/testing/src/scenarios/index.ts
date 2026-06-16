@@ -37,7 +37,7 @@ export async function scenarioBaselined(harness: LedgerHarness, output: RuleOutp
 	return fingerprint;
 }
 
-export async function scenarioResolved(harness: LedgerHarness, output: RuleOutput): Promise<string> {
+export async function scenarioResolved(harness: LedgerHarness, output: RuleOutput, reason?: string): Promise<string> {
 	const fingerprint = await scenarioObserved(harness, output);
 	await harness.backend.append({
 		type: FindingStatus.RESOLVED,
@@ -47,6 +47,7 @@ export async function scenarioResolved(harness: LedgerHarness, output: RuleOutpu
 		instanceId: output.ruleId,
 		message: output.message,
 		artifacts: output.artifacts,
+		...(reason !== undefined ? { reason } : {}),
 	});
 	return fingerprint;
 }

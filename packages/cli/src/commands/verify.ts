@@ -5,6 +5,7 @@ import { MaatCommandBase } from './base';
 type VerifyOptions = {
 	fingerprint: string;
 	revoke?: boolean;
+	reopen?: boolean;
 	reason?: string;
 };
 
@@ -15,13 +16,18 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			.description('Verify a probabilistic finding as approved by a human')
 			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to verify')
 			.option('--revoke', 'Revoke a previous verification', false)
+			.option('--reopen', 'Reopen a previously revoked finding', false)
 			.option('--reason <reason>', 'Optional reason for the verification or revocation')
 			.action((options: VerifyOptions) => this.action(options));
 	}
 
-	private async action({ fingerprint, revoke, reason }: VerifyOptions) {
+	private async action({ fingerprint, revoke, reason, reopen }: VerifyOptions) {
 		if (!this.isLedgerProvided()) {
 			this.presenter.error('No ledger configured. Cannot verify without a ledger.\n');
+			process.exit(1);
+		}
+		if (revoke && reopen) {
+			this.presenter.error('Cannot use --revoke and --reopen together. Please choose one action.\n');
 			process.exit(1);
 		}
 
@@ -31,12 +37,17 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			process.exit(1);
 		}
 
+		if (reopen && record.type !== FindingStatus.REVOKED) {
+			this.presenter.error(`Finding "${fingerprint}" is not revoked. Only revoked findings can be reopened.\n`);
+			process.exit(1);
+		}
+
 		if (record.type === FindingStatus.OBSERVED) {
 			this.presenter.error(`Finding "${fingerprint}" is already verified.\n`);
 			process.exit(1);
 		}
 
-		if (record.type !== FindingStatus.UNVERIFIED) {
+		if (record.type !== FindingStatus.UNVERIFIED && !reopen) {
 			this.presenter.error(
 				`Finding "${fingerprint}" is not in an unverified state. Only unverified findings can be verified or revoked.\n`,
 			);
@@ -56,6 +67,22 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 			});
 
 			this.presenter.log(`Finding "${fingerprint}" revoked.\n`);
+			return;
+		}
+		if (reopen) {
+			await this.ledger.append({
+				type: FindingStatus.UNVERIFIED,
+				timestamp: new Date().toISOString(),
+				fingerprint,
+				ruleId: record.ruleId,
+				instanceId: record.instanceId,
+				message: record.message,
+				artifacts: record.artifacts,
+				requiresVerification: true,
+				...(reason ? { reason } : {}),
+			});
+
+			this.presenter.log(`Finding "${fingerprint}" reopened (moved back to UNVERIFIED).\n`);
 			return;
 		}
 

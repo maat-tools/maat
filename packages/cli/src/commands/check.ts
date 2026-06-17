@@ -26,7 +26,7 @@ type ExpiredBaselineDetail = {
 	expiredAt: string;
 };
 
-type LedgerReconcilation = {
+type LedgerReconciliation = {
 	baselinedFingerprints: Set<string>;
 	expiredBaselines: ExpiredBaselineDetail[];
 	requiringVerificationFingerprints: Set<string>;
@@ -112,32 +112,32 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		}
 
 		const allFindingsState = await this.ledger.getAllFindingsState();
-		const reconcilation = await this.reconcileCurrentRunWithLedgerState(allFindingsState, findingsFromTheCurrentRun);
+		const reconciliation = await this.reconcileCurrentRunWithLedgerState(allFindingsState, findingsFromTheCurrentRun);
 
 		if (options.ledger === true) {
-			await this.syncLedgerEvents(allFindingsState, findingsFromTheCurrentRun, reconcilation);
+			await this.syncLedgerEvents(allFindingsState, findingsFromTheCurrentRun, reconciliation);
 		}
 
-		const visibleFindings = this.removeSkippedFindings(findingsFromTheCurrentRun, reconcilation);
+		const visibleFindings = this.removeSkippedFindings(findingsFromTheCurrentRun, reconciliation);
 
 		this.presenter.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
 		this.printLLMSummaryIfNecessary(totalLLMCosts);
-		this.evaluateExitConditions(visibleFindings, reconcilation, actionableFindingsFromTheCurrentRun);
+		this.evaluateExitConditions(visibleFindings, reconciliation, actionableFindingsFromTheCurrentRun);
 	}
 
-	private removeSkippedFindings(findings: Finding[], reconcilation: LedgerReconcilation): Finding[] {
+	private removeSkippedFindings(findings: Finding[], reconciliation: LedgerReconciliation): Finding[] {
 		return findings.filter(
 			(f) =>
-				!reconcilation.baselinedFingerprints.has(f.fingerprint) &&
-				!reconcilation.revokedFingerprints.has(f.fingerprint) &&
-				!reconcilation.automaticallyResolvedFingerprints.has(f.fingerprint),
+				!reconciliation.baselinedFingerprints.has(f.fingerprint) &&
+				!reconciliation.revokedFingerprints.has(f.fingerprint) &&
+				!reconciliation.automaticallyResolvedFingerprints.has(f.fingerprint),
 		);
 	}
 
 	private async reconcileCurrentRunWithLedgerState(
 		findingsFromLedger: FindingEvent[],
 		findingsFromTheCurrentRun: Finding[],
-	): Promise<LedgerReconcilation> {
+	): Promise<LedgerReconciliation> {
 		const baselinedFingerprints = new Set<string>();
 		const requiringVerificationFingerprints = new Set<string>();
 		const revokedFingerprints = new Set<string>();
@@ -239,16 +239,16 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	private async syncLedgerEvents(
 		allFindingsFromLedger: FindingEvent[],
 		findingsFromTheCurrentRun: Finding[],
-		reconcilation: LedgerReconcilation,
+		reconciliation: LedgerReconciliation,
 	): Promise<void> {
 		if (!this.isLedgerProvided()) {
 			throw new Error('Ledger is not configured');
 		}
 
 		const timestamp = new Date().toISOString();
-		if (reconcilation.automaticallyResolvedFingerprints.size > 0) {
+		if (reconciliation.automaticallyResolvedFingerprints.size > 0) {
 			const findingsFromLedgerByFingerprint = new Map(allFindingsFromLedger.map((r) => [r.fingerprint, r]));
-			for (const fingerprint of reconcilation.automaticallyResolvedFingerprints) {
+			for (const fingerprint of reconciliation.automaticallyResolvedFingerprints) {
 				const finding = findingsFromLedgerByFingerprint.get(fingerprint);
 				if (!finding) {
 					this.presenter.warn(
@@ -268,9 +268,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 				});
 			}
 		}
-		if (reconcilation.newFindings.size > 0) {
+		if (reconciliation.newFindings.size > 0) {
 			const findingsFromTheCurrentRunByFingerprint = new Map(findingsFromTheCurrentRun.map((f) => [f.fingerprint, f]));
-			for (const fingerprint of reconcilation.newFindings) {
+			for (const fingerprint of reconciliation.newFindings) {
 				const finding = findingsFromTheCurrentRunByFingerprint.get(fingerprint);
 				if (!finding) {
 					this.presenter.warn(
@@ -308,10 +308,10 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 	private evaluateExitConditions(
 		visibleFindings: Finding[],
-		reconcilation: LedgerReconcilation,
+		reconciliation: LedgerReconciliation,
 		actionableFindingsFromTheCurrentRun: Finding[],
 	): void {
-		const { regressions, regressionsToVerify, expiredBaselines } = reconcilation;
+		const { regressions, regressionsToVerify, expiredBaselines } = reconciliation;
 		const hasFailures = regressions.length > 0 || regressionsToVerify.length > 0 || expiredBaselines.length > 0;
 
 		if (hasFailures) {
@@ -329,7 +329,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		if (
 			this.config.check?.strict &&
-			this.removeSkippedFindings(actionableFindingsFromTheCurrentRun, reconcilation).length > 0
+			this.removeSkippedFindings(actionableFindingsFromTheCurrentRun, reconciliation).length > 0
 		) {
 			this.presenter.error(
 				'One or more findings that violate the defined architecture detected. Please address these issues to comply with it.\n',

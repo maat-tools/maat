@@ -1,12 +1,20 @@
-import { GoogleGenAI } from '@google/genai';
-import { GeminiAIModel, type LLMConfig, type LLMInput, type LLMModel, type LLMOutput, type VertexLLMExtra } from '..';
-import { BaseLLMModel, type ModelCapabilities } from '../base';
+import { type GenerateContentConfig, GoogleGenAI } from '@google/genai';
+import { BaseLLMModel } from '../base';
+import {
+	GeminiAIModel,
+	type LLMConfig,
+	type LLMInput,
+	type LLMModel,
+	type LLMOutput,
+	type ModelCapabilities,
+	type VertexLLMExtra,
+} from '../types';
 
 type GeminiConfig = LLMConfig<'vertex', 'gemini-3-5-flash', VertexLLMExtra>;
 
 const MODEL_ID = 'gemini-3.5-flash';
 
-export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
+export class VertexGemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 	protected override modelCapabilities: ModelCapabilities = {
 		maxInputTokens: 1_000_000,
 		maxOutputTokens: 65_536,
@@ -18,7 +26,7 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 
 	private readonly ai: GoogleGenAI;
 
-	public constructor(config: GeminiConfig) {
+	public constructor(private config: GeminiConfig) {
 		super();
 
 		if (config.provider !== 'vertex' || config.model !== GeminiAIModel.Gemini_3_5_Flash) {
@@ -36,8 +44,9 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 
 	public async call(input: LLMInput): Promise<LLMOutput> {
 		const { prompt } = this.sanitize(input);
-		const generationConfig = {
+		const generationConfig: GenerateContentConfig = {
 			temperature: 0,
+			httpOptions: { timeout: this.config.timeoutMs ?? 60000 },
 			...(input.responseFormat === 'json'
 				? {
 						responseMimeType: 'application/json' as const,
@@ -61,8 +70,7 @@ export class Gemini_3_5_Flash extends BaseLLMModel implements LLMModel {
 				cost: this.calculateInputCost(prompt) + this.calculateOutputCost(text),
 			};
 		} catch (e) {
-			console.error('Error calling Gemini 3.5 Flash model:', e);
-			throw new Error('Error calling Gemini 3.5 Flash model');
+			throw new Error(`Error calling Gemini 3.5 Flash model: ${e}`);
 		}
 	}
 

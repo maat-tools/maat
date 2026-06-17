@@ -16,13 +16,13 @@ export {
 } from './file-system/file-system';
 export { isMatch } from './file-system/glob';
 export { generateId } from './id-generator';
+export { LLMInteractor } from './llm';
 export {
 	GeminiAIModel,
 	type KnownLLMConfig,
 	type LLMConfig,
-	LLMInteractor,
 	type LLMModel,
 	type LLMProvider,
 	type ProviderModelRegistry,
-} from './llm';
+} from './llm/types';
 export { StdoutPresenter } from './presenter/stdout';

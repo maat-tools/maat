@@ -85,11 +85,8 @@ export class CoMEnricherLLM
 		);
 
 		const { items, usedTokens, cost } = await this.batchedInteract<FunctionSignature, CoMAssessment>({
-			enricherId: this.id,
 			items: duplicateReturnValueCandidates,
 			instructions: COM_INSTRUCTIONS,
-			serialize: this.serializeSignature.bind(this),
-			serializeForCache: this.serializeForCache.bind(this),
 			responseSchema: COM_BATCH_RESPONSE_SCHEMA,
 		});
 
@@ -104,15 +101,7 @@ export class CoMEnricherLLM
 		return { facts: { comCandidates }, usedTokens, cost };
 	}
 
-	private serializeForCache(sig: FunctionSignature): string {
-		const sites = sig.output.returnSites
-			.map((site) => `${site.value}${site.guardSnippet ? `[${site.guardSnippet}]` : ''}`)
-			.join('|');
-
-		return `${sig.name}|${sig.output.returnType}|${sites}`;
-	}
-
-	private serializeSignature(sig: FunctionSignature): string {
+	protected serializeItem(sig: FunctionSignature): string {
 		const returnSiteLines = sig.output.returnSites
 			.map((site, i) => {
 				const guard = site.guardSnippet ? ` [guard: ${site.guardSnippet}]` : '';
@@ -120,11 +109,13 @@ export class CoMEnricherLLM
 			})
 			.join('\n');
 
-		return `Function: \`${sig.name}\`
-File: ${sig.file}:${sig.location.line}
-Return type: \`${sig.output.returnType}\`
-Return sites (${sig.output.returnSites.length} total):
-${returnSiteLines}`;
+		return `
+				Function: \`${sig.name}\`
+				File: ${sig.file}:${sig.location.line}
+				Return type: \`${sig.output.returnType}\`
+				Return sites (${sig.output.returnSites.length} total):
+				${returnSiteLines}
+			`;
 	}
 }
 

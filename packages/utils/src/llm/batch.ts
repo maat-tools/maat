@@ -33,12 +33,17 @@ export class BatchLLMRequest {
 		return batches;
 	}
 
-	public async executeBatch<TItem, TResult>(
-		batch: (TItem & { serialized: string; identifier: string })[],
-		orderingHashes: string[],
-		instructions: string,
-		responseSchema: JsonArraySchema,
-	): Promise<{ result: { item: TItem; result: TResult }[]; cost?: number; usedTokens?: number }> {
+	public async executeBatch<TItem, TResult>({
+		batch,
+		instructions,
+		orderingHashes,
+		responseSchema,
+	}: {
+		batch: (TItem & { serialized: string; identifier: string })[];
+		orderingHashes: string[];
+		instructions: string;
+		responseSchema: JsonArraySchema;
+	}): Promise<{ result: { item: TItem; result: TResult }[]; cost?: number; usedTokens?: number }> {
 		if (batch.length !== orderingHashes.length) {
 			throw new Error('Batch and keys must have the same length');
 		}

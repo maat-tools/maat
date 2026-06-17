@@ -140,7 +140,12 @@ describe('BatchLLMRequest.executeBatch', () => {
 
 	test('maps each result back to its item by _key, strips _key, and reports cost/tokens', async () => {
 		const model = new FakeModel(BIG_CAPS);
-		const out = await new BatchLLMRequest(model).executeBatch(batch, ['k1', 'k2'], 'do it', SCORE_SCHEMA);
+		const out = await new BatchLLMRequest(model).executeBatch({
+			batch,
+			orderingHashes: ['k1', 'k2'],
+			instructions: 'do it',
+			responseSchema: SCORE_SCHEMA,
+		});
 
 		expect(out.result).toHaveLength(2);
 		expect(out.result[0]?.item).toBe(batch[0]);
@@ -153,7 +158,12 @@ describe('BatchLLMRequest.executeBatch', () => {
 
 	test('builds a keyed context and wraps the schema with a _key property', async () => {
 		const model = new FakeModel(BIG_CAPS);
-		await new BatchLLMRequest(model).executeBatch(batch, ['k1', 'k2'], 'do it', SCORE_SCHEMA);
+		await new BatchLLMRequest(model).executeBatch({
+			batch,
+			orderingHashes: ['k1', 'k2'],
+			instructions: 'do it',
+			responseSchema: SCORE_SCHEMA,
+		});
 
 		const input = model.lastInput;
 		expect(input?.context).toContain('(key: k1)');
@@ -167,29 +177,49 @@ describe('BatchLLMRequest.executeBatch', () => {
 
 	test('matches items even when the model returns results out of order', async () => {
 		const model = new FakeModel(BIG_CAPS, (keys) => keys.map((k, i) => ({ _key: k, score: i })).reverse());
-		const out = await new BatchLLMRequest(model).executeBatch(batch, ['k1', 'k2'], 'i', SCORE_SCHEMA);
+		const out = await new BatchLLMRequest(model).executeBatch({
+			batch,
+			orderingHashes: ['k1', 'k2'],
+			instructions: 'i',
+			responseSchema: SCORE_SCHEMA,
+		});
 		expect(out.result[0]?.result).toEqual({ score: 0 });
 		expect(out.result[1]?.result).toEqual({ score: 1 });
 	});
 
 	test('throws when batch and keys lengths differ', async () => {
 		const model = new FakeModel(BIG_CAPS);
-		await expect(new BatchLLMRequest(model).executeBatch(batch, ['k1'], 'i', SCORE_SCHEMA)).rejects.toThrow(
-			'Batch and keys must have the same length',
-		);
+		await expect(
+			new BatchLLMRequest(model).executeBatch({
+				batch,
+				orderingHashes: ['k1'],
+				instructions: 'i',
+				responseSchema: SCORE_SCHEMA,
+			}),
+		).rejects.toThrow('Batch and keys must have the same length');
 	});
 
 	test('throws when the model returns the wrong number of results', async () => {
 		const model = new FakeModel(BIG_CAPS, (keys) => [{ _key: keys[0], score: 0 }]);
-		await expect(new BatchLLMRequest(model).executeBatch(batch, ['k1', 'k2'], 'i', SCORE_SCHEMA)).rejects.toThrow(
-			'LLM returned 1 results for a batch of 2 items',
-		);
+		await expect(
+			new BatchLLMRequest(model).executeBatch({
+				batch,
+				orderingHashes: ['k1', 'k2'],
+				instructions: 'i',
+				responseSchema: SCORE_SCHEMA,
+			}),
+		).rejects.toThrow('LLM returned 1 results for a batch of 2 items');
 	});
 
 	test('throws when a result is missing for a key', async () => {
 		const model = new FakeModel(BIG_CAPS, (keys) => keys.map((_, i) => ({ _key: `wrong-${i}`, score: i })));
-		await expect(new BatchLLMRequest(model).executeBatch(batch, ['k1', 'k2'], 'i', SCORE_SCHEMA)).rejects.toThrow(
-			'LLM did not return a result for item',
-		);
+		await expect(
+			new BatchLLMRequest(model).executeBatch({
+				batch,
+				orderingHashes: ['k1', 'k2'],
+				instructions: 'i',
+				responseSchema: SCORE_SCHEMA,
+			}),
+		).rejects.toThrow('LLM did not return a result for item');
 	});
 });

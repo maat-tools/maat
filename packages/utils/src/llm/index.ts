@@ -103,12 +103,12 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 					this.batchRequest.executeBatch<
 						{ serialized: string; identifier: string; orderingHash: string; originalIndex: number; original: TItem },
 						TResult
-					>(
+					>({
 						batch,
-						batch.map((item) => item.orderingHash),
+						orderingHashes: batch.map((item) => item.orderingHash),
 						instructions,
 						responseSchema,
-					),
+					}),
 				),
 			);
 

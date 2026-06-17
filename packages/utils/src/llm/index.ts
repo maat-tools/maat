@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { LocalCache } from '../cache';
-import { dump } from '../dump';
 import { BatchLLMRequest } from './batch';
 import { VertexGemini_3_5_Flash } from './gemini';
 import { GeminiAIModel, type JsonArraySchema, type LLMConfig, type LLMModel, LLMProvider } from './types';
@@ -42,10 +41,12 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 		items,
 		instructions,
 		responseSchema,
+		options = { useCache: true },
 	}: {
 		items: TItem[];
 		instructions: string;
 		responseSchema: JsonArraySchema;
+		options?: { useCache?: boolean };
 	}): Promise<{
 		items: {
 			item: TItem;
@@ -54,14 +55,45 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 		usedTokens: number;
 		cost: number;
 	}> {
-		dump({
-			enricherId: this.id,
-			items,
-			instructions,
-			responseSchema,
-		});
 		if (items.length === 0) {
 			return { items: [], usedTokens: 0, cost: 0 };
+		}
+
+		let usedTokens = 0;
+		let cost = 0;
+		if (!options.useCache) {
+			const budget = this.modelInstance.computeBatchBudget(instructions, responseSchema);
+			const itemsForBatching = items.map((item, index) => ({
+				serialized: this.serializeItem(item),
+				identifier: this.createHash(this.serializeItem(item)),
+				orderingHash: this.createHash(String(index)),
+				originalIndex: index,
+				original: item,
+			}));
+			const batches = this.batchRequest.packBatchesBasedOnModelCapacity(itemsForBatching, budget);
+
+			const batchResults = await Promise.all(
+				batches.map(async (batch) =>
+					this.batchRequest.executeBatch<
+						{ serialized: string; identifier: string; orderingHash: string; originalIndex: number; original: TItem },
+						TResult
+					>({
+						batch,
+						orderingHashes: batch.map((item) => item.orderingHash),
+						instructions,
+						responseSchema,
+					}),
+				),
+			);
+
+			const flatResults = batchResults.flatMap((r) => r.result);
+			({ usedTokens, cost } = this.calculateLLMCost(batchResults));
+
+			const sortedItems = flatResults
+				.sort((a, b) => a.item.originalIndex - b.item.originalIndex)
+				.map(({ item, result }) => ({ item: item.original, result }));
+
+			return { items: sortedItems, usedTokens, cost };
 		}
 
 		const CACHE_FOLDER = `enrichers/${this.id}`;
@@ -84,8 +116,6 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 		const usedKeys = new Set([...hits.map((h) => h.cacheKey)]);
 
 		const freshEntries: { originalIndex: number; item: TItem; result: TResult }[] = [];
-		let usedTokens = 0;
-		let cost = 0;
 
 		if (missedItems.length > 0) {
 			const budget = this.modelInstance.computeBatchBudget(instructions, responseSchema);
@@ -113,8 +143,7 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 			);
 
 			const flatResults = batchResults.flatMap((r) => r.result);
-			usedTokens = batchResults.reduce((sum, r) => sum + (r.usedTokens ?? 0), 0);
-			cost = batchResults.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+			({ usedTokens, cost } = this.calculateLLMCost(batchResults));
 
 			await Promise.all(
 				flatResults.map(({ item, result }) =>
@@ -138,6 +167,19 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 			.map(({ item, result }) => ({ item, result }));
 
 		return { items: sortedItems, usedTokens, cost };
+	}
+
+	private calculateLLMCost(batchResults: { usedTokens?: number; cost?: number }[]): {
+		usedTokens: number;
+		cost: number;
+	} {
+		const usedTokens = batchResults.reduce((sum, r) => sum + (r.usedTokens ?? 0), 0);
+		const cost = batchResults.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+
+		return {
+			usedTokens,
+			cost,
+		};
 	}
 
 	private async cleanUpUnusedCacheEntries(usedKeys: Set<string>, dir: string): Promise<void> {

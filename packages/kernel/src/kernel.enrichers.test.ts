@@ -131,6 +131,69 @@ describe('Kernel.run with enrichers', () => {
 			.registerRule(makeRule());
 		await expect(kernel.run()).rejects.toThrow('enrich failed');
 	});
+
+	test('enricher receives useCache: true by default', async () => {
+		const seenOptions: { useCache?: boolean }[] = [];
+		const observingEnricher: Enricher<'testFacts', 'enrichedFacts'> = {
+			id: 'observing-enricher',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async (_facts, options) => {
+				seenOptions.push(options ?? {});
+				return { facts: { enrichedFacts: ['seen'] } };
+			},
+		};
+
+		await new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerEnricher(observingEnricher)
+			.registerRule(makeRuleConsumingEnriched())
+			.run();
+
+		expect(seenOptions).toEqual([{ useCache: true }]);
+	});
+
+	test('enricher receives useCache: false when Kernel.run is called with useCache: false', async () => {
+		const seenOptions: { useCache?: boolean }[] = [];
+		const observingEnricher: Enricher<'testFacts', 'enrichedFacts'> = {
+			id: 'observing-enricher',
+			needFacts: ['testFacts'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async (_facts, options) => {
+				seenOptions.push(options ?? {});
+				return { facts: { enrichedFacts: ['seen'] } };
+			},
+		};
+
+		await new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerEnricher(observingEnricher)
+			.registerRule(makeRuleConsumingEnriched())
+			.run({ useCache: false });
+
+		expect(seenOptions).toEqual([{ useCache: false }]);
+	});
+
+	test('standalone enricher receives useCache option from Kernel.run', async () => {
+		const seenOptions: { useCache?: boolean }[] = [];
+		const standaloneEnricher: Enricher<never, 'enrichedFacts'> = {
+			id: 'standalone-enricher',
+			needFacts: [] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async (_facts, options) => {
+				seenOptions.push(options ?? {});
+				return { facts: { enrichedFacts: ['standalone'] } };
+			},
+		};
+
+		await new Kernel()
+			.registerCollector(makeCollector(['x']))
+			.registerEnricher(standaloneEnricher)
+			.registerRule(makeRuleConsumingEnriched())
+			.run({ useCache: false });
+
+		expect(seenOptions).toEqual([{ useCache: false }]);
+	});
 });
 
 function makeEnricher(): Enricher<'testFacts', 'enrichedFacts'> {

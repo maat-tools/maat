@@ -7,6 +7,7 @@ import { MaatCommandBase } from './base';
 type CheckOptions = {
 	ledger?: boolean;
 	silent?: boolean;
+	noCache?: boolean;
 };
 
 type RegressionDetail = {
@@ -44,6 +45,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			.description('Scan the codebase for architectural findings')
 			.option('--ledger', 'Save findings to the ledger')
 			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
+			.option('--no-cache', 'Disable caching of enricher results')
 			.action((options: CheckOptions) => this.action(options));
 	}
 
@@ -63,6 +65,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const totalLLMCosts = { usedTokens: 0, cost: 0, hasUsedLLM: false };
 		const { findings: findingsFromTheCurrentRun } = await this.kernel
 			.run({
+				useCache: !options.noCache,
 				onProgress: (event: KernelProgressEvent) => {
 					if (event.type === 'collector:start') {
 						spinner?.update(`Collecting ${event.collectorId} (${event.index + 1}/${event.total})`);

@@ -58,8 +58,13 @@ class TestInteractor extends LLMInteractor {
 		return `id:${item.id}|${item.payload}`;
 	}
 
-	public run(items: FakeItem[]) {
-		return this.batchedInteract<FakeItem, FakeResult>({ items, instructions: 'Rate.', responseSchema: SCORE_SCHEMA });
+	public run(items: FakeItem[], options?: { useCache?: boolean }) {
+		return this.batchedInteract<FakeItem, FakeResult>({
+			items,
+			instructions: 'Rate.',
+			responseSchema: SCORE_SCHEMA,
+			options,
+		});
 	}
 }
 
@@ -152,5 +157,36 @@ describe('LLMInteractor.batchedInteract', () => {
 		expect(cached.items).toHaveLength(3);
 		expect(cached.usedTokens).toBe(0);
 		expect(cached.cost).toBe(0);
+	});
+
+	test('useCache: false bypasses cache and calls the LLM again', async () => {
+		const id = nextId();
+		const input = [
+			{ id: 0, payload: 'a' },
+			{ id: 1, payload: 'b' },
+		];
+
+		const model1 = new FakeModel(BIG_CAPS);
+		await new TestInteractor(model1, id).run(input);
+		expect(model1.calls.length).toBe(1);
+
+		const model2 = new FakeModel(BIG_CAPS);
+		const noCache = await new TestInteractor(model2, id).run(input, { useCache: false });
+		expect(model2.calls.length).toBe(1); // cache was bypassed
+		expect(noCache.items).toHaveLength(2);
+		expect(noCache.usedTokens).toBe(2);
+		expect(noCache.cost).toBe(2);
+	});
+
+	test('useCache: false preserves item order', async () => {
+		const model = new FakeModel({ maxInputTokens: 10_000, maxOutputTokens: 40 });
+		const interactor = new TestInteractor(model, nextId());
+		const input = Array.from({ length: 6 }, (_, i) => ({ id: i, payload: 'p' }));
+		const { items } = await interactor.run(input, { useCache: false });
+
+		expect(items).toHaveLength(6);
+		input.forEach((it, i) => {
+			expect(items[i]?.item.id).toBe(it.id);
+		});
 	});
 });

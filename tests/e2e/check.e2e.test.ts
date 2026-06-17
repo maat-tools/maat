@@ -128,6 +128,12 @@ describe('maat check — core behavior', () => {
 		const result = runCli(['check'], { config: SAMPLE_CONFIG });
 		expect(stripAnsi(result.stderr)).not.toContain('no ledger is configured');
 	});
+
+	test('--no-cache flag is accepted and runs to completion', () => {
+		const result = runCli(['check', '--no-cache'], { config: SAMPLE_CONFIG });
+		expect(result.exitCode).toBe(1);
+		expect(result.stdout).toContain('cop-args');
+	});
 });
 
 describe('maat check — ledger state transitions', () => {

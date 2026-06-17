@@ -144,11 +144,19 @@ If a finding is a false positive, it can be dismissed:
 maat verify --fingerprint <fp> --revoke
 ```
 
-## Caching: every LLM response is cached, always
+## Caching
 
-For the official `@maat-tools/enricher-llm` package, caching is not optional and has no off switch. Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. **If nothing changed — same code, same prompt, same model — the cached result is used and the LLM is never called again for that item.** Only changed items trigger new calls; entries are per-item, so one changed function re-asks about one function, not the whole batch. Entries for items that no longer exist are pruned automatically.
+For the official `@maat-tools/enricher-llm` package, every LLM response is cached by default. Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. **If nothing changed — same code, same prompt, same model — the cached result is used and the LLM is never called again for that item.** Only changed items trigger new calls; entries are per-item, so one changed function re-asks about one function, not the whole batch. Entries for items that no longer exist are pruned automatically.
 
 Commit `.maat/enricher-cache/` with your repository. This makes enriched runs reproducible across machines and CI — same facts, no network access, no repeated cost — and it means LLM cost scales with how much code changed, not with how often `maat check` runs. The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
+
+To bypass the cache for a single run — for example, when you suspect cached enriched facts are stale or want to reproduce an issue without committing the cache — pass `--no-cache` to `maat check`:
+
+```bash
+maat check --no-cache
+```
+
+This forces all configured enrichers to re-run. It has no effect when no enrichers are configured.
 
 ## Tradeoffs and design decisions
 

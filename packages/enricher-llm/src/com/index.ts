@@ -1,4 +1,4 @@
-import { defineEnricher, type Enricher } from '@maat-tools/contracts';
+import { defineEnricher, type Enricher, type EnricherOptions } from '@maat-tools/contracts';
 import { type KnownLLMConfig, type LLMConfig, LLMInteractor } from '@maat-tools/utils';
 import { FUNCTION_SIGNATURES_CAPABILITY, type FunctionSignature } from '@maat-tools/vocabulary';
 
@@ -70,11 +70,14 @@ export class CoMEnricherLLM
 		super(config as LLMConfig);
 	}
 
-	public async enrich({
-		functionSignatures,
-	}: {
-		functionSignatures: FunctionSignature[];
-	}): Promise<{ facts: { comCandidates: CoMCandidate[] }; usedTokens?: number; cost?: number }> {
+	public async enrich(
+		{
+			functionSignatures,
+		}: {
+			functionSignatures: FunctionSignature[];
+		},
+		options?: EnricherOptions,
+	): Promise<{ facts: { comCandidates: CoMCandidate[] }; usedTokens?: number; cost?: number }> {
 		const heterogeneousCandidates = functionSignatures.filter((sig) => sig.output.heterogeneous);
 		if (heterogeneousCandidates.length === 0) {
 			return { facts: { comCandidates: [] } };
@@ -88,6 +91,7 @@ export class CoMEnricherLLM
 			items: duplicateReturnValueCandidates,
 			instructions: COM_INSTRUCTIONS,
 			responseSchema: COM_BATCH_RESPONSE_SCHEMA,
+			options,
 		});
 
 		const comCandidates = items

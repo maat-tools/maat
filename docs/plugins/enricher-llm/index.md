@@ -80,11 +80,9 @@ The type marks `extra` as optional, but the Vertex Gemini model throws at constr
 
 Each enricher has its own page with configuration and fact shapes.
 
-## Caching: always on {#caching-always-on}
+## Caching
 
-**Every LLM response is cached, unconditionally.** There is no flag to enable or disable it.
-
-Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. If nothing changed — same code, same prompt, same model — the cached result is used and **the LLM is never called again** for that item. Only items whose key changed trigger new calls; entries are per-item, not per-batch, so one changed function re-asks about one function, not the whole batch. Stale entries for items that no longer exist are pruned automatically.
+**Every LLM response is cached by default.** Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. If nothing changed — same code, same prompt, same model — the cached result is used and **the LLM is never called again** for that item. Only items whose key changed trigger new calls; entries are per-item, not per-batch, so one changed function re-asks about one function, not the whole batch. Stale entries for items that no longer exist are pruned automatically.
 
 This has two consequences worth relying on:
 
@@ -92,6 +90,8 @@ This has two consequences worth relying on:
 - **Re-runs are reproducible.** Commit `.maat/enricher-cache/` with your repository and every environment — CI included — gets the exact same enriched facts without network access or repeated cost.
 
 The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
+
+To bypass the cache for a single run, use [`maat check --no-cache`](/commands/check).
 
 ## Tradeoffs
 

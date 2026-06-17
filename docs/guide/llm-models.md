@@ -39,9 +39,11 @@ export default defineConfig({
 
 ## Cache and cost
 
-Every LLM response is cached at `.maat/enricher-cache/`, keyed by content hash, model version, and prompt instructions. Only items whose code actually changed trigger new calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
+Every LLM response is cached at `.maat/enricher-cache/` by default, keyed by content hash, model version, and prompt instructions. Only items whose code actually changed trigger new calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
 
 Set the `MAAT_ENRICHER_CACHE_DIR` environment variable to override the cache location.
+
+To bypass the cache for a single run, use [`maat check --no-cache`](/commands/check).
 
 ## Related
 

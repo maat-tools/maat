@@ -6,10 +6,11 @@ Runs the configured collectors and rules, prints the current findings, and evalu
 maat check
 maat check --ledger
 maat check --silent
+maat check --no-cache
 
 # With a custom config file:
 maat --config ./path/to/maat.config.ts check
-maat -c ./maat.config.ts check --ledger
+maat -c ./path/to/maat.config.ts check --ledger
 ```
 
 ## What it does
@@ -58,6 +59,7 @@ On a fresh ledger, the first `maat check --ledger` records every current finding
 |---|---|
 | `--ledger` | Record findings to the configured ledger. Reconciliation against the ledger happens automatically when one is configured; this flag controls **writing**. Errors if no ledger is configured. |
 | `--silent` | Suppress normal console output while preserving the exit code. Configuration errors (such as `--ledger` without a configured ledger) are still reported. |
+| `--no-cache` | Bypass the enricher cache and force all configured enrichers to re-run. Useful when you suspect cached enriched facts are stale or want to reproduce an issue without committing the cache. Has no effect when no enrichers are configured. |
 
 ## Exit behavior
 

@@ -8,6 +8,9 @@ export type EnricherFactory<
 	TProduces extends keyof FactRegistry = keyof FactRegistry,
 > = (config: TConfig) => Enricher<TNeeds, TProduces>;
 
+export type EnricherOptions = {
+	useCache?: boolean;
+};
 export interface Enricher<
 	TNeeds extends keyof FactRegistry = keyof FactRegistry,
 	TProduces extends keyof FactRegistry = keyof FactRegistry,
@@ -17,6 +20,7 @@ export interface Enricher<
 	readonly provideFacts: readonly TProduces[];
 	enrich(
 		facts?: { [K in TNeeds]: FactRegistry[K] },
+		options?: EnricherOptions,
 	): Promise<{ facts: { [K in TProduces]: FactRegistry[K] }; usedTokens?: number; cost?: number }>;
 }
 

@@ -13,7 +13,10 @@ type StoredEnricher = {
 	readonly id: string;
 	readonly needFacts: readonly (keyof FactRegistry)[];
 	readonly provideFacts: readonly (keyof FactRegistry)[];
-	enrich(facts?: Partial<FactRegistry>): Promise<{ facts: Partial<FactRegistry>; usedTokens?: number; cost?: number }>;
+	enrich(
+		facts?: Partial<FactRegistry>,
+		options?: { useCache?: boolean },
+	): Promise<{ facts: Partial<FactRegistry>; usedTokens?: number; cost?: number }>;
 };
 
 export type KernelResult = {
@@ -106,7 +109,10 @@ export class Kernel {
 		return this.rules.find((r) => r.id === id);
 	}
 
-	public async run(options?: { onProgress?: (event: KernelProgressEvent) => void }): Promise<KernelResult> {
+	public async run(options?: {
+		useCache?: boolean;
+		onProgress?: (event: KernelProgressEvent) => void;
+	}): Promise<KernelResult> {
 		let facts: Partial<FactRegistry> = {};
 		const factsRequiringVerification = new Map<string, (keyof FactRegistry)[]>();
 		const onProgress = options?.onProgress;
@@ -137,7 +143,7 @@ export class Kernel {
 				onProgress?.({ type: 'enricher:start', enricherId: enricher.id, index: i, total: this.enrichers.length });
 
 				if (enricher.needFacts.length === 0) {
-					const enriched = await enricher.enrich();
+					const enriched = await enricher.enrich(undefined, { useCache: options?.useCache ?? true });
 					factsRequiringVerification.set(enricher.id, [...enricher.provideFacts]);
 
 					onProgress?.({
@@ -164,7 +170,9 @@ export class Kernel {
 					return { enriched: { facts: {} }, enricher };
 				}
 
-				const enriched = await enricher.enrich(Object.fromEntries(enricher.needFacts.map((key) => [key, facts[key]])));
+				const enriched = await enricher.enrich(Object.fromEntries(enricher.needFacts.map((key) => [key, facts[key]])), {
+					useCache: options?.useCache ?? true,
+				});
 				factsRequiringVerification.set(enricher.id, [...enricher.provideFacts]);
 
 				onProgress?.({

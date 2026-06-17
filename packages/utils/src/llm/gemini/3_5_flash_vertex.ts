@@ -1,4 +1,4 @@
-import { GoogleGenAI, type GenerateContentConfig } from '@google/genai';
+import { type GenerateContentConfig, GoogleGenAI } from '@google/genai';
 import { BaseLLMModel } from '../base';
 import {
 	GeminiAIModel,

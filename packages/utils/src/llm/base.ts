@@ -57,6 +57,54 @@ export abstract class BaseLLMModel {
 		return { availableInputTokens, maxItemsByOutput };
 	}
 
+	protected buildStructuredOutputSchema(responseSchema: Record<string, unknown>): Record<string, unknown> {
+		return {
+			type: 'object',
+			properties: { results: this.toStrictJsonSchema(responseSchema) },
+			required: ['results'],
+			additionalProperties: false,
+		};
+	}
+
+	protected unwrapStructuredOutput(text: string): string {
+		try {
+			const parsed = JSON.parse(text) as { results?: unknown };
+			if (parsed && typeof parsed === 'object' && Array.isArray(parsed.results)) {
+				return JSON.stringify(parsed.results);
+			}
+		} catch {
+			// Not valid JSON — leave as-is and let the caller's parser report it.
+		}
+
+		return text;
+	}
+
+	private toStrictJsonSchema(schema: Record<string, unknown>): Record<string, unknown> {
+		if (schema.type === 'object' && schema.properties && typeof schema.properties === 'object') {
+			const properties = schema.properties as Record<string, Record<string, unknown>>;
+			const strictProperties: Record<string, unknown> = {};
+			for (const [key, value] of Object.entries(properties)) {
+				strictProperties[key] = this.toStrictJsonSchema(value);
+			}
+
+			return {
+				...schema,
+				properties: strictProperties,
+				required: Object.keys(properties),
+				additionalProperties: false,
+			};
+		}
+
+		if (schema.type === 'array' && schema.items && typeof schema.items === 'object') {
+			return {
+				...schema,
+				items: this.toStrictJsonSchema(schema.items as Record<string, unknown>),
+			};
+		}
+
+		return { ...schema };
+	}
+
 	protected calculateInputCost(prompt: string): number {
 		const promptTokens = this.calculatePromptSize(prompt);
 

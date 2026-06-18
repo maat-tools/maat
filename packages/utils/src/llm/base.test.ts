@@ -8,6 +8,14 @@ class TestModel extends BaseLLMModel {
 		super();
 		this.modelCapabilities = caps;
 	}
+
+	public wrapSchema(schema: Record<string, unknown>): Record<string, unknown> {
+		return this.buildStructuredOutputSchema(schema);
+	}
+
+	public unwrap(text: string): string {
+		return this.unwrapStructuredOutput(text);
+	}
 }
 
 const SCORE_SCHEMA: JsonArraySchema = {
@@ -110,5 +118,75 @@ describe('BaseLLMModel.computeBatchBudget — exact math', () => {
 			}),
 		);
 		expect(budget.maxItemsByOutput).toBe(Math.floor(850 / 21));
+	});
+});
+
+describe('BaseLLMModel structured output', () => {
+	const model = new TestModel({ maxInputTokens: 100, maxOutputTokens: 100 });
+
+	test('wraps an array-rooted schema into a strict object root', () => {
+		const wrapped = model.wrapSchema({
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					_key: { type: 'string' },
+					name: { type: 'string' },
+				},
+			},
+		});
+
+		expect(wrapped).toEqual({
+			type: 'object',
+			properties: {
+				results: {
+					type: 'array',
+					items: {
+						type: 'object',
+						properties: {
+							_key: { type: 'string' },
+							name: { type: 'string' },
+						},
+						required: ['_key', 'name'],
+						additionalProperties: false,
+					},
+				},
+			},
+			required: ['results'],
+			additionalProperties: false,
+		});
+	});
+
+	test('makes every nested object strict recursively', () => {
+		const wrapped = model.wrapSchema({
+			type: 'array',
+			items: {
+				type: 'object',
+				properties: {
+					address: {
+						type: 'object',
+						properties: { city: { type: 'string' } },
+					},
+				},
+			},
+		});
+
+		const { results } = wrapped.properties as {
+			results: { items: { properties: { address: { required: string[]; additionalProperties: boolean } } } };
+		};
+		const address = results.items.properties.address;
+		expect(address.required).toEqual(['city']);
+		expect(address.additionalProperties).toBe(false);
+	});
+
+	test('unwraps the results array back into a plain array string', () => {
+		const text = JSON.stringify({ results: [{ _key: 'a', score: 1 }] });
+		expect(model.unwrap(text)).toBe(JSON.stringify([{ _key: 'a', score: 1 }]));
+	});
+
+	test('passes through text that is not the results wrapper', () => {
+		const plainArray = JSON.stringify([{ _key: 'a' }]);
+		expect(model.unwrap(plainArray)).toBe(plainArray);
+		expect(model.unwrap('not json')).toBe('not json');
 	});
 });

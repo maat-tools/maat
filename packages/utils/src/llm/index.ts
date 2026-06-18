@@ -2,22 +2,42 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { LocalCache } from '../cache';
 import { BatchLLMRequest } from './batch';
-import { VertexGemini_3_5_Flash } from './gemini';
-import { GeminiAIModel, type JsonArraySchema, type LLMConfig, type LLMModel, LLMProvider } from './types';
+import { Claude_Haiku_4_5, Claude_Opus_4_8, Claude_Sonnet_4_6 } from './claude';
+import { Gemini_3_1_Pro_Preview, Gemini_3_5_Flash } from './gemini';
+import { Grok_4_3 } from './grok';
+import { GPT_5_4, GPT_5_5 } from './openai';
+import {
+	ClaudeAIModel,
+	GeminiAIModel,
+	GrokAIModel,
+	type JsonArraySchema,
+	type LLMConfig,
+	type LLMModel,
+	OpenAIModel,
+} from './types';
 
 export * from './types';
 
 function buildModelInstance(config: LLMConfig): LLMModel {
-	switch (config.provider) {
-		case LLMProvider.Vertex:
-			switch (config.model) {
-				case GeminiAIModel.Gemini_3_5_Flash:
-					return new VertexGemini_3_5_Flash(config as LLMConfig<'vertex', 'gemini-3-5-flash'>);
-				default:
-					throw new Error(`Unsupported Gemini model: ${config.model}`);
-			}
+	switch (config.model) {
+		case GeminiAIModel.Gemini_3_5_Flash:
+			return new Gemini_3_5_Flash(config as never);
+		case GeminiAIModel.Gemini_3_1_Pro_Preview:
+			return new Gemini_3_1_Pro_Preview(config as never);
+		case ClaudeAIModel.Claude_Sonnet_4_6:
+			return new Claude_Sonnet_4_6(config as never);
+		case ClaudeAIModel.Claude_Opus_4_8:
+			return new Claude_Opus_4_8(config as never);
+		case ClaudeAIModel.Claude_Haiku_4_5:
+			return new Claude_Haiku_4_5(config as never);
+		case GrokAIModel.Grok_4_3:
+			return new Grok_4_3(config as never);
+		case OpenAIModel.GPT_5_4:
+			return new GPT_5_4(config as never);
+		case OpenAIModel.GPT_5_5:
+			return new GPT_5_5(config as never);
 		default:
-			throw new Error(`Unsupported LLM provider: ${config.provider}`);
+			throw new Error(`Unsupported LLM model: ${config.model}`);
 	}
 }
 

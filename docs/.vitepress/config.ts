@@ -43,11 +43,29 @@ const guideAndPluginSidebar = [
         collapsed: false,
         items: [
           {
-            text: 'Vertex AI',
-            link: '/guide/llm-models/vertex',
+            text: 'Providers',
+            collapsed: false,
+            items: [
+              { text: 'Google Vertex AI', link: '/guide/llm-models/vertex' },
+              { text: 'Google AI', link: '/guide/llm-models/google' },
+              { text: 'Anthropic', link: '/guide/llm-models/anthropic' },
+              { text: 'xAI', link: '/guide/llm-models/xai' },
+              { text: 'OpenAI', link: '/guide/llm-models/openai' },
+              { text: 'OpenRouter', link: '/guide/llm-models/openrouter' },
+            ],
+          },
+          {
+            text: 'Models',
             collapsed: false,
             items: [
               { text: 'Gemini 3.5 Flash', link: '/guide/llm-models/gemini-3-5-flash' },
+              { text: 'Gemini 3.1 Pro Preview', link: '/guide/llm-models/gemini-3-1-pro-preview' },
+              { text: 'Claude Sonnet 4.6', link: '/guide/llm-models/claude-sonnet-4-6' },
+              { text: 'Claude Opus 4.8', link: '/guide/llm-models/claude-opus-4-8' },
+              { text: 'Claude Haiku 4.5', link: '/guide/llm-models/claude-haiku-4-5' },
+              { text: 'Grok 4.3', link: '/guide/llm-models/grok-4-3' },
+              { text: 'GPT 5.4', link: '/guide/llm-models/gpt-5-4' },
+              { text: 'GPT 5.5', link: '/guide/llm-models/gpt-5-5' },
             ],
           },
         ],

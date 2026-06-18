@@ -1,11 +1,38 @@
 export const GeminiAIModel = {
 	Gemini_3_5_Flash: 'gemini-3-5-flash',
+	Gemini_3_1_Pro_Preview: 'gemini-3-1-pro-preview',
 } as const;
 
 export type GeminiAIModel = (typeof GeminiAIModel)[keyof typeof GeminiAIModel];
 
+export const ClaudeAIModel = {
+	Claude_Sonnet_4_6: 'claude-sonnet-4-6',
+	Claude_Opus_4_8: 'claude-opus-4-8',
+	Claude_Haiku_4_5: 'claude-haiku-4-5',
+} as const;
+
+export type ClaudeAIModel = (typeof ClaudeAIModel)[keyof typeof ClaudeAIModel];
+
+export const GrokAIModel = {
+	Grok_4_3: 'grok-4-3',
+} as const;
+
+export type GrokAIModel = (typeof GrokAIModel)[keyof typeof GrokAIModel];
+
+export const OpenAIModel = {
+	GPT_5_4: 'gpt-5-4',
+	GPT_5_5: 'gpt-5-5',
+} as const;
+
+export type OpenAIModel = (typeof OpenAIModel)[keyof typeof OpenAIModel];
+
 export const LLMProvider = {
 	Vertex: 'vertex',
+	Google: 'google',
+	Anthropic: 'anthropic',
+	XAI: 'xai',
+	OpenAI: 'openai',
+	OpenRouter: 'openrouter',
 } as const;
 
 export type LLMProvider = (typeof LLMProvider)[keyof typeof LLMProvider];
@@ -19,9 +46,62 @@ export type VertexLLMExtra = {
 	location?: string;
 };
 
+export type GoogleLLMExtra = {
+	apiKey?: string;
+};
+
+export type AnthropicLLMExtra = {
+	apiKey?: string;
+};
+
+export type XAILLMExtra = {
+	apiKey?: string;
+};
+
+export type OpenAILLMExtra = {
+	apiKey?: string;
+	baseUrl?: string;
+};
+
+export type OpenRouterLLMExtra = {
+	apiKey?: string;
+	baseUrl?: string;
+};
+
 export interface ProviderModelRegistry {
 	vertex: {
 		'gemini-3-5-flash': VertexLLMExtra;
+		'gemini-3-1-pro-preview': VertexLLMExtra;
+		'claude-sonnet-4-6': VertexLLMExtra;
+		'claude-opus-4-8': VertexLLMExtra;
+		'claude-haiku-4-5': VertexLLMExtra;
+		'grok-4-3': VertexLLMExtra;
+	};
+	google: {
+		'gemini-3-5-flash': GoogleLLMExtra;
+		'gemini-3-1-pro-preview': GoogleLLMExtra;
+	};
+	anthropic: {
+		'claude-sonnet-4-6': AnthropicLLMExtra;
+		'claude-opus-4-8': AnthropicLLMExtra;
+		'claude-haiku-4-5': AnthropicLLMExtra;
+	};
+	xai: {
+		'grok-4-3': XAILLMExtra;
+	};
+	openai: {
+		'gpt-5-4': OpenAILLMExtra;
+		'gpt-5-5': OpenAILLMExtra;
+	};
+	openrouter: {
+		'gemini-3-5-flash': OpenRouterLLMExtra;
+		'gemini-3-1-pro-preview': OpenRouterLLMExtra;
+		'claude-sonnet-4-6': OpenRouterLLMExtra;
+		'claude-opus-4-8': OpenRouterLLMExtra;
+		'claude-haiku-4-5': OpenRouterLLMExtra;
+		'grok-4-3': OpenRouterLLMExtra;
+		'gpt-5-4': OpenRouterLLMExtra;
+		'gpt-5-5': OpenRouterLLMExtra;
 	};
 }
 

@@ -3,8 +3,8 @@ import { promisify } from 'node:util';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
 import { getCurrentDir } from '@maat-tools/utils';
 
-export const GIT_COMMITS_CAPABILITY = 'git_commits' as const;
-export const GIT_FILE_CHANGES_CAPABILITY = 'git_file_changes' as const;
+export const GIT_COMMITS_CAPABILITY = 'gitCommits' as const;
+export const GIT_FILE_CHANGES_CAPABILITY = 'gitFileChanges' as const;
 
 export type GitCommit = {
 	hash: string;
@@ -41,8 +41,8 @@ export type GitFileChange = {
 
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
-		git_commits: GitCommit[];
-		git_file_changes: GitFileChange[];
+		gitCommits: GitCommit[];
+		gitFileChanges: GitFileChange[];
 	}
 }
 
@@ -133,13 +133,13 @@ export function parseGitLog(output: string): { commits: GitCommit[]; fileChanges
 	return { commits, fileChanges };
 }
 
-export class GitCollector implements Collector<'git_commits' | 'git_file_changes'> {
+export class GitCollector implements Collector<'gitCommits' | 'gitFileChanges'> {
 	public readonly id = 'maat-tools/git-collector@v1';
 	public readonly provideFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
 
 	public constructor(private readonly config: GitInput) {}
 
-	public async collect(): Promise<Pick<FactRegistry, 'git_commits' | 'git_file_changes'>> {
+	public async collect(): Promise<Pick<FactRegistry, 'gitCommits' | 'gitFileChanges'>> {
 		const cwd = this.config.repoPath ?? getCurrentDir();
 		const args = ['-c', 'core.quotepath=false', 'log', `--format=${FORMAT}`, '--name-status'];
 
@@ -158,8 +158,8 @@ export class GitCollector implements Collector<'git_commits' | 'git_file_changes
 		const { commits, fileChanges } = parseGitLog(stdout);
 
 		return {
-			git_commits: commits,
-			git_file_changes: fileChanges,
+			gitCommits: commits,
+			gitFileChanges: fileChanges,
 		};
 	}
 }

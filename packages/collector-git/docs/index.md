@@ -1,7 +1,7 @@
 # `@maat-tools/collector-git`
 
 ::: info Provides
-`git_commits` · `git_file_changes`
+`gitCommits` · `gitFileChanges`
 :::
 
 Collects git history facts — commits and file changes — for use by git-based rules and insights.
@@ -10,8 +10,8 @@ Collects git history facts — commits and file changes — for use by git-based
 
 | Fact | Type | Description |
 |---|---|---|
-| `git_commits` | `GitCommit[]` | One entry per commit: hash, author, email, ISO date, subject |
-| `git_file_changes` | `GitFileChange[]` | One entry per file touched per commit: path, status, optional old path for renames |
+| `gitCommits` | `GitCommit[]` | One entry per commit: hash, author, email, ISO date, subject |
+| `gitFileChanges` | `GitFileChange[]` | One entry per file touched per commit: path, status, optional old path for renames |
 
 ### `GitCommit`
 

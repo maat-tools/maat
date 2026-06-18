@@ -19,7 +19,7 @@ export type ChurnOptions = {
 	exclude?: string[];
 };
 
-export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
+export class ChurnRule implements Rule<'gitCommits' | 'gitFileChanges'> {
 	public readonly id = 'maat-tools/git-rules/churn@v1';
 	public readonly instanceId = this.id;
 	public readonly needFacts = [GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY] as const;
@@ -34,10 +34,10 @@ export class ChurnRule implements Rule<'git_commits' | 'git_file_changes'> {
 		this.exclude = options.exclude ?? [];
 	}
 
-	public evaluate(facts: { git_commits: GitCommit[]; git_file_changes: GitFileChange[] }): RuleOutput[] {
+	public evaluate(facts: { gitCommits: GitCommit[]; gitFileChanges: GitFileChange[] }): RuleOutput[] {
 		const cutoff = Date.now() - this.windowMs;
-		const commits = facts.git_commits ?? [];
-		const fileChanges = facts.git_file_changes ?? [];
+		const commits = facts.gitCommits ?? [];
+		const fileChanges = facts.gitFileChanges ?? [];
 
 		const hashesInWindow = new Set(commits.filter((c) => new Date(c.date).getTime() >= cutoff).map((c) => c.hash));
 

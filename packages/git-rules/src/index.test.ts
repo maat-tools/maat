@@ -11,8 +11,8 @@ describe('git-rules exports', () => {
 		const rule = churn();
 		expect(isRule(rule)).toBe(true);
 		expect(rule.id).toBe('maat-tools/git-rules/churn@v1');
-		expect(rule.needFacts).toContain('git_commits');
-		expect(rule.needFacts).toContain('git_file_changes');
+		expect(rule.needFacts).toContain('gitCommits');
+		expect(rule.needFacts).toContain('gitFileChanges');
 	});
 
 	test('ChurnRule class is exported', () => {

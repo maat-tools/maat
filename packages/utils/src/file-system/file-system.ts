@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { access, appendFile, mkdir, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
@@ -39,6 +40,18 @@ export async function findMaatConfig(cwd: string, validConfigFilenames: string[]
 
 export function getCurrentDir(): string {
 	return resolve(process.cwd());
+}
+
+export function resolveProjectRoot(startDir: string = process.cwd()): string {
+	const start = resolve(startDir);
+
+	for (const dir of ancestorDirs(start)) {
+		if (existsSync(join(dir, '.git'))) {
+			return dir;
+		}
+	}
+
+	return start;
 }
 
 export function resolveSymbol(symbol: string): string {

@@ -1,14 +1,22 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolveProjectRoot } from './file-system/file-system';
 
 export class LocalCache {
-	private cachePath = join(process.cwd(), '.maat', 'cache');
+	private readonly namespace: string;
+	private resolvedCachePath: string | null = null;
 
 	public constructor({ cachePath }: { cachePath: string }) {
 		if (!cachePath) {
 			throw new Error('Cache path must be provided');
 		}
-		this.cachePath = join(this.cachePath, cachePath);
+		this.namespace = cachePath;
+	}
+
+	private get cachePath(): string {
+		this.resolvedCachePath ??= join(resolveProjectRoot(), '.maat', 'cache', this.namespace);
+
+		return this.resolvedCachePath;
 	}
 
 	public async readCacheEntry<T>(file: string): Promise<T | null> {

@@ -168,9 +168,9 @@ class LayerRule implements Rule<'dependsOn'> {
 				continue;
 			}
 
-			const dependenciesOfAllowedDependency = Array.from(
-				dependenciesByPath.entries().filter(([from]) => isMatch(from, [currentPath, `${currentPath}/**`])),
-			).flatMap(([, deps]) => deps);
+			const dependenciesOfAllowedDependency = Array.from(dependenciesByPath.entries())
+				.filter(([from]) => isMatch(from, [currentPath, `${currentPath}/**`]))
+				.flatMap(([, deps]) => deps);
 
 			for (const dep of dependenciesOfAllowedDependency) {
 				if (!dep.to.isExternal && !visited.has(dep.to.path)) {
@@ -219,7 +219,10 @@ class LayerBuilderState {
 	}
 
 	public build(): Rule<'dependsOn'> {
-		if (this.role === Pure) {
+		// Compare by role name, not object identity: bundlers can inline a separate
+		// copy of the Pure singleton into each entry point, so a Pure imported from
+		// one subpath (e.g. /roles) is not identity-equal to the one used here.
+		if (this.role?.name === Pure.name) {
 			return new PureLayerRule(this.target);
 		}
 

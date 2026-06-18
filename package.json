@@ -22,7 +22,7 @@
 		"tests"
 	],
 	"scripts": {
-		"build": "for pkg in contracts vocabulary utils core kernel collector-ts collector-git enricher-llm coupling-rules connascence-rules presets-ts git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build; done",
+		"build": "for pkg in contracts vocabulary utils core kernel collector-ts collector-git enricher-llm coupling-rules connascence-rules presets-ts git-rules insights file-ledger cli; do bun run --cwd packages/$pkg build || exit 1; done",
 		"docs:dev": "vitepress dev docs",
 		"docs:build": "vitepress build docs",
 		"docs:preview": "vitepress preview docs",
@@ -30,6 +30,7 @@
 		"test": "bun run test:unit && bun run test:e2e",
 		"test:unit": "bun test packages",
 		"test:e2e": "bun test tests/e2e",
+		"test:pack": "bash scripts/smoke-pack.sh",
 		"typecheck": "tsc --noEmit",
 		"maat": "bun run packages/cli/src/index.ts",
 		"maat:node": "bun run build && node packages/cli/dist/index.js",

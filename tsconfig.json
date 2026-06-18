@@ -1,7 +1,6 @@
 {
 	"compilerOptions": {
-		// Environment setup & latest features
-		"lib": ["ESNext"],
+		"lib": ["ES2023"],
 		"target": "ESNext",
 		"module": "Preserve",
 		"moduleDetection": "force",

@@ -1,4 +1,4 @@
-import { access, appendFile, readFile } from 'node:fs/promises';
+import { access, appendFile, mkdir, readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -108,5 +108,6 @@ export async function readFileContent(path: string, encoding: BufferEncoding = '
 }
 
 export async function appendToFile(path: string, content: string, encoding: BufferEncoding = 'utf-8'): Promise<void> {
+	await mkdir(dirname(path), { recursive: true });
 	return appendFile(path, content, { encoding });
 }

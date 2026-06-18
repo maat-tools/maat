@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
-    "@biomejs/biome": "2.4.15",
+    "@biomejs/biome": "2.5.0",
     "@maat-tools/testing": "workspace:*",
     "@maat-tools/utils": "workspace:*"
   },
@@ -32,7 +32,7 @@
     "@maat-tools/contracts": "workspace:*",
     "@maat-tools/core": "workspace:*",
     "@maat-tools/kernel": "workspace:*",
-    "commander": "14.0.3",
+    "commander": "15.0.0",
     "yocto-spinner": "1.2.0"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",

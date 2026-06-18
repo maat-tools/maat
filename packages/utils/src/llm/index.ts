@@ -116,7 +116,7 @@ export abstract class LLMInteractor<TProvider extends string = string, TModel ex
 			return { items: sortedItems, usedTokens, cost };
 		}
 
-		const CACHE_FOLDER = `enrichers/${this.id}`;
+		const CACHE_FOLDER = this.id;
 		const provider = this.config.provider;
 		const model = this.config.model;
 

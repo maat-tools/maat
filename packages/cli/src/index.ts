@@ -72,7 +72,6 @@ class MaatCLI {
 		});
 
 		this.configFilePath = loadedConfig.filePath;
-		process.chdir(loadedConfig.rootDir);
 
 		if (loadedConfig.config.collectors.length === 0) {
 			this.presenter.error('No collectors configured.\n');

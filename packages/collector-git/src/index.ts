@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
-import { getCurrentDir } from '@maat-tools/utils';
+import { resolveProjectRoot } from '@maat-tools/utils';
 
 export const GIT_COMMITS_CAPABILITY = 'gitCommits' as const;
 export const GIT_FILE_CHANGES_CAPABILITY = 'gitFileChanges' as const;
@@ -140,7 +140,7 @@ export class GitCollector implements Collector<'gitCommits' | 'gitFileChanges'> 
 	public constructor(private readonly config: GitInput) {}
 
 	public async collect(): Promise<Pick<FactRegistry, 'gitCommits' | 'gitFileChanges'>> {
-		const cwd = this.config.repoPath ?? getCurrentDir();
+		const cwd = this.config.repoPath ?? resolveProjectRoot();
 		const args = ['-c', 'core.quotepath=false', 'log', `--format=${FORMAT}`, '--name-status'];
 
 		if (this.config.sinceDays) {

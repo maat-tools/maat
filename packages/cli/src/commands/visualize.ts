@@ -82,7 +82,12 @@ export class Visualize extends MaatCommandBase implements MaatCommand {
 				continue;
 			}
 
-			groupedFindings.getOrInsert(group, []).push(finding);
+			let bucket = groupedFindings.get(group);
+			if (!bucket) {
+				bucket = [];
+				groupedFindings.set(group, bucket);
+			}
+			bucket.push(finding);
 		}
 
 		if (json) {

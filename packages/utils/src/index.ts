@@ -24,5 +24,6 @@ export {
 	type LLMModel,
 	type LLMProvider,
 	type ProviderModelRegistry,
+	type VertexLLMExtra,
 } from './llm/types';
 export { StdoutPresenter } from './presenter/stdout';

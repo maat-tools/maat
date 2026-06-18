@@ -34,12 +34,16 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Packed-artifact smoke test (Node + Bun)
+        run: bun run test:pack
+
       - name: Publish to npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
           VERSION=${{ steps.version.outputs.version }}
           for pkg in contracts vocabulary utils core kernel collector-ts collector-git enricher-llm coupling-rules connascence-rules presets-ts git-rules insights file-ledger cli; do
             dir="packages/$pkg"
+            cp LICENSE "$dir/LICENSE"
             jq --arg v "$VERSION" '
               .version = $v |
               if .dependencies then .dependencies = (.dependencies | map_values(if test("^workspace:") then $v else . end)) else . end |
@@ -49,6 +53,7 @@ jobs:
             mv "$dir/package.publish.json" "$dir/package.json"
             (cd "$dir" && npm publish --access public)
             mv "$dir/package.json.orig" "$dir/package.json"
+            rm -f "$dir/LICENSE"
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

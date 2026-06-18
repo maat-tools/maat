@@ -13,10 +13,10 @@
       "default": "./dist/index.js"
     },
     "./com": {
-      "bun": "./src/com.ts",
-      "import": "./dist/com.js",
-      "types": "./dist/com.d.ts",
-      "default": "./dist/com.js"
+      "bun": "./src/com/com.ts",
+      "import": "./dist/com/com.js",
+      "types": "./dist/com/com.d.ts",
+      "default": "./dist/com/com.js"
     },
     "./cop": {
       "bun": "./src/cop/index.ts",
@@ -59,7 +59,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/com.ts src/cop/index.ts src/cop/args.ts src/cop/struct.ts src/coa/technical.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/com/com.ts src/com/com-semantic.ts src/cop/index.ts src/cop/args.ts src/cop/struct.ts src/coa/technical.ts --outdir dist --format esm --target node --packages external && bunx tsc -p tsconfig.build.json",
     "dev": "bun run src/index.ts",
     "lint": "biome check .",
     "test": "bun test",

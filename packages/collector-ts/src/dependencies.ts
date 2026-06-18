@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-import { getCurrentDir } from '@maat-tools/utils';
+import { resolveProjectRoot } from '@maat-tools/utils';
 import type { DependsOn } from '@maat-tools/vocabulary';
 import { type Node, type SourceFile, type StandardizedFilePath, SyntaxKind } from 'ts-morph';
 import { makeLocation } from './utils';
@@ -34,7 +34,7 @@ function resolvePackageInformation(filePath: string): PackageInfo | null {
 			try {
 				const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 				const name = typeof pkg.name === 'string' ? pkg.name : null;
-				const rootPath = toProjectRelativePath(getCurrentDir(), dir);
+				const rootPath = toProjectRelativePath(resolveProjectRoot(), dir);
 				for (const d of visited) {
 					packageInformationCache.set(d, { name, rootPath });
 				}
@@ -78,12 +78,12 @@ function buildDependsOn({
 }): DependsOn {
 	return {
 		from: {
-			path: toProjectRelativePath(getCurrentDir(), absoluteFile),
+			path: toProjectRelativePath(resolveProjectRoot(), absoluteFile),
 			location: makeLocation(file, node),
 			...(packageInfo ? { package: { name: packageInfo.name, rootPath: packageInfo.rootPath } } : {}),
 		},
 		to: {
-			path: isExternal ? value : toProjectRelativePath(getCurrentDir(), resolve(dirname(absoluteFile), value)),
+			path: isExternal ? value : toProjectRelativePath(resolveProjectRoot(), resolve(dirname(absoluteFile), value)),
 			isExternal,
 			...(isExternal ? { package: { name: value } } : {}),
 		},

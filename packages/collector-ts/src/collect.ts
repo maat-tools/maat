@@ -1,5 +1,6 @@
+import { resolve } from 'node:path';
 import type { FactRegistry } from '@maat-tools/contracts';
-import { getCurrentDir, isMatch, resolveSymbol } from '@maat-tools/utils';
+import { isMatch, resolveProjectRoot } from '@maat-tools/utils';
 import type {
 	AlgorithmicBinding,
 	AlgorithmicPattern,
@@ -46,7 +47,7 @@ async function expandGlobs(patterns: string[], rootDir: string): Promise<string[
 			const matches = await glob(pattern, { cwd: rootDir, absolute: true });
 			results.push(...matches);
 		} else {
-			results.push(resolveSymbol(pattern));
+			results.push(resolve(rootDir, pattern));
 		}
 	}
 
@@ -56,7 +57,7 @@ async function expandGlobs(patterns: string[], rootDir: string): Promise<string[
 export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
 	const rawPatterns = Array.isArray(config.tsConfigFilePath) ? config.tsConfigFilePath : [config.tsConfigFilePath];
 
-	const projectRoot = getCurrentDir();
+	const projectRoot = resolveProjectRoot();
 	const tsConfigPaths = await expandGlobs(rawPatterns, projectRoot);
 
 	const excludePatterns = config.exclude ?? [];

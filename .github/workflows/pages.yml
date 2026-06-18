@@ -8,6 +8,11 @@ on:
     workflows: [Release]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      docs_version:
+        description: 'Version label to show in docs (e.g. v0.2.0). Defaults to the selected branch/tag.'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -43,6 +48,8 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             tag=$(git describe --tags --exact-match ${{ github.event.workflow_run.head_sha }} 2>/dev/null || echo "")
             echo "version=$tag" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.inputs.docs_version }}" ]; then
+            echo "version=${{ github.event.inputs.docs_version }}" >> $GITHUB_OUTPUT
           else
             echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi

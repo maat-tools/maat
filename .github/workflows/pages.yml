@@ -7,7 +7,6 @@ on:
   workflow_run:
     workflows: [Release]
     types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -28,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -36,10 +37,20 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Determine docs version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            tag=$(git describe --tags --exact-match ${{ github.event.workflow_run.head_sha }} 2>/dev/null || echo "")
+            echo "version=$tag" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build docs
         env:
           GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
-          MAAT_DOCS_VERSION: ${{ github.ref_name }}
+          MAAT_DOCS_VERSION: ${{ steps.version.outputs.version }}
         run: bun run docs:build
 
       - uses: actions/configure-pages@v4

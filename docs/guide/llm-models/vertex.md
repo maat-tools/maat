@@ -2,7 +2,7 @@
 
 `provider: 'vertex'`
 
-Vertex AI is the only supported provider. Authentication uses [Application Default Credentials (ADC)](https://cloud.google.com/docs/authentication/application-default-credentials).
+Vertex AI serves Gemini, Claude, and Grok models behind a single GCP project. Authentication uses [Application Default Credentials (ADC)](https://cloud.google.com/docs/authentication/application-default-credentials).
 
 ## Authentication
 
@@ -44,11 +44,17 @@ Common choices: `us-central1`, `us-east4`, `europe-west1`. Refer to the [Vertex 
 
 ## Models
 
-| Model | `model` | Page |
-|---|---|---|
-| Gemini 3.5 Flash | `gemini-3-5-flash` | [Details](/guide/llm-models/gemini-3-5-flash) |
+| Model | `model` |
+|---|---|
+| [Gemini 3.5 Flash](/guide/llm-models/gemini-3-5-flash) | `gemini-3-5-flash` |
+| [Gemini 3.1 Pro Preview](/guide/llm-models/gemini-3-1-pro-preview) | `gemini-3-1-pro-preview` |
+| [Claude Sonnet 4.6](/guide/llm-models/claude-sonnet-4-6) | `claude-sonnet-4-6` |
+| [Claude Opus 4.8](/guide/llm-models/claude-opus-4-8) | `claude-opus-4-8` |
+| [Claude Haiku 4.5](/guide/llm-models/claude-haiku-4-5) | `claude-haiku-4-5` |
+| [Grok 4.3](/guide/llm-models/grok-4-3) | `grok-4-3` |
+
+Claude models on Vertex are served through the AnthropicVertex backend; Gemini through the Google GenAI Vertex backend; Grok through Vertex's OpenAI-compatible endpoint. All three only need `extra.project` and `extra.location`.
 
 ## Related
 
 - [LLM models overview](/guide/llm-models)
-- [Gemini 3.5 Flash](/guide/llm-models/gemini-3-5-flash)

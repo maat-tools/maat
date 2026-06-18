@@ -1,12 +1,13 @@
 name: Deploy Pages
 
-# Docs deploy together with releases (v* tags), so the site always documents
+# Docs deploy after a release finishes successfully, so the site always documents
 # what is actually published on npm. Use workflow_dispatch for doc-only
 # hotfixes between releases.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -39,7 +39,6 @@ jobs:
 
       - name: Publish to npm
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
           VERSION=${{ steps.version.outputs.version }}
           for pkg in contracts vocabulary utils core kernel collector-ts collector-git enricher-llm coupling-rules connascence-rules presets-ts git-rules insights file-ledger cli; do
             dir="packages/$pkg"

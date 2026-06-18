@@ -1,7 +1,7 @@
 # `churn`
 
 ::: info Needs
-`git_commits` · `git_file_changes` — from [`@maat-tools/collector-git`](../collector-git/)
+`gitCommits` · `gitFileChanges` — from [`@maat-tools/collector-git`](../collector-git/)
 :::
 
 `churn` detects files that change too frequently within a rolling time window. A file that accumulates changes faster than the rest of the codebase is a signal that it is doing too much, that too many concerns depend on it, or both.

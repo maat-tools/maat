@@ -1,7 +1,7 @@
 # `@maat-tools/git-rules`
 
 ::: info Needs
-`git_commits` · `git_file_changes` — from [`@maat-tools/collector-git`](../collector-git/)
+`gitCommits` · `gitFileChanges` — from [`@maat-tools/collector-git`](../collector-git/)
 :::
 
 Rules derived from git history. Requires [`@maat-tools/collector-git`](../collector-git/) to be configured as a collector.

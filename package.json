@@ -37,9 +37,9 @@
 		"commitlint": "commitlint --from HEAD~1 --to HEAD"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.15",
-		"@commitlint/cli": "21.0.1",
-		"@commitlint/config-conventional": "21.0.1",
+		"@biomejs/biome": "2.5.0",
+		"@commitlint/cli": "21.0.2",
+		"@commitlint/config-conventional": "21.0.2",
 		"@maat-tools/collector-ts": "workspace:*",
 		"@maat-tools/enricher-llm": "workspace:*",
 		"@maat-tools/connascence-rules": "workspace:*",

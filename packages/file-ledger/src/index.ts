@@ -1,3 +1,4 @@
+import { isAbsolute, join } from 'node:path';
 import {
 	type AxiomEvent,
 	defineLedgerBackend,
@@ -8,7 +9,7 @@ import {
 	type LedgerEventInput,
 } from '@maat-tools/contracts';
 import { LedgerBackendBase, type LedgerSnapshot } from '@maat-tools/core';
-import { appendToFile, pathExists, readFileContent } from '@maat-tools/utils';
+import { appendToFile, pathExists, readFileContent, resolveProjectRoot } from '@maat-tools/utils';
 
 export type {
 	AxiomEvent,
@@ -31,11 +32,15 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	private initialized = false;
 	private cache: LedgerSnapshot = EMPTY_SNAPSHOT;
 
-	public constructor(private readonly options: FilePathLedgerOptions) {
+	private readonly resolvedPath: string;
+
+	public constructor(options: FilePathLedgerOptions) {
 		super();
 		if (!options.path.endsWith('.ndjson')) {
 			throw new Error(`FilePathLedgerBackend: path must end with ".ndjson", got: "${options.path}"`);
 		}
+
+		this.resolvedPath = isAbsolute(options.path) ? options.path : join(resolveProjectRoot(), options.path);
 	}
 
 	public async initialize(): Promise<void> {
@@ -56,7 +61,7 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 
 		try {
 			const event = this.stampEvent(input);
-			await appendToFile(this.options.path, `${JSON.stringify(event)}\n`, 'utf-8');
+			await appendToFile(this.resolvedPath, `${JSON.stringify(event)}\n`, 'utf-8');
 			this.cache = this.applyEventLastWriteWins(this.cache, event);
 		} catch (err) {
 			throw new Error(`FilePathLedgerBackend: failed to append event: ${(err as Error).message}`);
@@ -116,13 +121,13 @@ export class FilePathLedgerBackend extends LedgerBackendBase implements LedgerBa
 	}
 
 	private async readLog(): Promise<LedgerEvent[]> {
-		const exists = await pathExists(this.options.path);
+		const exists = await pathExists(this.resolvedPath);
 
 		if (!exists) {
 			return [];
 		}
 
-		const text = await readFileContent(this.options.path, 'utf-8');
+		const text = await readFileContent(this.resolvedPath, 'utf-8');
 
 		return text.trim().length === 0
 			? []

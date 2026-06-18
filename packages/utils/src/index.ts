@@ -12,6 +12,7 @@ export {
 	requireFile,
 	resolveModule,
 	resolvePath,
+	resolveProjectRoot,
 	resolveSymbol,
 } from './file-system/file-system';
 export { isMatch } from './file-system/glob';

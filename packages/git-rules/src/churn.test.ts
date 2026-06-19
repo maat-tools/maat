@@ -28,7 +28,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2), makeCommit('c', 3)];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges }).findings).toHaveLength(0);
 	});
 
 	test('at threshold → finding produced', () => {
@@ -60,7 +60,7 @@ describe('ChurnRule.evaluate()', () => {
 		];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges }).findings).toHaveLength(0);
 	});
 
 	test('changes with hash not present in commits are ignored', () => {
@@ -75,7 +75,7 @@ describe('ChurnRule.evaluate()', () => {
 
 	test('empty inputs → no findings', () => {
 		const rule = new ChurnRule({ threshold: 1, windowDays: 90 });
-		expect(rule.evaluate({ gitCommits: [], gitFileChanges: [] })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: [], gitFileChanges: [] }).findings).toHaveLength(0);
 	});
 
 	test('threshold of 1 flags any in-window change', () => {
@@ -147,7 +147,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2)];
 		const fileChanges = [makeChange('a', 'src/generated/schema.ts'), makeChange('b', 'src/generated/schema.ts')];
 
-		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges }).findings).toHaveLength(0);
 	});
 
 	test('exclude only suppresses matched paths, others still count', () => {
@@ -156,7 +156,7 @@ describe('ChurnRule.evaluate()', () => {
 		const fileChanges = [makeChange('a', 'src/generated/schema.ts'), makeChange('b', 'src/index.ts')];
 
 		// generated is excluded, index.ts appears only once — nothing over threshold
-		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges }).findings).toHaveLength(0);
 	});
 
 	test('exclude as exact file pattern suppresses that file', () => {
@@ -164,7 +164,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2)];
 		const fileChanges = [makeChange('a', 'src/generated/schema.ts'), makeChange('b', 'src/generated/schema.ts')];
 
-		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges })).toHaveLength(0);
+		expect(rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges }).findings).toHaveLength(0);
 	});
 
 	test('multiple changes to the same file in the same commit count each entry', () => {

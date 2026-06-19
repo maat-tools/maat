@@ -1,6 +1,6 @@
 {
 	"name": "@maat-tools/presets-ts",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Pre-configured algorithmic patterns for TypeScript / JavaScript projects",
 	"type": "module",
 	"main": "./dist/index.js",

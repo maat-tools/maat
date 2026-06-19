@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/git-rules",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Rules derived from git history \u2014 hotspot detection and co-change analysis",
   "type": "module",
   "main": "./dist/index.js",

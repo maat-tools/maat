@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import type { Collector, Rule } from '@maat-tools/contracts';
+import type { Collector, Enricher, FactRegistry, Rule } from '@maat-tools/contracts';
 import { makeCollector, makeRule } from '@maat-tools/testing';
 import { Kernel } from './index';
 
 declare module '@maat-tools/contracts' {
 	interface FactRegistry {
 		scalarFact: string;
+		requiredFactA: string[];
+		requiredFactB: string[];
+		unusedFact: string[];
 	}
 }
 
@@ -255,5 +258,202 @@ describe('Kernel.run', () => {
 		};
 		const kernel = new Kernel().registerCollector(makeCollector(['x'])).registerRule(rule);
 		await expect(kernel.run()).rejects.toThrow('evaluate failed');
+	});
+});
+
+describe('Kernel.run — smart collector fact selection', () => {
+	function makeObservingCollector<TKeys extends keyof FactRegistry>(
+		id: string,
+		provideFacts: readonly TKeys[],
+	): { collector: Collector<TKeys>; seenKeys: (keyof FactRegistry)[][] } {
+		const seenKeys: (keyof FactRegistry)[][] = [];
+		const collector: Collector<TKeys> = {
+			id,
+			provideFacts,
+			collect: async (options) => {
+				seenKeys.push([...(options?.requiredFactKeys ?? [])]);
+				return Object.fromEntries(provideFacts.map((key) => [key, [`value-for-${String(key)}`]])) as Pick<
+					FactRegistry,
+					TKeys
+				>;
+			},
+		};
+		return { collector, seenKeys };
+	}
+
+	function makeRuleNeeding<TKeys extends keyof FactRegistry>(id: string, needFacts: readonly TKeys[]): Rule<TKeys> {
+		return {
+			instanceId: id,
+			id,
+			needFacts,
+			evaluate: () => [],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+	}
+
+	test('passes rule needFacts as requiredFactKeys to collectors', async () => {
+		const { collector, seenKeys } = makeObservingCollector('observing', ['requiredFactA', 'requiredFactB']);
+		await new Kernel()
+			.registerCollector(collector)
+			.registerRule(makeRuleNeeding('rule-a@v1', ['requiredFactA']))
+			.run();
+
+		expect(seenKeys).toHaveLength(1);
+		expect(seenKeys[0]?.sort()).toEqual(['requiredFactA']);
+	});
+
+	test('passes union of all rule needFacts to collectors', async () => {
+		const { collector, seenKeys } = makeObservingCollector('observing', ['requiredFactA', 'requiredFactB']);
+		await new Kernel()
+			.registerCollector(collector)
+			.registerRule(makeRuleNeeding('rule-a@v1', ['requiredFactA']))
+			.registerRule(makeRuleNeeding('rule-b@v1', ['requiredFactB']))
+			.run();
+
+		expect(seenKeys[0]?.sort()).toEqual(['requiredFactA', 'requiredFactB']);
+	});
+
+	test('passes enricher needFacts as requiredFactKeys to collectors', async () => {
+		const { collector, seenKeys } = makeObservingCollector('observing', ['requiredFactA', 'testFacts']);
+		const enricher: Enricher<'requiredFactA', 'enrichedFacts'> = {
+			id: 'needs-a',
+			needFacts: ['requiredFactA'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async ({ requiredFactA }: { requiredFactA: string[] }) => ({
+				facts: { enrichedFacts: requiredFactA.map((v) => `enriched:${v}`) },
+			}),
+		};
+
+		await new Kernel().registerCollector(collector).registerEnricher(enricher).registerRule(makeRule()).run();
+
+		expect(seenKeys[0]?.sort()).toEqual(['requiredFactA', 'testFacts']);
+	});
+
+	test('passes union of rule and enricher needFacts to collectors', async () => {
+		const { collector, seenKeys } = makeObservingCollector('observing', ['requiredFactA', 'requiredFactB']);
+		const enricher: Enricher<'requiredFactA', 'enrichedFacts'> = {
+			id: 'needs-a',
+			needFacts: ['requiredFactA'] as const,
+			provideFacts: ['enrichedFacts'] as const,
+			enrich: async ({ requiredFactA }: { requiredFactA: string[] }) => ({
+				facts: { enrichedFacts: requiredFactA.map((v) => `enriched:${v}`) },
+			}),
+		};
+
+		await new Kernel()
+			.registerCollector(collector)
+			.registerEnricher(enricher)
+			.registerRule(makeRuleNeeding('rule-b@v1', ['requiredFactB']))
+			.run();
+
+		expect(seenKeys[0]?.sort()).toEqual(['requiredFactA', 'requiredFactB']);
+	});
+
+	test('requiredFactKeys contains rule needFacts regardless of which collector provides them', async () => {
+		const { collector, seenKeys } = makeObservingCollector('observing', ['requiredFactA']);
+		const rule: Rule<'testFacts'> = {
+			instanceId: 'needs-test@v1',
+			id: 'needs-test@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+
+		await new Kernel().registerCollector(collector).registerRule(rule).run();
+
+		expect(seenKeys[0]).toEqual(['testFacts']);
+	});
+
+	test('every registered collector receives the same requiredFactKeys', async () => {
+		const first = makeObservingCollector('first', ['requiredFactA']);
+		const second = makeObservingCollector('second', ['requiredFactB']);
+
+		await new Kernel()
+			.registerCollector(first.collector)
+			.registerCollector(second.collector)
+			.registerRule(makeRuleNeeding('rule-a@v1', ['requiredFactA']))
+			.run();
+
+		expect(first.seenKeys[0]?.sort()).toEqual(['requiredFactA']);
+		expect(second.seenKeys[0]?.sort()).toEqual(['requiredFactA']);
+	});
+
+	test('collector can return empty facts when none of its facts are required', async () => {
+		const collector: Collector<'unusedFact'> = {
+			id: 'smart-collector',
+			provideFacts: ['unusedFact'] as const,
+			collect: async ({ requiredFactKeys }: { requiredFactKeys?: Set<keyof FactRegistry> } = {}) => {
+				if (requiredFactKeys?.has('unusedFact')) {
+					return { unusedFact: ['collected'] };
+				}
+				return { unusedFact: [] };
+			},
+		};
+		const rule: Rule<'testFacts'> = {
+			instanceId: 'needs-test@v1',
+			id: 'needs-test@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+
+		await new Kernel().registerCollector(collector).registerRule(rule).run();
+		// Should complete without findings and without the collector throwing.
+		expect(true).toBe(true);
+	});
+
+	test('progress events still fire when collector facts are not required', async () => {
+		const collector: Collector<'unusedFact'> = {
+			id: 'smart-collector',
+			provideFacts: ['unusedFact'] as const,
+			collect: async ({ requiredFactKeys }: { requiredFactKeys?: Set<keyof FactRegistry> } = {}) => ({
+				unusedFact: requiredFactKeys?.has('unusedFact') ? ['collected'] : [],
+			}),
+		};
+		const rule: Rule<'testFacts'> = {
+			instanceId: 'needs-test@v1',
+			id: 'needs-test@v1',
+			needFacts: ['testFacts'] as const,
+			evaluate: () => [],
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+		const events: unknown[] = [];
+
+		await new Kernel()
+			.registerCollector(collector)
+			.registerRule(rule)
+			.run({ onProgress: (event) => events.push(event) });
+
+		expect(events.some((e) => (e as { type: string }).type === 'collector:start')).toBe(true);
+		expect(events.some((e) => (e as { type: string }).type === 'collector:done')).toBe(true);
+	});
+
+	test('collector only provides required facts and rule evaluation still works', async () => {
+		const collector: Collector<'requiredFactA' | 'unusedFact'> = {
+			id: 'smart-collector',
+			provideFacts: ['requiredFactA', 'unusedFact'] as const,
+			collect: async ({ requiredFactKeys }: { requiredFactKeys?: Set<keyof FactRegistry> } = {}) => ({
+				requiredFactA: requiredFactKeys?.has('requiredFactA') ? ['a'] : [],
+				unusedFact: requiredFactKeys?.has('unusedFact') ? ['should-not-appear'] : [],
+			}),
+		};
+		const rule: Rule<'requiredFactA'> = {
+			instanceId: 'needs-a@v1',
+			id: 'needs-a@v1',
+			needFacts: ['requiredFactA'] as const,
+			evaluate: ({ requiredFactA }) =>
+				requiredFactA.map((value) => ({
+					ruleId: 'needs-a@v1',
+					ruleIdentifier: { value },
+					message: `found: ${value}`,
+					artifacts: [],
+				})),
+			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
+		};
+
+		const { findings } = await new Kernel().registerCollector(collector).registerRule(rule).run();
+
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toBe('found: a');
 	});
 });

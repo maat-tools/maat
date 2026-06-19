@@ -139,7 +139,16 @@ export class GitCollector implements Collector<'gitCommits' | 'gitFileChanges'> 
 
 	public constructor(private readonly config: GitInput) {}
 
-	public async collect(): Promise<Pick<FactRegistry, 'gitCommits' | 'gitFileChanges'>> {
+	public async collect(options?: {
+		requiredFactKeys?: Set<keyof FactRegistry>;
+	}): Promise<Pick<FactRegistry, 'gitCommits' | 'gitFileChanges'>> {
+		const needsCommits = !options?.requiredFactKeys || options.requiredFactKeys.has(GIT_COMMITS_CAPABILITY);
+		const needsFileChanges = !options?.requiredFactKeys || options.requiredFactKeys.has(GIT_FILE_CHANGES_CAPABILITY);
+
+		if (!needsCommits && !needsFileChanges) {
+			return { gitCommits: [], gitFileChanges: [] };
+		}
+
 		const cwd = this.config.repoPath ?? resolveProjectRoot();
 		const args = ['-c', 'core.quotepath=false', 'log', `--format=${FORMAT}`, '--name-status'];
 

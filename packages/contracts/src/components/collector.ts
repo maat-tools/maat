@@ -5,7 +5,7 @@ export const COLLECTOR_FACTORY_BRAND = Symbol.for('maat.CollectorFactory');
 export interface Collector<TKeys extends keyof FactRegistry = keyof FactRegistry> {
 	readonly id: string;
 	readonly provideFacts: readonly TKeys[];
-	collect(): Promise<Pick<FactRegistry, TKeys>>;
+	collect(options?: { requiredFactKeys?: Set<keyof FactRegistry> }): Promise<Pick<FactRegistry, TKeys>>;
 }
 
 export type AnyCollector = Omit<Collector<never>, 'provideFacts' | 'collect'> & {

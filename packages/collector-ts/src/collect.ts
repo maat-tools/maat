@@ -86,9 +86,13 @@ export async function runCollect({
 	let callGraph: CallGraph = { nodes: [], edges: [] };
 
 	for (const tsConfigPath of tsConfigPaths) {
-		const project = new Project({ tsConfigFilePath: tsConfigPath });
+		const project = new Project({ tsConfigFilePath: tsConfigPath, skipAddingFilesFromTsConfig: true });
+		project.addSourceFilesFromTsConfig(tsConfigPath);
 
 		for (const sourceFile of project.getSourceFiles()) {
+			if (sourceFile.isInNodeModules() || sourceFile.isFromExternalLibrary()) {
+				continue;
+			}
 			const absoluteFile = sourceFile.getFilePath();
 			if (seenFiles.has(absoluteFile)) {
 				continue;

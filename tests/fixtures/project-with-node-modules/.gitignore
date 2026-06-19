@@ -1,0 +1,4 @@
+!node_modules
+node_modules/*
+!node_modules/fake-lib
+!node_modules/fake-lib/*

@@ -8,6 +8,10 @@ const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/sampl
 const MULTI_PROJECT_ROOT = resolve(import.meta.dir, '../../../tests/fixtures/multi-project');
 const MULTI_PKG_A_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-a/tsconfig.json');
 const MULTI_PKG_B_TSCONFIG = resolve(MULTI_PROJECT_ROOT, 'pkg-b/tsconfig.json');
+const NODE_MODULES_TSCONFIG = resolve(
+	import.meta.dir,
+	'../../../tests/fixtures/project-with-node-modules/tsconfig.json',
+);
 
 describe('runCollect() — single tsconfig', () => {
 	test('collects constants from the fixture project', async () => {
@@ -194,5 +198,22 @@ describe('runCollect() — smart fact selection via requiredFactKeys', () => {
 		expect(facts.positionalAccesses).toHaveLength(0);
 		expect(facts.algorithmicBindings).toHaveLength(0);
 		expect(facts.callGraph.nodes.length).toBeGreaterThan(0);
+	});
+});
+
+describe('runCollect() — node_modules / external library files', () => {
+	test('skips source files located in node_modules even when included by tsconfig', async () => {
+		const { constants } = await runCollect({ config: { tsConfigFilePath: NODE_MODULES_TSCONFIG } });
+		const values = constants.map((c) => c.value);
+
+		expect(values).toContain('app');
+		expect(values).not.toContain('lib');
+	});
+
+	test('does not report paths inside node_modules', async () => {
+		const { constants } = await runCollect({ config: { tsConfigFilePath: NODE_MODULES_TSCONFIG } });
+		const files = constants.map((c) => c.location.file);
+
+		expect(files.some((f) => f.includes('node_modules'))).toBe(false);
 	});
 });

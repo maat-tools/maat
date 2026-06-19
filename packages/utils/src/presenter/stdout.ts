@@ -80,7 +80,7 @@ export class StdoutPresenter {
 				if (findings.length === 0) {
 					continue;
 				}
-				const badge = findings.some(f => f.requiresVerification) ? chalk.yellow('[Verify] ') : '';
+				const badge = findings.some((f) => f.requiresVerification) ? chalk.yellow('[Verify] ') : '';
 				const message = findings[0]?.message;
 				process.stdout.write(`    ${chalk.dim(fingerprint)}  ${badge}${message}\n`);
 				for (const f of findings) {

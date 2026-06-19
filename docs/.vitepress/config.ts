@@ -34,6 +34,7 @@ const guideAndPluginSidebar = [
       { text: 'Greenfield and brownfield', link: '/guide/adoption' },
       { text: 'Repeatable results (determinism)', link: '/guide/determinism' },
       { text: 'AI-assisted facts (enrichers)', link: '/guide/enrichers' },
+      { text: 'CI integration', link: '/guide/ci' },
       { text: 'Fitness functions', link: '/guide/fitness-functions' },
       { text: 'ADRs vs axioms', link: '/guide/adrs-vs-axioms' },
       { text: 'Plugin system', link: '/guide/plugins' },

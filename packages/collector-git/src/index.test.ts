@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { convertGitFileStatus, GitHumanReadableFileStatus, parseGitLog } from './index';
+import {
+	convertGitFileStatus,
+	GIT_COMMITS_CAPABILITY,
+	GIT_FILE_CHANGES_CAPABILITY,
+	GitCollector,
+	GitHumanReadableFileStatus,
+	parseGitLog,
+} from './index';
 
 const SEP = '\x01';
 
@@ -234,5 +241,55 @@ describe('convertGitFileStatus()', () => {
 
 	test('throws on unknown status code', () => {
 		expect(() => convertGitFileStatus('X')).toThrow('Unknown git file status: X');
+	});
+});
+
+// ── GitCollector.collect smart fact selection ─────────────────────────────────
+
+describe('GitCollector.collect() — smart fact selection via requiredFactKeys', () => {
+	function requiredKeys(...keys: ('gitCommits' | 'gitFileChanges')[]): Set<'gitCommits' | 'gitFileChanges'> {
+		return new Set(keys);
+	}
+
+	test('returns empty arrays when neither git fact is required', async () => {
+		const collector = new GitCollector({ repoPath: process.cwd() });
+		const facts = await collector.collect({ requiredFactKeys: requiredKeys() });
+
+		expect(facts.gitCommits).toHaveLength(0);
+		expect(facts.gitFileChanges).toHaveLength(0);
+	});
+
+	test('returns commits when gitCommits is required', async () => {
+		const collector = new GitCollector({ repoPath: process.cwd() });
+		const facts = await collector.collect({ requiredFactKeys: requiredKeys(GIT_COMMITS_CAPABILITY) });
+
+		expect(facts.gitCommits.length).toBeGreaterThan(0);
+		expect(facts.gitFileChanges).toHaveLength(0);
+	});
+
+	test('returns file changes when gitFileChanges is required', async () => {
+		const collector = new GitCollector({ repoPath: process.cwd() });
+		const facts = await collector.collect({ requiredFactKeys: requiredKeys(GIT_FILE_CHANGES_CAPABILITY) });
+
+		expect(facts.gitCommits).toHaveLength(0);
+		expect(facts.gitFileChanges.length).toBeGreaterThan(0);
+	});
+
+	test('returns both facts when both are required', async () => {
+		const collector = new GitCollector({ repoPath: process.cwd() });
+		const facts = await collector.collect({
+			requiredFactKeys: requiredKeys(GIT_COMMITS_CAPABILITY, GIT_FILE_CHANGES_CAPABILITY),
+		});
+
+		expect(facts.gitCommits.length).toBeGreaterThan(0);
+		expect(facts.gitFileChanges.length).toBeGreaterThan(0);
+	});
+
+	test('returns both facts when requiredFactKeys is omitted', async () => {
+		const collector = new GitCollector({ repoPath: process.cwd() });
+		const facts = await collector.collect();
+
+		expect(facts.gitCommits.length).toBeGreaterThan(0);
+		expect(facts.gitFileChanges.length).toBeGreaterThan(0);
 	});
 });

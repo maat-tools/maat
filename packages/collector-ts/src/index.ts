@@ -40,11 +40,15 @@ export class TSCollector
 
 	public constructor(private readonly config: TSInput) {}
 
-	public collect(): Promise<TSCollectedFacts> {
+	public collect({
+		requiredFactKeys,
+	}: {
+		requiredFactKeys?: Set<keyof TSCollectedFacts>;
+	} = {}): Promise<TSCollectedFacts> {
 		const workerEntry = fileURLToPath(import.meta.resolve('@maat-tools/collector-ts/worker'));
 
 		return new Promise((resolve, reject) => {
-			const worker = new Worker(workerEntry, { workerData: this.config });
+			const worker = new Worker(workerEntry, { workerData: { config: this.config, requiredFactKeys } });
 
 			worker.once('message', (result: WorkerResult) => {
 				void worker.terminate();

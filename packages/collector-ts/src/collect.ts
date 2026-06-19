@@ -1,15 +1,22 @@
 import { resolve } from 'node:path';
 import type { FactRegistry } from '@maat-tools/contracts';
 import { isMatch, resolveProjectRoot } from '@maat-tools/utils';
-import type {
-	AlgorithmicBinding,
-	AlgorithmicPattern,
-	CallGraph,
-	Constant,
-	DependsOn,
-	FunctionSignature,
-	PositionalAccess,
-	PositionalSource,
+import {
+	ALGORITHMIC_BINDINGS_CAPABILITY,
+	type AlgorithmicBinding,
+	type AlgorithmicPattern,
+	CALL_GRAPH_CAPABILITY,
+	type CallGraph,
+	CONSTANTS_CAPABILITY,
+	type Constant,
+	DEPENDS_ON_CAPABILITY,
+	type DependsOn,
+	FUNCTION_SIGNATURES_CAPABILITY,
+	type FunctionSignature,
+	POSITIONAL_ACCESSES_CAPABILITY,
+	POSITIONAL_SOURCES_CAPABILITY,
+	type PositionalAccess,
+	type PositionalSource,
 } from '@maat-tools/vocabulary';
 import { glob } from 'tinyglobby';
 import { Project } from 'ts-morph';
@@ -55,9 +62,14 @@ async function expandGlobs(patterns: string[], rootDir: string): Promise<string[
 	return results;
 }
 
-export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
+export async function runCollect({
+	config,
+	requiredFactKeys,
+}: {
+	config: TSInput;
+	requiredFactKeys?: Set<keyof TSCollectedFacts>;
+}): Promise<TSCollectedFacts> {
 	const rawPatterns = Array.isArray(config.tsConfigFilePath) ? config.tsConfigFilePath : [config.tsConfigFilePath];
-
 	const projectRoot = resolveProjectRoot();
 	const tsConfigPaths = await expandGlobs(rawPatterns, projectRoot);
 
@@ -71,6 +83,7 @@ export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
 	const positionalAccesses: PositionalAccess[] = [];
 	const algorithmicBindings: AlgorithmicBinding[] = [];
 	const includedFiles: string[] = [];
+	let callGraph: CallGraph = { nodes: [], edges: [] };
 
 	for (const tsConfigPath of tsConfigPaths) {
 		const project = new Project({ tsConfigFilePath: tsConfigPath });
@@ -89,16 +102,30 @@ export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
 
 			includedFiles.push(absoluteFile);
 
-			dependsOn.push(...collectDependsOn(sourceFile, file));
-			constants.push(...collectConstants(sourceFile, file));
-			functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
-			positionalSources.push(...collectPositionalSources(sourceFile, file));
-			positionalAccesses.push(...collectPositionalAccesses(sourceFile, file, projectRoot));
-			algorithmicBindings.push(...collectAlgorithmicBindings(sourceFile, file, algorithmicPatterns));
+			if (!requiredFactKeys || requiredFactKeys.has(DEPENDS_ON_CAPABILITY)) {
+				dependsOn.push(...collectDependsOn(sourceFile, file));
+			}
+			if (!requiredFactKeys || requiredFactKeys.has(CONSTANTS_CAPABILITY)) {
+				constants.push(...collectConstants(sourceFile, file));
+			}
+			if (!requiredFactKeys || requiredFactKeys.has(FUNCTION_SIGNATURES_CAPABILITY)) {
+				functionSignatures.push(...collectFunctionSignatures(sourceFile, file));
+			}
+			if (!requiredFactKeys || requiredFactKeys.has(POSITIONAL_SOURCES_CAPABILITY)) {
+				positionalSources.push(...collectPositionalSources(sourceFile, file));
+			}
+			if (!requiredFactKeys || requiredFactKeys.has(POSITIONAL_ACCESSES_CAPABILITY)) {
+				positionalAccesses.push(...collectPositionalAccesses(sourceFile, file, projectRoot));
+			}
+			if (!requiredFactKeys || requiredFactKeys.has(ALGORITHMIC_BINDINGS_CAPABILITY)) {
+				algorithmicBindings.push(...collectAlgorithmicBindings(sourceFile, file, algorithmicPatterns));
+			}
 		}
 	}
 
-	const callGraph = await collectCallGraphSafely(includedFiles, projectRoot, config.callGraph ?? {});
+	if (!requiredFactKeys || requiredFactKeys.has(CALL_GRAPH_CAPABILITY)) {
+		callGraph = await collectCallGraphSafely(includedFiles, projectRoot, config.callGraph ?? {});
+	}
 
 	return {
 		dependsOn,

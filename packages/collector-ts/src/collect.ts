@@ -4,6 +4,7 @@ import { isMatch, resolveProjectRoot } from '@maat-tools/utils';
 import type {
 	AlgorithmicBinding,
 	AlgorithmicPattern,
+	CallGraph,
 	Constant,
 	DependsOn,
 	FunctionSignature,
@@ -97,7 +98,7 @@ export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
 		}
 	}
 
-	const callGraph = await collectCallGraph(includedFiles, projectRoot, config.callGraph ?? {});
+	const callGraph = await collectCallGraphSafely(includedFiles, projectRoot, config.callGraph ?? {});
 
 	return {
 		dependsOn,
@@ -108,4 +109,17 @@ export async function runCollect(config: TSInput): Promise<TSCollectedFacts> {
 		algorithmicBindings,
 		callGraph,
 	};
+}
+
+async function collectCallGraphSafely(
+	entryFiles: string[],
+	projectRoot: string,
+	options: { maxIndirections?: number; timeout?: number },
+): Promise<CallGraph> {
+	try {
+		return await collectCallGraph(entryFiles, projectRoot, options);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		return { nodes: [], edges: [] };
+	}
 }

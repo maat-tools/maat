@@ -54,12 +54,6 @@ describe('LayerRule.evaluate() — allowlist', () => {
 		expect(findings).toHaveLength(0);
 	});
 
-	test('allows() with empty list — any external dep is a finding', () => {
-		const rule = layer('@maat-tools/contracts').allows().build();
-		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/contracts', 'node:crypto')]));
-		expect(findings).toHaveLength(1);
-	});
-
 	test('string pattern does not match partial package name', () => {
 		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/contracts-extra')]));
@@ -104,7 +98,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('internal dependency within target is not flagged', () => {
-		const rule = layer('@maat-tools/kernel').allows().build();
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate(
 			makeFacts([makeDep('@maat-tools/kernel', 'packages/kernel/src/internal.ts', { toExternal: false })]),
 		);
@@ -112,7 +106,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('self-import via package name is not flagged', () => {
-		const rule = layer('@maat-tools/kernel').allows().build();
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate(
 			makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/kernel', { toExternal: true })]),
 		);
@@ -120,7 +114,7 @@ describe('LayerRule.evaluate() — allowlist', () => {
 	});
 
 	test('glob target matches files outside named package', () => {
-		const rule = layer('packages/kernel/**').allows().build();
+		const rule = layer('packages/kernel/**').allows('@maat-tools/contracts').build();
 		const findings = rule.evaluate(
 			makeFacts([
 				makeDep('@maat-tools/kernel', 'uuid', { fromPath: 'packages/kernel/src/auth.ts' }),
@@ -149,6 +143,282 @@ describe('LayerRule.evaluate() — allowlist', () => {
 		);
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ dependency: 'uuid' });
+	});
+});
+
+// ─── LayerRule.evaluate() — denylist (forbids) ────────────────────────────────
+
+describe('LayerRule.evaluate() — denylist', () => {
+	test('no finding when dependency is NOT in forbids list', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/contracts')]));
+		expect(findings).toHaveLength(0);
+	});
+
+	test('finding when dependency IS in forbids list', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', 'uuid')]));
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleId).toBe('maat-tools/coupling-rules/layer-imports@v1');
+	});
+
+	test('no finding when source package does not match target', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/cli', 'uuid')]));
+		expect(findings).toHaveLength(0);
+	});
+
+	test('finding message indicates forbidden import', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', 'uuid')]));
+		expect(findings[0]?.message).toContain('@maat-tools/kernel');
+		expect(findings[0]?.message).toContain('uuid');
+		expect(findings[0]?.message).toContain('forbidden');
+	});
+
+	test('multiple deps — only forbidden ones produce findings', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid', 'lodash').build();
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@maat-tools/kernel', '@maat-tools/contracts'),
+				makeDep('@maat-tools/kernel', 'uuid'),
+				makeDep('@maat-tools/kernel', 'lodash'),
+				makeDep('@maat-tools/cli', 'uuid'),
+			]),
+		);
+		expect(findings).toHaveLength(2);
+		expect(findings.map((f) => f.ruleIdentifier)).toMatchObject([{ dependency: 'uuid' }, { dependency: 'lodash' }]);
+	});
+
+	test('regexp pattern in forbids list', () => {
+		const rule = layer('@maat-tools/kernel')
+			.forbids(/^lodash/)
+			.build();
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@maat-tools/kernel', 'lodash'),
+				makeDep('@maat-tools/kernel', 'lodash/fp'),
+				makeDep('@maat-tools/kernel', 'uuid'),
+			]),
+		);
+		expect(findings).toHaveLength(2);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ dependency: 'lodash' });
+		expect(findings[1]?.ruleIdentifier).toMatchObject({ dependency: 'lodash/fp' });
+	});
+
+	test('regexp pattern — non-matching dependency is not a finding', () => {
+		const rule = layer('@maat-tools/kernel')
+			.forbids(/^lodash/)
+			.build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', 'uuid')]));
+		expect(findings).toHaveLength(0);
+	});
+
+	test('mixed string and regexp forbids', () => {
+		const rule = layer('@maat-tools/kernel')
+			.forbids('uuid', /^lodash/)
+			.build();
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@maat-tools/kernel', 'uuid'),
+				makeDep('@maat-tools/kernel', 'lodash/fp'),
+				makeDep('@maat-tools/kernel', '@maat-tools/contracts'),
+			]),
+		);
+		expect(findings).toHaveLength(2);
+	});
+
+	test('chained forbids() accumulate patterns', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').forbids('lodash').build();
+		const findings = rule.evaluate(
+			makeFacts([makeDep('@maat-tools/kernel', 'uuid'), makeDep('@maat-tools/kernel', 'lodash')]),
+		);
+		expect(findings).toHaveLength(2);
+	});
+
+	test('string pattern does not match partial package name', () => {
+		const rule = layer('@maat-tools/kernel').forbids('lodash').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', 'lodash-es')]));
+		expect(findings).toHaveLength(0);
+	});
+
+	test('internal dependency within target is not flagged even if it matches forbids', () => {
+		const rule = layer('@maat-tools/kernel').forbids('packages/kernel/src/internal.ts').build();
+		const findings = rule.evaluate(
+			makeFacts([makeDep('@maat-tools/kernel', 'packages/kernel/src/internal.ts', { toExternal: false })]),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	test('self-import via package name is not flagged even if it matches forbids', () => {
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/kernel').build();
+		const findings = rule.evaluate(
+			makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/kernel', { toExternal: true })]),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	test('glob pattern in forbids list', () => {
+		const rule = layer('src/domain/**').forbids('src/infrastructure/**').build();
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/infrastructure/db.ts', {
+					fromPath: 'src/domain/service.ts',
+					toExternal: false,
+				}),
+				makeDep('@irrelevant', 'src/shared/utils.ts', {
+					fromPath: 'src/domain/service.ts',
+					toExternal: false,
+				}),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ dependency: 'src/infrastructure/db.ts' });
+	});
+
+	test('empty dependsOn → no findings', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		expect(rule.evaluate(makeFacts([]))).toHaveLength(0);
+	});
+
+	test('ruleIdentifier includes target and dependency', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		const findings = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', 'uuid')]));
+		expect(findings[0]?.ruleIdentifier).toMatchObject({
+			target: '@maat-tools/kernel',
+			dependency: 'uuid',
+		});
+	});
+
+	test('forbids() returns a builder with instanceId including target', () => {
+		const rule = layer('@maat-tools/kernel').forbids('uuid').build();
+		expect(rule.instanceId).toContain('@maat-tools/kernel');
+	});
+});
+
+describe('LayerRule.evaluate() — allowlist transitive', () => {
+	test('transitive: no finding when allowed dep does not pull in disallowed external', () => {
+		const rule = layer('src/payments/**').allows('src/core/**', 'node:crypto').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'node:crypto', { fromPath: 'src/core/utils.ts', toExternal: true }),
+			]),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	test('transitive: finding when allowed dep pulls in disallowed external', () => {
+		const rule = layer('src/payments/**').allows('src/core/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'pg', { fromPath: 'src/core/utils.ts', toExternal: true }),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ dependency: 'pg' });
+		expect(findings[0]?.message).toContain('Transitive');
+		expect(findings[0]?.message).toContain('not declared in allowed');
+	});
+
+	test('transitive: finding carries the intermediate path', () => {
+		const rule = layer('src/payments/**').allows('src/core/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'pg', { fromPath: 'src/core/utils.ts', toExternal: true }),
+			]),
+		);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({
+			target: 'src/payments/**',
+			currentPath: 'src/core/utils.ts',
+			dependency: 'pg',
+		});
+	});
+
+	test('transitive: direct disallowed dep is flagged once (main flow), not again transitively', () => {
+		const rule = layer('src/payments/**').allows('src/core/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([makeDep('@irrelevant', 'pg', { fromPath: 'src/payments/checkout.ts', toExternal: true })]),
+		);
+		expect(findings).toHaveLength(1);
+	});
+
+	test('transitive: deduplication — same violation from same intermediate seen twice emits one finding', () => {
+		const rule = layer('src/payments/**').allows('src/core/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				// two files under core both import pg — seenFindings deduplicates by (currentPath, dependency)
+				makeDep('@irrelevant', 'pg', { fromPath: 'src/core/utils.ts', toExternal: true }),
+				makeDep('@irrelevant', 'pg', { fromPath: 'src/core/utils.ts', toExternal: true }),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+	});
+});
+
+describe('LayerRule.evaluate() — denylist transitive', () => {
+	test('transitive: no finding when forbidden dep is not transitively reached', () => {
+		const rule = layer('src/payments/**').forbids('src/banned/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'src/shared/helpers.ts', { fromPath: 'src/core/utils.ts', toExternal: false }),
+			]),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	test('transitive: finding when internal forbidden dep is transitively reached', () => {
+		const rule = layer('src/payments/**').forbids('src/banned/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'src/banned/secret.ts', { fromPath: 'src/core/utils.ts', toExternal: false }),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.message).toContain('forbidden');
+		expect(findings[0]?.message).toContain('Transitive');
+	});
+
+	test('transitive: finding when external forbidden dep is transitively reached', () => {
+		const rule = layer('src/payments/**').forbids('uuid').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'uuid', { fromPath: 'src/core/utils.ts', toExternal: true }),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({ dependency: 'uuid' });
+	});
+
+	test('transitive: direct forbidden dep is reported in the main flow, not duplicated', () => {
+		const rule = layer('src/payments/**').forbids('src/banned/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/banned/secret.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+			]),
+		);
+		expect(findings).toHaveLength(1);
+	});
+
+	test('transitive: finding carries intermediate path in ruleIdentifier', () => {
+		const rule = layer('src/payments/**').forbids('src/banned/**').build({ transitive: true });
+		const findings = rule.evaluate(
+			makeFacts([
+				makeDep('@irrelevant', 'src/core/utils.ts', { fromPath: 'src/payments/checkout.ts', toExternal: false }),
+				makeDep('@irrelevant', 'src/banned/secret.ts', { fromPath: 'src/core/utils.ts', toExternal: false }),
+			]),
+		);
+		expect(findings[0]?.ruleIdentifier).toMatchObject({
+			target: 'src/payments/**',
+			currentPath: 'src/core/utils.ts',
+			dependency: 'src/banned/secret.ts',
+		});
 	});
 });
 

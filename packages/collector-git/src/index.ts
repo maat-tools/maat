@@ -167,8 +167,8 @@ export class GitCollector implements Collector<'gitCommits' | 'gitFileChanges'> 
 		const { commits, fileChanges } = parseGitLog(stdout);
 
 		return {
-			gitCommits: commits,
-			gitFileChanges: fileChanges,
+			gitCommits: needsCommits ? commits : [],
+			gitFileChanges: needsFileChanges ? fileChanges : [],
 		};
 	}
 }

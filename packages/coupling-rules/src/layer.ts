@@ -119,21 +119,19 @@ class LayerRule implements Rule<'dependsOn'> {
 		const directDependencies: DependsOn[] = [];
 
 		const patterns = this.allowed.length ? this.allowed : this.forbids;
-		const matchedPatterns = new Set<string | RegExp>();
-		let relevantDepCount = 0;
+		const patternMatchesGraph = new Set<string | RegExp>();
 
 		for (const dep of facts.dependsOn) {
+			for (const p of patterns) {
+				if (!patternMatchesGraph.has(p) && this.matchesPattern(dep.to.path, p)) {
+					patternMatchesGraph.add(p);
+				}
+			}
+
 			if (!purityEvaluation(dep, targetPath)) {
 				continue;
 			}
 			directDependencies.push(dep);
-			relevantDepCount++;
-
-			for (const p of patterns) {
-				if (this.matchesPattern(dep.to.path, p)) {
-					matchedPatterns.add(p);
-				}
-			}
 
 			if (this.allowed.length && this.isAllowed(dep)) {
 				continue;
@@ -156,12 +154,12 @@ class LayerRule implements Rule<'dependsOn'> {
 		}
 
 		const warnings: string[] = [];
-		if (relevantDepCount > 0) {
+		if (facts.dependsOn.length > 0) {
 			for (const p of patterns) {
-				if (!matchedPatterns.has(p)) {
+				if (!patternMatchesGraph.has(p)) {
 					const warning =
 						`[maat] layer("${this.target}") — pattern ${p instanceof RegExp ? p : `"${p}"`} ` +
-						`never matched any dependency. Typo, or a glob that needs /** ?`;
+						`matches no import anywhere in the dependency graph. Likely a typo or wrong glob.`;
 					warnings.push(warning);
 				}
 			}

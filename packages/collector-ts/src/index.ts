@@ -1,5 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
+import { resolveProjectRoot, ThreadRunner } from '@maat-tools/utils';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
 	type AlgorithmicBinding,
@@ -19,7 +20,6 @@ import {
 } from '@maat-tools/vocabulary';
 import { glob } from 'tinyglobby';
 import ts from 'typescript';
-import { resolveProjectRoot, ThreadRunner } from '@maat-tools/utils';
 import { collectCallGraph } from './call-graph';
 
 function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {

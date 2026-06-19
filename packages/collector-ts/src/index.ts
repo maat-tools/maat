@@ -19,8 +19,7 @@ import {
 } from '@maat-tools/vocabulary';
 import { glob } from 'tinyglobby';
 import ts from 'typescript';
-import { resolveProjectRoot } from '../../utils/src/file-system/file-system';
-import { ThreadRunner } from '../../utils/src/threads/thread-runner';
+import { resolveProjectRoot, ThreadRunner } from '@maat-tools/utils';
 import { collectCallGraph } from './call-graph';
 
 function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {

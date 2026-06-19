@@ -63,21 +63,30 @@ export class StdoutPresenter {
 			return;
 		}
 
-		const byRule = new Map<string, Finding[]>();
+		const byFingerprint = new Map<string, Finding[]>();
+		const byRule = new Map<string, typeof byFingerprint>();
 		for (const f of findings) {
-			const group = byRule.get(f.ruleId) ?? [];
-			group.push(f);
+			const group = byRule.get(f.ruleId) ?? new Map<string, Finding[]>();
+			const fingerprintGroup = group.get(f.fingerprint) ?? [];
+			fingerprintGroup.push(f);
+			group.set(f.fingerprint, fingerprintGroup);
 			byRule.set(f.ruleId, group);
 		}
 
 		for (const [ruleId, group] of byRule) {
 			const rule = getRule(ruleId);
-			process.stdout.write(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.length} finding(s)\n`);
-			for (const f of group) {
-				const badge = f.requiresVerification ? chalk.yellow('[Verify] ') : '';
-				process.stdout.write(`    ${chalk.dim(f.fingerprint)}  ${badge}${f.message}\n`);
-				for (const artifact of f.artifacts) {
-					process.stdout.write(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}\n`);
+			process.stdout.write(`\n  ${chalk.cyan(`[${ruleId}]`)} — ${group.size} finding(s)\n`);
+			for (const [fingerprint, findings] of group) {
+				if (findings.length === 0) {
+					continue;
+				}
+				const badge = findings.some((f) => f.requiresVerification) ? chalk.yellow('[Verify] ') : '';
+				const message = findings[0]?.message;
+				process.stdout.write(`    ${chalk.dim(fingerprint)}  ${badge}${message}\n`);
+				for (const f of findings) {
+					for (const artifact of f.artifacts) {
+						process.stdout.write(`            ${chalk.dim('↳')} ${formatArtifact(artifact, rule)}\n`);
+					}
 				}
 			}
 		}

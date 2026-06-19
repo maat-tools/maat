@@ -118,8 +118,7 @@ async function collectCallGraphSafely(
 ): Promise<CallGraph> {
 	try {
 		return await collectCallGraph(entryFiles, projectRoot, options);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
+	} catch {
 		return { nodes: [], edges: [] };
 	}
 }

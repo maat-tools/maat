@@ -81,13 +81,36 @@ class LayerRule implements Rule<'dependsOn'> {
 	public readonly instanceId: string;
 	public readonly needFacts = [DEPENDS_ON_CAPABILITY] as const;
 
-	public constructor(
-		private readonly target: string,
-		private readonly allowed: readonly (string | RegExp)[],
-		private readonly transitive: boolean = false,
-	) {
+	private readonly target: string;
+	private readonly allowed: readonly (string | RegExp)[];
+	private readonly forbids: readonly (string | RegExp)[];
+	private readonly transitive: boolean = false;
+
+	public constructor({
+		allowed,
+		forbids,
+		transitive,
+		target,
+	}: {
+		target: string;
+		allowed: (string | RegExp)[];
+		forbids: (string | RegExp)[];
+		transitive: boolean;
+	}) {
 		this.id = 'maat-tools/coupling-rules/layer-imports@v1';
 		this.instanceId = `${this.id}:${target}`;
+		if (allowed.length > 0 && forbids.length > 0) {
+			throw new Error('LayerRule cannot have both allowed and forbids patterns');
+		}
+		if (allowed.length === 0 && forbids.length === 0) {
+			throw new Error(
+				'LayerRule must have either allowed or forbids patterns — use is(Pure) for zero-dependency layers',
+			);
+		}
+		this.target = target;
+		this.allowed = allowed;
+		this.forbids = forbids;
+		this.transitive = transitive;
 	}
 
 	public evaluate(facts: { dependsOn: DependsOn[] }): RuleOutput[] {
@@ -99,22 +122,25 @@ class LayerRule implements Rule<'dependsOn'> {
 			if (!purityEvaluation(dep, targetPath)) {
 				continue;
 			}
-
 			directDependencies.push(dep);
-			if (this.isAllowed(dep)) {
+			if (this.allowed.length && this.isAllowed(dep)) {
+				continue;
+			}
+
+			if (this.forbids.length && !this.isForbidden(dep)) {
 				continue;
 			}
 
 			findings.push({
 				ruleId: this.id,
 				ruleIdentifier: { target: this.target, dependency: dep.to.path },
-				message: `"${this.target}" depends on "${dep.to.path}" — not declared in allowed imports layer`,
+				message: this.formatMessage(dep),
 				artifacts: [{ kind: DEPENDS_ON_CAPABILITY, data: dep }],
 			});
 		}
 
 		if (this.transitive) {
-			findings.push(...this.evaluateTransitiveImports(facts.dependsOn, directDependencies, targetPath));
+			findings.push(...this.evaluateTransitiveImports(facts.dependsOn, directDependencies));
 		}
 
 		return findings;
@@ -129,15 +155,23 @@ class LayerRule implements Rule<'dependsOn'> {
 		return { file: `${dep.from.path}:${dep.from.location.line}:${dep.from.location.column}`, dependency: dep.to.path };
 	}
 
+	private formatMessage(dep: DependsOn): string {
+		if (this.allowed.length > 0) {
+			return `"${this.target}" depends on "${dep.to.path}" — not declared in allowed imports layer`;
+		}
+
+		return `"${this.target}" depends on "${dep.to.path}" — declared in forbidden imports layer`;
+	}
+
 	private isAllowed(dep: DependsOn): boolean {
 		return this.allowed.some((p) => (typeof p === 'string' ? isMatch(dep.to.path, [p]) : p.test(dep.to.path)));
 	}
 
-	private evaluateTransitiveImports(
-		allDependencies: DependsOn[],
-		directDependencies: DependsOn[],
-		_rootGlob: string,
-	): RuleOutput[] {
+	private isForbidden(dep: DependsOn): boolean {
+		return this.forbids.some((p) => (typeof p === 'string' ? isMatch(dep.to.path, [p]) : p.test(dep.to.path)));
+	}
+
+	private evaluateTransitiveImports(allDependencies: DependsOn[], directDependencies: DependsOn[]): RuleOutput[] {
 		const findings: RuleOutput[] = [];
 		const dependenciesByPath = new Map<string, DependsOn[]>();
 		const visited = new Set<string>([]);
@@ -151,8 +185,9 @@ class LayerRule implements Rule<'dependsOn'> {
 		}
 
 		for (const dep of directDependencies) {
-			const alreadyHandledByMainFlow = dep.to.isExternal || !this.isAllowed(dep);
-			if (alreadyHandledByMainFlow) {
+			const alreadyHandledByMainFlow =
+				(this.allowed.length && !this.isAllowed(dep)) || (this.forbids.length && this.isForbidden(dep));
+			if (dep.to.isExternal || alreadyHandledByMainFlow) {
 				continue;
 			}
 
@@ -162,7 +197,7 @@ class LayerRule implements Rule<'dependsOn'> {
 			}
 		}
 
-		for (const [from, to] of queue) {
+		for (const [_, to] of queue) {
 			const currentPath = to;
 			if (!currentPath) {
 				continue;
@@ -174,11 +209,18 @@ class LayerRule implements Rule<'dependsOn'> {
 
 			for (const dep of dependenciesOfAllowedDependency) {
 				if (!dep.to.isExternal && !visited.has(dep.to.path)) {
-					visited.add(dep.to.path);
-					queue.set(dep.from.path, dep.to.path);
+					const isInternalForbidden = this.forbids.length > 0 && this.isForbidden(dep);
+					if (!isInternalForbidden) {
+						visited.add(dep.to.path);
+						queue.set(dep.from.path, dep.to.path);
+						continue;
+					}
+				}
+				if (this.allowed.length && this.isAllowed(dep)) {
 					continue;
 				}
-				if (this.isAllowed(dep)) {
+
+				if (this.forbids.length && !this.isForbidden(dep)) {
 					continue;
 				}
 
@@ -191,7 +233,7 @@ class LayerRule implements Rule<'dependsOn'> {
 				findings.push({
 					ruleId: this.id,
 					ruleIdentifier: { target: this.target, currentPath, dependency: dep.to.path },
-					message: `"[Transitive] Target:(${this.target}) at file: "${from}" depends on "${dep.to.path}" via "${currentPath}" — not declared in allowed imports layer`,
+					message: this.formatTransitiveMessage(dep, currentPath),
 					artifacts: [{ kind: DEPENDS_ON_CAPABILITY, data: dep }],
 				});
 			}
@@ -199,12 +241,21 @@ class LayerRule implements Rule<'dependsOn'> {
 
 		return findings;
 	}
+
+	private formatTransitiveMessage(dep: DependsOn, currentPath: string): string {
+		if (this.allowed.length > 0) {
+			return `"[Transitive] Target:(${this.target}) at file: "${dep.from.path}" depends on "${dep.to.path}" via "${currentPath}" — not declared in allowed imports layer`;
+		}
+
+		return `"[Transitive] Target:(${this.target}) at file: "${dep.from.path}" depends on "${dep.to.path}" via "${currentPath}" — declared in forbidden imports layer`;
+	}
 }
 
 class LayerBuilderState {
 	public role: Role | null = null;
 	public roleOptions: PureRoleOptions = {};
 	public readonly allowed: (string | RegExp)[] = [];
+	public readonly forbids: (string | RegExp)[] = [];
 	public transitive: boolean = false;
 
 	public constructor(public readonly target: string) {
@@ -226,13 +277,22 @@ class LayerBuilderState {
 			return new PureLayerRule(this.target);
 		}
 
-		return new LayerRule(this.target, this.allowed, this.transitive);
+		return new LayerRule({
+			target: this.target,
+			allowed: this.allowed,
+			forbids: this.forbids,
+			transitive: this.transitive,
+		});
 	}
 }
 
-export interface LayerReadyBuilder {
+export interface AllowLayerReadyBuilder {
 	build(options?: { transitive?: boolean }): Rule<'dependsOn'>;
-	allows(...patterns: (string | RegExp)[]): LayerReadyBuilder;
+	allows(first: string | RegExp, ...rest: (string | RegExp)[]): AllowLayerReadyBuilder;
+}
+export interface ForbidsLayerReadyBuilder {
+	build(options?: { transitive?: boolean }): Rule<'dependsOn'>;
+	forbids(first: string | RegExp, ...rest: (string | RegExp)[]): ForbidsLayerReadyBuilder;
 }
 
 export interface PureLayerReadyBuilder {
@@ -241,21 +301,36 @@ export interface PureLayerReadyBuilder {
 
 export interface LayerInitialBuilder {
 	is(role: Role, options?: PureRoleOptions): PureLayerReadyBuilder;
-	allows(...patterns: (string | RegExp)[]): LayerReadyBuilder;
+	allows(first: string | RegExp, ...rest: (string | RegExp)[]): AllowLayerReadyBuilder;
+	forbids(first: string | RegExp, ...rest: (string | RegExp)[]): ForbidsLayerReadyBuilder;
 }
 
 export type LayerBuilder = LayerInitialBuilder;
 
-function makeReadyBuilder(state: LayerBuilderState): LayerReadyBuilder {
+function makeAllowReadyBuilder(state: LayerBuilderState): AllowLayerReadyBuilder {
 	return defineRuleBuilder({
 		build: (options: { transitive?: boolean } = {}) => {
 			state.transitive = options.transitive ?? false;
 			return state.build();
 		},
-		allows(...patterns: (string | RegExp)[]): LayerReadyBuilder {
-			state.allowed.push(...patterns);
+		allows(first: string | RegExp, ...rest: (string | RegExp)[]): AllowLayerReadyBuilder {
+			state.allowed.push(first, ...rest);
 
-			return makeReadyBuilder(state);
+			return makeAllowReadyBuilder(state);
+		},
+	});
+}
+
+function makeForbidsReadyBuilder(state: LayerBuilderState): ForbidsLayerReadyBuilder {
+	return defineRuleBuilder({
+		build: (options: { transitive?: boolean } = {}) => {
+			state.transitive = options.transitive ?? false;
+			return state.build();
+		},
+		forbids(first: string | RegExp, ...rest: (string | RegExp)[]): ForbidsLayerReadyBuilder {
+			state.forbids.push(first, ...rest);
+
+			return makeForbidsReadyBuilder(state);
 		},
 	});
 }
@@ -272,10 +347,15 @@ export function layer(target: string): LayerInitialBuilder {
 				build: () => state.build(),
 			});
 		},
-		allows(...patterns: (string | RegExp)[]): LayerReadyBuilder {
-			state.allowed.push(...patterns);
+		allows(first: string | RegExp, ...rest: (string | RegExp)[]): AllowLayerReadyBuilder {
+			state.allowed.push(first, ...rest);
 
-			return makeReadyBuilder(state);
+			return makeAllowReadyBuilder(state);
+		},
+		forbids(first: string | RegExp, ...rest: (string | RegExp)[]): ForbidsLayerReadyBuilder {
+			state.forbids.push(first, ...rest);
+
+			return makeForbidsReadyBuilder(state);
 		},
 	};
 }

@@ -1,5 +1,5 @@
 import { type Artifact, defineRuleBuilder, type Rule, type RuleOutput } from '@maat-tools/contracts';
-import { isMatch } from '@maat-tools/utils';
+import { isGlob, isMatch } from '@maat-tools/utils';
 import { DEPENDS_ON_CAPABILITY, type DependsOn } from '@maat-tools/vocabulary';
 import { Pure, type Role } from './roles';
 
@@ -46,7 +46,7 @@ class PureLayerRule implements Rule<'dependsOn'> {
 		this.instanceId = `${this.id}:${target}`;
 	}
 
-	public evaluate(facts: { dependsOn: DependsOn[] }): RuleOutput[] {
+	public evaluate(facts: { dependsOn: DependsOn[] }): { findings: RuleOutput[]; warnings?: string[] } {
 		const findings: RuleOutput[] = [];
 		const targetPath = getValidTargetPath(facts.dependsOn, this.target);
 
@@ -63,7 +63,7 @@ class PureLayerRule implements Rule<'dependsOn'> {
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
@@ -113,16 +113,28 @@ class LayerRule implements Rule<'dependsOn'> {
 		this.transitive = transitive;
 	}
 
-	public evaluate(facts: { dependsOn: DependsOn[] }): RuleOutput[] {
+	public evaluate(facts: { dependsOn: DependsOn[] }): { findings: RuleOutput[]; warnings?: string[] } {
 		const findings: RuleOutput[] = [];
 		const targetPath = getValidTargetPath(facts.dependsOn, this.target);
 		const directDependencies: DependsOn[] = [];
+
+		const patterns = this.allowed.length ? this.allowed : this.forbids;
+		const matchedPatterns = new Set<string | RegExp>();
+		let relevantDepCount = 0;
 
 		for (const dep of facts.dependsOn) {
 			if (!purityEvaluation(dep, targetPath)) {
 				continue;
 			}
 			directDependencies.push(dep);
+			relevantDepCount++;
+
+			for (const p of patterns) {
+				if (this.matchesPattern(dep.to.path, p)) {
+					matchedPatterns.add(p);
+				}
+			}
+
 			if (this.allowed.length && this.isAllowed(dep)) {
 				continue;
 			}
@@ -143,7 +155,22 @@ class LayerRule implements Rule<'dependsOn'> {
 			findings.push(...this.evaluateTransitiveImports(facts.dependsOn, directDependencies));
 		}
 
-		return findings;
+		const warnings: string[] = [];
+		if (relevantDepCount > 0) {
+			for (const p of patterns) {
+				if (!matchedPatterns.has(p)) {
+					const warning =
+						`[maat] layer("${this.target}") — pattern ${p instanceof RegExp ? p : `"${p}"`} ` +
+						`never matched any dependency. Typo, or a glob that needs /** ?`;
+					warnings.push(warning);
+				}
+			}
+		}
+
+		return {
+			findings,
+			...(warnings.length > 0 ? { warnings } : {}),
+		};
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {
@@ -163,12 +190,24 @@ class LayerRule implements Rule<'dependsOn'> {
 		return `"${this.target}" depends on "${dep.to.path}" — declared in forbidden imports layer`;
 	}
 
+	private matchesPattern(path: string, p: string | RegExp): boolean {
+		if (p instanceof RegExp) {
+			return p.test(path);
+		}
+
+		if (!isGlob(p)) {
+			return path === p || path.startsWith(`${p}/`);
+		}
+
+		return isMatch(path, [p]);
+	}
+
 	private isAllowed(dep: DependsOn): boolean {
-		return this.allowed.some((p) => (typeof p === 'string' ? isMatch(dep.to.path, [p]) : p.test(dep.to.path)));
+		return this.allowed.some((p) => this.matchesPattern(dep.to.path, p));
 	}
 
 	private isForbidden(dep: DependsOn): boolean {
-		return this.forbids.some((p) => (typeof p === 'string' ? isMatch(dep.to.path, [p]) : p.test(dep.to.path)));
+		return this.forbids.some((p) => this.matchesPattern(dep.to.path, p));
 	}
 
 	private evaluateTransitiveImports(allDependencies: DependsOn[], directDependencies: DependsOn[]): RuleOutput[] {

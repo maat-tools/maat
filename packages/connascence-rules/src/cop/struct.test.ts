@@ -34,13 +34,13 @@ function makeAccess(overrides: Partial<PositionalAccess> = {}): PositionalAccess
 describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 	test('no sources, no accesses → no findings', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({ positionalSources: [], positionalAccesses: [] });
+		const { findings } = rule.evaluate({ positionalSources: [], positionalAccesses: [] });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('source with no matching access → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [makeSource()],
 			positionalAccesses: [],
 		});
@@ -49,7 +49,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 
 	test('access with no matching source → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [],
 			positionalAccesses: [makeAccess()],
 		});
@@ -60,7 +60,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'data', file: '/src/users.ts' });
 		const access = makeAccess({ name: 'data', file: '/src/users.ts' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -70,7 +70,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 
 	test('source and access in different files with no origin → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [makeSource({ name: 'user', file: '/src/users.ts' })],
 			positionalAccesses: [makeAccess({ name: 'user', file: '/src/auth.ts' })],
 		});
@@ -79,7 +79,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 
 	test('source and access with different variable names → no finding', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [makeSource({ name: 'user' })],
 			positionalAccesses: [makeAccess({ name: 'data' })],
 		});
@@ -90,7 +90,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule({ onlyHeterogeneous: true });
 		const source = makeSource({ isHeterogeneous: false });
 		const access = makeAccess({ file: source.file });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -101,7 +101,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule({ onlyHeterogeneous: false });
 		const source = makeSource({ isHeterogeneous: false });
 		const access = makeAccess({ file: source.file });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -113,7 +113,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const source = makeSource({ name: 'data', file: '/src/users.ts' });
 		const access1 = makeAccess({ name: 'data', file: '/src/users.ts', accessedIndex: 0 });
 		const access2 = makeAccess({ name: 'data', file: '/src/users.ts', accessedIndex: 3 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access1, access2],
 		});
@@ -127,7 +127,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const source2 = makeSource({ name: 'config', file: '/src/config.ts' });
 		const access1 = makeAccess({ name: 'user', file: '/src/users.ts' });
 		const access2 = makeAccess({ name: 'config', file: '/src/config.ts' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source1, source2],
 			positionalAccesses: [access1, access2],
 		});
@@ -138,7 +138,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'result', file: '/src/parser.ts' });
 		const access = makeAccess({ name: 'result', file: '/src/parser.ts', accessKind: 'destructuring' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -159,7 +159,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 			origin: { file: '/src/parser.ts', name: 'result' },
 			location: { file: '/src/consumer.ts', line: 3, column: 2 },
 		});
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -188,7 +188,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 			origin: { file: '/src/db.ts', name: 'tuple' },
 			location: { file: '/src/b.ts', line: 5, column: 3 },
 		});
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [accessA, accessB],
 		});
@@ -204,7 +204,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 			file: '/src/consumer.ts',
 			origin: { file: '/src/parser.ts', name: 'differentName' },
 		});
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -215,7 +215,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'pair', file: '/src/util.ts' });
 		const access = makeAccess({ name: 'pair', file: '/src/util.ts', accessedIndex: '0' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -228,7 +228,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'data', file: '/src/users.ts' });
 		const access = makeAccess({ name: 'data', file: '/src/users.ts' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -240,7 +240,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'data', file: '/src/users.ts' });
 		const access = makeAccess({ name: 'data', file: '/src/users.ts' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -252,7 +252,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 		const rule = new ConnascenceOfPositionStructRule();
 		const source = makeSource({ name: 'data', positions: [], isHeterogeneous: true });
 		const access = makeAccess({ name: 'data', file: source.file, accessedIndex: 0 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -267,7 +267,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 			file: '/src/consumer.ts',
 			origin: { file: '/src/parser.ts', name: 'differentName' },
 		});
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: [source],
 			positionalAccesses: [access],
 		});
@@ -276,7 +276,7 @@ describe('ConnascenceOfPositionStructRule.evaluate()', () => {
 
 	test('missing positional facts capabilities → treated as empty', () => {
 		const rule = new ConnascenceOfPositionStructRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			positionalSources: undefined as unknown as PositionalSource[],
 			positionalAccesses: undefined as unknown as PositionalAccess[],
 		});

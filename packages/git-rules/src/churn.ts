@@ -34,7 +34,7 @@ export class ChurnRule implements Rule<'gitCommits' | 'gitFileChanges'> {
 		this.exclude = options.exclude ?? [];
 	}
 
-	public evaluate(facts: { gitCommits: GitCommit[]; gitFileChanges: GitFileChange[] }): RuleOutput[] {
+	public evaluate(facts: { gitCommits: GitCommit[]; gitFileChanges: GitFileChange[] }): { findings: RuleOutput[] } {
 		const cutoff = Date.now() - this.windowMs;
 		const commits = facts.gitCommits ?? [];
 		const fileChanges = facts.gitFileChanges ?? [];
@@ -65,7 +65,7 @@ export class ChurnRule implements Rule<'gitCommits' | 'gitFileChanges'> {
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

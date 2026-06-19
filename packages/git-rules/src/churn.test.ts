@@ -36,7 +36,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2), makeCommit('c', 3)];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('maat-tools/git-rules/churn@v1');
 	});
@@ -46,7 +46,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2), makeCommit('c', 3), makeCommit('d', 4)];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('4 times');
 	});
@@ -68,7 +68,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1)];
 		const fileChanges = [makeChange('a', 'src/index.ts'), makeChange('z', 'src/orphan.ts')];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ path: 'src/index.ts' });
 	});
@@ -83,7 +83,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1)];
 		const fileChanges = [makeChange('a', 'src/index.ts')];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -94,7 +94,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [todayCommit, yesterdayCommit];
 		const fileChanges = [makeChange('a', 'src/today.ts'), makeChange('b', 'src/yesterday.ts')];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ path: 'src/today.ts' });
 	});
@@ -104,7 +104,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2)];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/utils.ts'));
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings[0]?.message).toContain('src/utils.ts');
 		expect(findings[0]?.message).toContain('2 times');
 		expect(findings[0]?.message).toContain('90 days');
@@ -119,7 +119,7 @@ describe('ChurnRule.evaluate()', () => {
 			makeChange('c', 'src/stable.ts'),
 		];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleIdentifier).toMatchObject({ path: 'src/churny.ts' });
 	});
@@ -136,7 +136,7 @@ describe('ChurnRule.evaluate()', () => {
 			makeChange('c', 'src/b.ts'),
 		];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(2);
 		const paths = findings.map((f) => (f.ruleIdentifier as { path: string }).path).sort();
 		expect(paths).toEqual(['src/a.ts', 'src/b.ts']);
@@ -172,7 +172,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1)];
 		const fileChanges = [makeChange('a', 'src/index.ts'), makeChange('a', 'src/index.ts')];
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('2 times');
 	});
@@ -182,7 +182,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = [makeCommit('a', 1), makeCommit('b', 2)];
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings[0]?.ruleIdentifier).toEqual({ path: 'src/index.ts' });
 	});
 
@@ -191,7 +191,7 @@ describe('ChurnRule.evaluate()', () => {
 		const commits = Array.from({ length: 10 }, (_, i) => makeCommit(String(i), i));
 		const fileChanges = commits.map((c) => makeChange(c.hash, 'src/index.ts'));
 
-		const findings = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
+		const { findings } = rule.evaluate({ gitCommits: commits, gitFileChanges: fileChanges });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('10 times');
 		expect(findings[0]?.message).toContain('90 days');
@@ -199,7 +199,7 @@ describe('ChurnRule.evaluate()', () => {
 
 	test('missing facts capabilities → treated as empty', () => {
 		const rule = new ChurnRule({ threshold: 1, windowDays: 90 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			gitCommits: undefined as unknown as GitCommit[],
 			gitFileChanges: undefined as unknown as GitFileChange[],
 		});

@@ -8,13 +8,14 @@ function makeRuleConsumingEnriched(id = 'rule-enriched@v1'): Rule<'enrichedFacts
 		instanceId: id,
 		id,
 		needFacts: ['enrichedFacts'] as const,
-		evaluate: ({ enrichedFacts }) =>
-			enrichedFacts.map((value, i) => ({
+		evaluate: ({ enrichedFacts }) => ({
+			findings: enrichedFacts.map((value, i) => ({
 				ruleId: id,
 				ruleIdentifier: { value, i },
 				message: `finding: ${value}`,
 				artifacts: [],
 			})),
+		}),
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	};
 }
@@ -44,14 +45,16 @@ describe('Kernel.run with enrichers', () => {
 			instanceId: 'mixed@v1',
 			id: 'mixed@v1',
 			needFacts: ['testFacts', 'enrichedFacts'] as const,
-			evaluate: ({ testFacts, enrichedFacts }) => [
-				{
-					ruleId: 'mixed@v1',
-					ruleIdentifier: { count: testFacts.length + enrichedFacts.length },
-					message: 'mixed finding',
-					artifacts: [],
-				},
-			],
+			evaluate: ({ testFacts, enrichedFacts }) => ({
+				findings: [
+					{
+						ruleId: 'mixed@v1',
+						ruleIdentifier: { count: testFacts.length + enrichedFacts.length },
+						message: 'mixed finding',
+						artifacts: [],
+					},
+				],
+			}),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 

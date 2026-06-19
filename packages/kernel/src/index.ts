@@ -21,6 +21,7 @@ type StoredEnricher = {
 
 export type KernelResult = {
 	findings: Finding[];
+	warnings?: string[];
 };
 
 export type KernelProgressEvent =
@@ -202,10 +203,10 @@ export class Kernel {
 			this.rules.map(async (rule) => {
 				const hasFacts = rule.needFacts.every((key) => key in facts);
 				if (!hasFacts) {
-					return [];
+					return { findings: [], warnings: [] };
 				}
 
-				const ruleResult = rule.evaluate(
+				const { findings, warnings } = rule.evaluate(
 					Object.fromEntries(rule.needFacts.map((key) => [key, facts[key]])) as unknown as FactRegistry,
 				);
 
@@ -215,7 +216,7 @@ export class Kernel {
 						.map(([enricherId]) => enricherId),
 				);
 
-				return ruleResult.map(({ ruleIdentifier, ...rest }) => {
+				const result = findings.map(({ ruleIdentifier, ...rest }) => {
 					const finding: Finding = {
 						message: rest.message,
 						ruleId: rule.id,
@@ -226,10 +227,15 @@ export class Kernel {
 					};
 					return finding;
 				});
+
+				return { findings: result, warnings };
 			}),
 		);
 
-		return { findings: findingsByRule.flat() };
+		return {
+			findings: findingsByRule.flatMap((r) => r.findings),
+			warnings: findingsByRule.flatMap((r) => r.warnings ?? []),
+		};
 	}
 
 	private mergeFacts(target: Partial<FactRegistry>, source: Partial<FactRegistry>): Partial<FactRegistry> {

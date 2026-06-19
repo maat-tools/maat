@@ -30,7 +30,7 @@ export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBin
 		this.ignoreBindingKeys = new Set([...UNIVERSAL_NOISE_BINDING_KEYS, ...(options.ignoreBindingKeys ?? [])]);
 	}
 
-	public evaluate(facts: { algorithmicBindings: AlgorithmicBinding[] }): RuleOutput[] {
+	public evaluate(facts: { algorithmicBindings: AlgorithmicBinding[] }): { findings: RuleOutput[] } {
 		const bindings = facts[ALGORITHMIC_BINDINGS_CAPABILITY] ?? [];
 
 		const groups = new Map<string, AlgorithmicBinding[]>();
@@ -94,7 +94,7 @@ export class ConnascenceOfAlgorithmTechnicalRule implements Rule<'algorithmicBin
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

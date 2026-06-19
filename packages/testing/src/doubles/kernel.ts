@@ -15,13 +15,14 @@ export function makeRule(id = 'rule@v1', instanceId?: string): Rule<'testFacts'>
 		instanceId: instanceId ?? id,
 		id,
 		needFacts: ['testFacts'] as const,
-		evaluate: ({ testFacts }) =>
-			testFacts.map((value, i) => ({
+		evaluate: ({ testFacts }) => ({
+			findings: testFacts.map((value, i) => ({
 				ruleId: id,
 				ruleIdentifier: { value, i },
 				message: `finding: ${value}`,
 				artifacts: [],
 			})),
+		}),
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	};
 }
@@ -44,7 +45,7 @@ export function makeKernel(findings: RuleOutput[] = []): Kernel {
 		instanceId: 'test@v1',
 		id: 'test@v1',
 		needFacts: ['testFacts'] as const,
-		evaluate: () => findings,
+		evaluate: () => ({ findings }),
 		describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 	});
 	return kernel;

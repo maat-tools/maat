@@ -35,7 +35,7 @@ function makeFunctionSignature(overrides: Partial<FunctionSignature> = {}): Func
 describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 	test('function with boolean → finding produced (default on)', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)]),
@@ -49,7 +49,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('function with 4 params → finding produced (default maxParams=3)', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([
@@ -67,7 +67,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('function with exactly maxArgumentsAllowed params and no boolean → no finding', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('a', 'string', 0), makeParam('b', 'string', 1), makeParam('c', 'string', 2)]),
@@ -79,7 +79,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('flagBoolean: false — boolean param not flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule({ flagBoolean: false });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean', 1)]),
@@ -91,7 +91,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('maxArgumentsAllowed: 5 — function with 4 params not flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule({ maxArgumentsAllowed: 5 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([
@@ -108,7 +108,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('both triggers → single finding with both reasons', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([
@@ -127,7 +127,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('ruleIdentifier includes function name and params', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [makeFunctionSignature()],
 		});
 		expect(findings[0]?.ruleIdentifier).toHaveProperty('function', 'sendEmail');
@@ -136,13 +136,13 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('empty input → no findings', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({ functionSignatures: [] });
+		const { findings } = rule.evaluate({ functionSignatures: [] });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('multiple signatures → multiple findings', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({ name: 'fnA', input: makeInput([makeParam('x', 'boolean', 0)]) }),
 				makeFunctionSignature({
@@ -161,7 +161,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('onlyExported: true (default) — non-exported function skipped', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					exported: false,
@@ -174,7 +174,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('onlyExported: false — non-exported function flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule({ onlyExported: false });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					exported: false,
@@ -189,7 +189,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('union type containing boolean (e.g. "boolean | undefined") → not flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean | undefined', 1)]),
@@ -201,7 +201,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('zero-parameter function → no finding', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [makeFunctionSignature({ input: makeInput([]) })],
 		});
 		expect(findings).toHaveLength(0);
@@ -209,7 +209,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('maxArgumentsAllowed: 0 — any function with params is flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule({ maxArgumentsAllowed: 0 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [makeFunctionSignature({ input: makeInput([makeParam('x', 'string', 0)]) })],
 		});
 		expect(findings).toHaveLength(1);
@@ -218,7 +218,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('no callers → finding produced without caller info', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('x', 'boolean', 0)]),
@@ -231,7 +231,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('multiple boolean params → single finding', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('a', 'boolean', 0), makeParam('b', 'boolean', 1)]),
@@ -244,7 +244,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('optional boolean param is still flagged', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			functionSignatures: [
 				makeFunctionSignature({
 					input: makeInput([makeParam('name', 'string', 0), makeParam('active', 'boolean | undefined', 1)]),
@@ -256,7 +256,7 @@ describe('ConnascenceOfPositionArgsRule.evaluate()', () => {
 
 	test('missing functionSignatures capability → treated as empty', () => {
 		const rule = new ConnascenceOfPositionArgsRule();
-		const findings = rule.evaluate({ functionSignatures: undefined as unknown as FunctionSignature[] });
+		const { findings } = rule.evaluate({ functionSignatures: undefined as unknown as FunctionSignature[] });
 		expect(findings).toHaveLength(0);
 	});
 });

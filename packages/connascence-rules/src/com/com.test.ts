@@ -21,27 +21,27 @@ function makeOccurrences(files: string[], value = 'ADMIN'): Constant[] {
 describe('ConnascenceOfMeaningRule.evaluate()', () => {
 	test('below threshold → no findings', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('at threshold → finding produced', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('maat-tools/connascence-rules/com@v1');
 	});
 
 	test('above threshold → single finding with file count', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts', '/d.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts', '/d.ts']) });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('4 files');
 	});
 
 	test('duplicate files only count once toward threshold', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			constants: makeOccurrences(['/a.ts', '/a.ts', '/a.ts', '/a.ts', '/a.ts']),
 		});
 		expect(findings).toHaveLength(0);
@@ -50,9 +50,9 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 	test('default threshold is 2', () => {
 		const rule = new ConnascenceOfMeaningRule();
 		const belowDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts']) });
-		expect(belowDefault).toHaveLength(0);
+		expect(belowDefault.findings).toHaveLength(0);
 		const atDefault = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
-		expect(atDefault).toHaveLength(1);
+		expect(atDefault.findings).toHaveLength(1);
 	});
 
 	test('custom ignoreValues excludes the value', () => {
@@ -60,13 +60,13 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 			threshold: 2,
 			ignoreValues: ['ADMIN'],
 		});
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('ignoreValues only suppresses listed values', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2, ignoreValues: ['OTHER'] });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			constants: [...makeOccurrences(['/a.ts', '/b.ts'], 'ADMIN'), ...makeOccurrences(['/c.ts', '/d.ts'], 'OTHER')],
 		});
 		expect(findings).toHaveLength(1);
@@ -75,24 +75,24 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 
 	test('empty constants → no findings', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 1 });
-		expect(rule.evaluate({ constants: [] })).toHaveLength(0);
+		expect(rule.evaluate({ constants: [] }).findings).toHaveLength(0);
 	});
 
 	test('threshold of 1 flags any single occurrence', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 1 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts']) });
 		expect(findings).toHaveLength(1);
 	});
 
 	test('finding message references distinct file count', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 3 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
 		expect(findings[0]?.message).toContain('3 files');
 	});
 
 	test('ruleIdentifier includes both value and kind', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts']) });
 		expect(findings[0]?.ruleIdentifier).toEqual({ value: 'ADMIN', kind: 'string' });
 	});
 
@@ -104,7 +104,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 			makeConstant({ kind: 'number', value: '42', location: { file: '/a.ts', line: 2 } }),
 			makeConstant({ kind: 'number', value: '42', location: { file: '/b.ts', line: 2 } }),
 		];
-		const findings = rule.evaluate({ constants });
+		const { findings } = rule.evaluate({ constants });
 		expect(findings).toHaveLength(2);
 		const kinds = findings.map((f) => (f.ruleIdentifier as { kind: string }).kind).sort();
 		expect(kinds).toEqual(['number', 'string']);
@@ -112,13 +112,13 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 
 	test('each occurrence produces one artifact', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
-		const findings = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
+		const { findings } = rule.evaluate({ constants: makeOccurrences(['/a.ts', '/b.ts', '/c.ts']) });
 		expect(findings[0]?.artifacts).toHaveLength(3);
 	});
 
 	test('multiple distinct values above threshold → multiple findings', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 2 });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			constants: [...makeOccurrences(['/a.ts', '/b.ts'], 'ADMIN'), ...makeOccurrences(['/c.ts', '/d.ts'], 'USER')],
 		});
 		expect(findings).toHaveLength(2);
@@ -126,7 +126,7 @@ describe('ConnascenceOfMeaningRule.evaluate()', () => {
 
 	test('missing constants capability → treated as empty', () => {
 		const rule = new ConnascenceOfMeaningRule({ threshold: 1 });
-		const findings = rule.evaluate({ constants: undefined as unknown as Constant[] });
+		const { findings } = rule.evaluate({ constants: undefined as unknown as Constant[] });
 		expect(findings).toHaveLength(0);
 	});
 });

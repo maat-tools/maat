@@ -1,28 +1,40 @@
-import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { type Collector, defineCollector, type FactRegistry } from '@maat-tools/contracts';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
-	CALL_GRAPH_CAPABILITY,
-	CONSTANTS_CAPABILITY,
-	DEPENDS_ON_CAPABILITY,
-	FUNCTION_SIGNATURES_CAPABILITY,
-	POSITIONAL_ACCESSES_CAPABILITY,
-	POSITIONAL_SOURCES_CAPABILITY,
 	type AlgorithmicBinding,
 	type AlgorithmicPattern,
+	CALL_GRAPH_CAPABILITY,
 	type CallGraph,
+	CONSTANTS_CAPABILITY,
 	type Constant,
+	DEPENDS_ON_CAPABILITY,
 	type DependsOn,
+	FUNCTION_SIGNATURES_CAPABILITY,
 	type FunctionSignature,
+	POSITIONAL_ACCESSES_CAPABILITY,
+	POSITIONAL_SOURCES_CAPABILITY,
 	type PositionalAccess,
 	type PositionalSource,
 } from '@maat-tools/vocabulary';
-import { ThreadRunner } from '../../utils/src/threads/thread-runner';
-import { resolveProjectRoot } from '../../utils/src/file-system/file-system';
 import { glob } from 'tinyglobby';
-import { dirname, resolve } from 'node:path';
 import ts from 'typescript';
+import { resolveProjectRoot } from '../../utils/src/file-system/file-system';
+import { ThreadRunner } from '../../utils/src/threads/thread-runner';
 import { collectCallGraph } from './call-graph';
+
+function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {
+	const seen = new Set<string>();
+	const result: T[] = [];
+	for (const item of items) {
+		const key = keyFn(item);
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(item);
+		}
+	}
+	return result;
+}
 
 export type TSCollectedFacts = Pick<
 	FactRegistry,
@@ -44,7 +56,6 @@ export type TSInput = {
 		timeout?: number;
 	};
 };
-
 
 async function expandGlobs(patterns: string[], rootDir: string): Promise<string[]> {
 	const results: string[] = [];
@@ -90,45 +101,91 @@ export class TSCollector
 	}: {
 		requiredFactKeys?: Set<keyof TSCollectedFacts>;
 	} = {}): Promise<TSCollectedFacts> {
-		const rawPatterns = Array.isArray(this.config.tsConfigFilePath) ? this.config.tsConfigFilePath : [this.config.tsConfigFilePath];
-			const projectRoot = resolveProjectRoot();
-			const tsConfigPaths = await expandGlobs(rawPatterns, projectRoot);
-			const includedFiles: string[] = tsConfigPaths.map((tsConfigPath) => this.getFilepathsForTSConfig(tsConfigPath)).flat();
-		
-			const worker = new ThreadRunner('@maat-tools/collector-ts/ast-worker');
-			
-			const [callGraph, astFacts] = await Promise.all([
-				this.collectCallGraphSafely({ entryFiles: includedFiles, projectRoot, options: this.config.callGraph ?? {}, requiredFactKeys }),
-				Promise.all(tsConfigPaths.map((tsConfigPath) => worker.run<{ tsConfigPath: string; config: TSInput; projectRoot: string; requiredFactKeys?: Set<keyof TSCollectedFacts> }, TSCollectedFacts>({
-					tsConfigPath,
-					config: this.config,
-					projectRoot,
-					requiredFactKeys
-				}))),
-			]);
-		
-			const mergedASTFacts = astFacts.reduce((merged, current) => {
+		const rawPatterns = Array.isArray(this.config.tsConfigFilePath)
+			? this.config.tsConfigFilePath
+			: [this.config.tsConfigFilePath];
+		const projectRoot = resolveProjectRoot();
+		const tsConfigPaths = await expandGlobs(rawPatterns, projectRoot);
+		const includedFiles: string[] = tsConfigPaths.flatMap((tsConfigPath) => this.getFilepathsForTSConfig(tsConfigPath));
+
+		const worker = new ThreadRunner('@maat-tools/collector-ts/ast-worker');
+
+		const [callGraph, astFacts] = await Promise.all([
+			this.collectCallGraphSafely({
+				entryFiles: includedFiles,
+				projectRoot,
+				options: this.config.callGraph ?? {},
+				requiredFactKeys,
+			}),
+			Promise.all(
+				tsConfigPaths.map((tsConfigPath) =>
+					worker.run<
+						{
+							tsConfigPath: string;
+							config: TSInput;
+							projectRoot: string;
+							requiredFactKeys?: Set<keyof TSCollectedFacts>;
+						},
+						TSCollectedFacts
+					>({
+						tsConfigPath,
+						config: this.config,
+						projectRoot,
+						requiredFactKeys,
+					}),
+				),
+			),
+		]);
+
+		const mergedASTFacts = astFacts.reduce(
+			(merged, current) => {
 				merged.constants.push(...current.constants);
 				merged.dependsOn.push(...current.dependsOn);
 				merged.functionSignatures.push(...current.functionSignatures);
 				merged.positionalAccesses.push(...current.positionalAccesses);
 				merged.positionalSources.push(...current.positionalSources);
 				merged.algorithmicBindings.push(...current.algorithmicBindings);
-		
+
 				return merged;
-			}, {
+			},
+			{
 				constants: [] as Constant[],
 				dependsOn: [] as DependsOn[],
 				functionSignatures: [] as FunctionSignature[],
 				positionalAccesses: [] as PositionalAccess[],
 				positionalSources: [] as PositionalSource[],
 				algorithmicBindings: [] as AlgorithmicBinding[],
-			});
-		
-			return {
-				...mergedASTFacts,
-				callGraph,
-			};
+			},
+		);
+
+		return {
+			constants: deduplicateBy(
+				mergedASTFacts.constants,
+				(c) => `${c.file}:${c.location.line}:${c.location.column}:${c.value}`,
+			),
+			dependsOn: deduplicateBy(
+				mergedASTFacts.dependsOn,
+				(d) => `${d.from.path}:${d.from.location.line}:${d.from.location.column}:${d.to.path}`,
+			),
+			functionSignatures: deduplicateBy(
+				mergedASTFacts.functionSignatures,
+				(f) => `${f.file}:${f.name}:${f.location.line}:${f.location.column}`,
+			),
+			positionalAccesses: deduplicateBy(
+				mergedASTFacts.positionalAccesses,
+				(p) => `${p.file}:${p.name}:${p.accessedIndex}:${p.location.line}:${p.location.column}`,
+			),
+			positionalSources: deduplicateBy(
+				mergedASTFacts.positionalSources,
+				(p) => `${p.file}:${p.name}:${p.location.line}:${p.location.column}`,
+			),
+			algorithmicBindings: deduplicateBy(
+				mergedASTFacts.algorithmicBindings,
+				(a) =>
+					`${a.file}:${a.patternId}:${a.role}:${a.functionName}:${a.bindingKey}:${a.location.line}:${a.location.column}`,
+			),
+			callGraph,
+		};
 	}
 
 	private async collectCallGraphSafely({
@@ -137,31 +194,26 @@ export class TSCollector
 		projectRoot,
 		requiredFactKeys,
 	}: {
-		entryFiles: string[],
-		projectRoot: string,
-		options: { maxIndirections?: number; timeout?: number },
-		requiredFactKeys?: Set<string>,
+		entryFiles: string[];
+		projectRoot: string;
+		options: { maxIndirections?: number; timeout?: number };
+		requiredFactKeys?: Set<string>;
 	}): Promise<CallGraph> {
-		if (!requiredFactKeys || !requiredFactKeys.has(CALL_GRAPH_CAPABILITY)) {
+		if (requiredFactKeys && !requiredFactKeys.has(CALL_GRAPH_CAPABILITY)) {
 			return { nodes: [], edges: [] };
 		}
-	
+
 		try {
 			return await collectCallGraph(entryFiles, projectRoot, options);
 		} catch {
 			return { nodes: [], edges: [] };
 		}
 	}
-	
 
 	private getFilepathsForTSConfig(tsConfigPath: string): string[] {
 		const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
-		const parsed = ts.parseJsonConfigFileContent(
-			configFile.config,
-			ts.sys,
-			dirname(tsConfigPath),
-		);
-	
+		const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, dirname(tsConfigPath));
+
 		return parsed.fileNames.filter((file) => !file.includes('node_modules') && !file.includes('dist'));
 	}
 }

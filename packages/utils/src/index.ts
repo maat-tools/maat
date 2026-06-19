@@ -1,3 +1,4 @@
+export { LocalCache } from './cache';
 export { dump } from './dump';
 export {
 	appendToFile,
@@ -28,3 +29,4 @@ export {
 	type VertexLLMExtra,
 } from './llm/types';
 export { StdoutPresenter } from './presenter/stdout';
+export { ThreadRunner, wrapFunctionForThread } from './threads/thread-runner';

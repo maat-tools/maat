@@ -6,7 +6,7 @@ export { generateFingerprint };
 type StoredCollector = {
 	readonly id: string;
 	readonly provideFacts: readonly (keyof FactRegistry)[];
-	collect(): Promise<Partial<FactRegistry>>;
+	collect(options?: { requiredFactKeys?: Set<keyof FactRegistry> }): Promise<Partial<FactRegistry>>;
 };
 
 type StoredEnricher = {
@@ -124,10 +124,16 @@ export class Kernel {
 			return { findings: [] };
 		}
 
+		const requiredFacts = [
+			...new Set(this.rules.flatMap((rule) => rule.needFacts)),
+			...new Set(this.enrichers.flatMap((enricher) => enricher.needFacts)),
+		];
+		const requiredFactKeys = new Set<keyof FactRegistry>(requiredFacts);
+
 		const collectedResults = await Promise.all(
 			this.collectors.map(async (collector, i) => {
 				onProgress?.({ type: 'collector:start', collectorId: collector.id, index: i, total: this.collectors.length });
-				const collected = await collector.collect();
+				const collected = await collector.collect({ requiredFactKeys });
 				onProgress?.({ type: 'collector:done', collectorId: collector.id, index: i, total: this.collectors.length });
 
 				return collected;

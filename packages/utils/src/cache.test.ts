@@ -52,8 +52,8 @@ describe('LocalCache', () => {
 		expect(await cache.readCacheEntry('d/a.json')).toBeNull();
 	});
 
-	test('deleteEntry rejects when the file does not exist', async () => {
+	test('deleteEntry succeeds silently when the file does not exist', async () => {
 		const cache = new LocalCache({ cachePath: nextNs() });
-		await expect(cache.deleteEntry('missing.json')).rejects.toThrow();
+		await expect(cache.deleteEntry('missing.json')).resolves.toBeUndefined();
 	});
 });

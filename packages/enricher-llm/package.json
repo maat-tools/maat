@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/enricher-llm",
-  "version": "0.1.9",
+  "version": "0.3.0",
   "description": "LLM-powered enrichers that consume facts from collectors and produce new probabilistic facts",
   "type": "module",
   "main": "./dist/index.js",

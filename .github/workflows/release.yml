@@ -44,7 +44,6 @@ jobs:
             dir="packages/$pkg"
             cp LICENSE "$dir/LICENSE"
             jq --arg v "$VERSION" '
-              .version = $v |
               if .dependencies then .dependencies = (.dependencies | map_values(if test("^workspace:") then $v else . end)) else . end |
               if .peerDependencies then .peerDependencies = (.peerDependencies | map_values(if test("^workspace:") then $v else . end)) else . end
             ' "$dir/package.json" > "$dir/package.publish.json"

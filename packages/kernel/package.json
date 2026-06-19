@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/kernel",
-  "version": "0.1.9",
+  "version": "0.3.0",
   "description": "Pure analysis engine that runs collectors and rules to produce findings",
   "type": "module",
   "main": "./dist/index.js",

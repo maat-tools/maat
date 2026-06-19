@@ -95,19 +95,33 @@ class MaatCLI {
 		this.registerCommands(loadedConfig.config);
 
 		const commandName = cliArguments.find((a) => !a.startsWith('-'));
-		if (commandName && !argv.includes('--silent')) {
-			this.trackPerformance(commandName);
-		}
+		const trackPerformance = commandName && !argv.includes('--silent') && !argv.includes('--json');
+		const start = trackPerformance ? performance.now() : null;
 
 		await this.program.parseAsync(argv);
+
+		if (trackPerformance && start !== null) {
+			this.trackPerformance(commandName, start);
+		}
 	}
 
-	private trackPerformance(commandName: string) {
-		const start = performance.now();
-		process.on('exit', () => {
-			const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-			process.stderr.write(`\n${commandName} took ${elapsed}s\n`);
-		});
+	private trackPerformance(commandName: string, start: number) {
+		const elapsed = performance.now() - start;
+		this.presenter.log(`\n${commandName} took ${this.formatElapsedTime(elapsed)}\n`);
+	}
+
+	private formatElapsedTime(elapsed: number): string {
+		const oneSecondInMS = 1000;
+		const oneMinuteInMS = 60 * oneSecondInMS;
+		if (elapsed < oneSecondInMS) {
+			return `${elapsed.toFixed(0)}ms`;
+		}
+
+		if (elapsed < oneMinuteInMS) {
+			return `${(elapsed / oneSecondInMS).toFixed(2)}s`;
+		}
+
+		return `${(elapsed / oneMinuteInMS).toFixed(2)}m`;
 	}
 
 	private registerNoopCommands() {

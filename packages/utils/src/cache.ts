@@ -44,6 +44,10 @@ export class LocalCache {
 	}
 
 	public async deleteEntry(file: string): Promise<void> {
-		return unlink(join(this.cachePath, file));
+		try {
+			await unlink(join(this.cachePath, file));
+		} catch {
+			// File already deleted or doesn't exist - that's fine
+		}
 	}
 }

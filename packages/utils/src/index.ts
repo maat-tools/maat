@@ -28,3 +28,4 @@ export {
 	type VertexLLMExtra,
 } from './llm/types';
 export { StdoutPresenter } from './presenter/stdout';
+export { ThreadRunner, wrapFunctionForThread } from './threads/thread-runner';

@@ -589,3 +589,55 @@ describe('layer() builder', () => {
 		expect(rule.instanceId).toContain('@maat-tools/kernel');
 	});
 });
+
+describe('LayerRule.evaluate() — pattern sanity warnings', () => {
+	test('warns when a forbids pattern matches nothing anywhere in the graph (typo)', () => {
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/clii').build();
+		const { warnings } = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/contracts')]));
+		expect(warnings).toHaveLength(1);
+		expect(warnings?.[0]).toContain('@maat-tools/clii');
+		expect(warnings?.[0]).toContain('typo or wrong glob');
+	});
+
+	test('does NOT warn for a forbids pattern the target never violates but exists elsewhere', () => {
+		// kernel does not import cli (no violation), but cli IS imported elsewhere in the graph.
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/cli').build();
+		const { findings, warnings } = rule.evaluate(
+			makeFacts([
+				makeDep('@maat-tools/kernel', '@maat-tools/contracts'),
+				makeDep('@maat-tools/web', '@maat-tools/cli'),
+			]),
+		);
+		expect(findings).toHaveLength(0);
+		expect(warnings ?? []).toHaveLength(0);
+	});
+
+	test('does NOT warn for a forbids pattern that is actually violated', () => {
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/cli').build();
+		const { findings, warnings } = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/cli')]));
+		expect(findings).toHaveLength(1);
+		expect(warnings ?? []).toHaveLength(0);
+	});
+
+	test('matches subpath imports so a bare package name does not warn', () => {
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/cli').build();
+		const { findings, warnings } = rule.evaluate(
+			makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/cli/dist/commands/check')]),
+		);
+		expect(findings).toHaveLength(1);
+		expect(warnings ?? []).toHaveLength(0);
+	});
+
+	test('warns for an allows pattern that matches nothing anywhere (typo)', () => {
+		const rule = layer('@maat-tools/kernel').allows('@maat-tools/contractz').build();
+		const { warnings } = rule.evaluate(makeFacts([makeDep('@maat-tools/kernel', '@maat-tools/contracts')]));
+		expect(warnings).toHaveLength(1);
+		expect(warnings?.[0]).toContain('@maat-tools/contractz');
+	});
+
+	test('no warnings on an empty dependency graph', () => {
+		const rule = layer('@maat-tools/kernel').forbids('@maat-tools/cli').build();
+		const { warnings } = rule.evaluate(makeFacts([]));
+		expect(warnings ?? []).toHaveLength(0);
+	});
+});

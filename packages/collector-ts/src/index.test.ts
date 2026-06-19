@@ -10,8 +10,8 @@ import {
 	POSITIONAL_ACCESSES_CAPABILITY,
 	POSITIONAL_SOURCES_CAPABILITY,
 } from '@maat-tools/vocabulary';
-import { TSCollector } from './index';
 import type { TSCollectedFacts } from './index';
+import { TSCollector } from './index';
 
 const FIXTURE_TSCONFIG = resolve(import.meta.dir, '../../../tests/fixtures/sample-project/tsconfig.json');
 
@@ -401,9 +401,7 @@ describe('TSCollector.collect() — positionalAccesses fact', () => {
 	});
 
 	test('detects destructuring from variable (config)', () => {
-		const access = sharedFacts.positionalAccesses.find(
-			(a) => a.name === 'config' && a.accessKind === 'destructuring',
-		);
+		const access = sharedFacts.positionalAccesses.find((a) => a.name === 'config' && a.accessKind === 'destructuring');
 		expect(access).toBeDefined();
 	});
 
@@ -475,9 +473,7 @@ describe('TSCollector.collect() — known positional APIs', () => {
 	});
 
 	test('detects computed index access with function call', () => {
-		const access = sharedFacts.positionalAccesses.find(
-			(a) => a.name === 'config' && a.accessedIndex === 'getIndex()',
-		);
+		const access = sharedFacts.positionalAccesses.find((a) => a.name === 'config' && a.accessedIndex === 'getIndex()');
 		expect(access).toBeDefined();
 	});
 });
@@ -596,9 +592,7 @@ describe('TSCollector.collect() — algorithmicBindings fact', () => {
 		});
 
 		test('emits template-literal bindings when expressionKind is template', () => {
-			const templateBindings = templateFacts.algorithmicBindings.filter(
-				(b) => b.functionName === 'template-literal',
-			);
+			const templateBindings = templateFacts.algorithmicBindings.filter((b) => b.functionName === 'template-literal');
 			expect(templateBindings.length).toBeGreaterThan(0);
 			for (const b of templateBindings) {
 				expect(b.patternId).toBe('pack-unpack');

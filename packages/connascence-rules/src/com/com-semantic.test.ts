@@ -50,37 +50,37 @@ describe('ConnascenceOfMeaningSemanticRule constructor', () => {
 describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 	test('no candidates → no findings', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		expect(rule.evaluate({ comCandidates: [] })).toHaveLength(0);
+		expect(rule.evaluate({ comCandidates: [] }).findings).toHaveLength(0);
 	});
 
 	test('missing comCandidates capability → treated as empty', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({ comCandidates: undefined as unknown as CoMCandidate[] });
+		const { findings } = rule.evaluate({ comCandidates: undefined as unknown as CoMCandidate[] });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('confidence below threshold → no finding', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.9' });
-		const findings = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.89 })] });
+		const { findings } = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.89 })] });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('confidence at threshold → finding produced', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.9' });
-		const findings = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.9 })] });
+		const { findings } = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.9 })] });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.ruleId).toBe('maat-tools/connascence-rules/com-semantic@v1');
 	});
 
 	test('confidence above threshold → finding produced', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.8 })] });
+		const { findings } = rule.evaluate({ comCandidates: [makeCandidate({ confidence: 0.8 })] });
 		expect(findings).toHaveLength(1);
 	});
 
 	test('message includes duplicated value, function name, file, reason and confidence', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [
 				makeCandidate({
 					signature: makeSignature({
@@ -112,7 +112,7 @@ describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 
 	test('value string joins return sites with guard snippets', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [
 				makeCandidate({
 					signature: makeSignature({
@@ -134,7 +134,7 @@ describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 
 	test('duplicatedValues lists only values that appear more than once', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [
 				makeCandidate({
 					signature: makeSignature({
@@ -158,7 +158,7 @@ describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 
 	test('multiple candidates → multiple findings', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [
 				makeCandidate({ signature: makeSignature({ name: 'fnA' }) }),
 				makeCandidate({ signature: makeSignature({ name: 'fnB' }) }),
@@ -169,7 +169,7 @@ describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 
 	test('artifacts map every return site', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '0.5' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [
 				makeCandidate({
 					signature: makeSignature({
@@ -192,7 +192,7 @@ describe('ConnascenceOfMeaningSemanticRule.evaluate()', () => {
 
 	test('threshold of "1" only includes perfect confidence', () => {
 		const rule = new ConnascenceOfMeaningSemanticRule({ threshold: '1' });
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			comCandidates: [makeCandidate({ confidence: 1 }), makeCandidate({ confidence: 0.99 })],
 		});
 		expect(findings).toHaveLength(1);

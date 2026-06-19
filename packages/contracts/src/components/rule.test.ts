@@ -17,7 +17,7 @@ describe('defineRule', () => {
 			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: () => ({}),
 		}));
 		expect(typeof factory).toBe('function');
@@ -31,7 +31,7 @@ describe('defineRuleSet', () => {
 			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: () => ({}),
 		}));
 		const set = defineRuleSet([f]);
@@ -48,7 +48,7 @@ describe('defineRuleBuilder', () => {
 				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
-				evaluate: () => [],
+				evaluate: () => ({ findings: [] }),
 				describeArtifact: () => ({}),
 			}),
 		};
@@ -62,7 +62,7 @@ describe('defineRuleBuilder', () => {
 				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
-				evaluate: () => [],
+				evaluate: () => ({ findings: [] }),
 				describeArtifact: () => ({}),
 			}),
 			extra: () => 42,
@@ -78,7 +78,7 @@ describe('isRuleFactory', () => {
 			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: () => ({}),
 		}));
 		expect(isRuleFactory(factory)).toBe(true);
@@ -100,7 +100,7 @@ describe('isRuleSet', () => {
 			instanceId: 'r',
 			id: 'r',
 			needFacts: [],
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: () => ({}),
 		}));
 		expect(isRuleSet(defineRuleSet([f]))).toBe(true);
@@ -117,7 +117,7 @@ describe('isRuleSet', () => {
 
 describe('isRule', () => {
 	test('true for object with correct shape', () => {
-		expect(isRule({ id: 'r', needFacts: [], evaluate: () => [] })).toBe(true);
+		expect(isRule({ id: 'r', needFacts: [], evaluate: () => ({ findings: [] }) })).toBe(true);
 	});
 
 	test('false if evaluate is missing', () => {
@@ -136,7 +136,7 @@ describe('isRuleBuilder', () => {
 				instanceId: 'r',
 				id: 'r',
 				needFacts: ['x' as never],
-				evaluate: () => [],
+				evaluate: () => ({ findings: [] }),
 				describeArtifact: () => ({}),
 			}),
 		});
@@ -146,7 +146,7 @@ describe('isRuleBuilder', () => {
 	test('true for plain object with build() — structural check', () => {
 		expect(
 			isRuleBuilder({
-				build: () => ({ id: 'r', needFacts: [], evaluate: () => [] }),
+				build: () => ({ id: 'r', needFacts: [], evaluate: () => ({ findings: [] }) }),
 			}),
 		).toBe(true);
 	});

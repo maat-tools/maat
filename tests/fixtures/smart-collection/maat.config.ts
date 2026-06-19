@@ -23,8 +23,8 @@ const constantsRule: Rule<'constants'> = {
 	instanceId: 'constants-only@v1',
 	id: 'constants-only@v1',
 	needFacts: ['constants'] as const,
-	evaluate: ({ constants }) =>
-		constants
+	evaluate: ({ constants }) => ({
+		findings: constants
 			.filter((c) => c.value === 'hello-smart-collection')
 			.map((c) => ({
 				ruleId: 'constants-only@v1',
@@ -32,6 +32,7 @@ const constantsRule: Rule<'constants'> = {
 				message: `found constant: ${c.value}`,
 				artifacts: [],
 			})),
+	}),
 	describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 };
 

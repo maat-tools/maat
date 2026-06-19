@@ -25,7 +25,7 @@ export class ConnascenceOfMeaningSemanticRule implements Rule<typeof COM_ENRICHE
 		this.threshold = Number(options.threshold);
 	}
 
-	public evaluate(facts: { comCandidates: CoMCandidate[] }): RuleOutput[] {
+	public evaluate(facts: { comCandidates: CoMCandidate[] }): { findings: RuleOutput[] } {
 		const comCandidates = facts[COM_ENRICHER_FACT_KEY] ?? [];
 		const findings: RuleOutput[] = [];
 
@@ -55,7 +55,7 @@ export class ConnascenceOfMeaningSemanticRule implements Rule<typeof COM_ENRICHE
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

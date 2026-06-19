@@ -23,7 +23,7 @@ function makeBinding(
 describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 	test('no bindings → no findings', () => {
 		const rule = new ConnascenceOfAlgorithmTechnicalRule();
-		const findings = rule.evaluate({ algorithmicBindings: [] });
+		const { findings } = rule.evaluate({ algorithmicBindings: [] });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -33,7 +33,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'packer', ':', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -43,7 +43,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'a.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -53,7 +53,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('pack-unpack');
 		expect(findings[0]?.message).toContain(':');
@@ -68,7 +68,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('hash-verify', 'hasher', 'sha256', { file: 'c.ts' }),
 			makeBinding('hash-verify', 'hasher', 'sha256', { file: 'd.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('pack-unpack');
 	});
@@ -79,7 +79,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('hash-verify', 'hasher', 'sha256', { file: 'a.ts' }),
 			makeBinding('hash-verify', 'hasher', 'sha256', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('sha256');
 	});
@@ -90,7 +90,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', '::', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', '::', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 		expect(findings[0]?.message).toContain('pack-unpack');
 		expect(findings[0]?.message).toContain('::');
@@ -103,7 +103,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts', containingFunction: 'buildKey' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts', containingFunction: 'parseKey' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -113,7 +113,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts', containingFunction: 'CacheService.buildKey' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'a.ts', containingFunction: 'CacheService.buildKey' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -123,7 +123,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'cache.ts', containingFunction: null }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'cache.ts', containingFunction: null }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -133,7 +133,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts', containingFunction: 'CacheService.buildKey' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts', containingFunction: 'CacheService.buildKey' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -144,7 +144,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 				makeBinding('pack-unpack', 'packer', sep, { file: 'a.ts' }),
 				makeBinding('pack-unpack', 'unpacker', sep, { file: 'b.ts' }),
 			];
-			const findings = rule.evaluate({ algorithmicBindings: bindings });
+			const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 			expect(findings).toHaveLength(0);
 		}
 	});
@@ -155,7 +155,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', '::', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', '::', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(0);
 	});
 
@@ -165,7 +165,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -205,7 +205,7 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'a.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(1);
 	});
 
@@ -215,13 +215,13 @@ describe('ConnascenceOfAlgorithmTechnicalRule', () => {
 			makeBinding('pack-unpack', 'packer', ':', { file: 'a.ts' }),
 			makeBinding('pack-unpack', 'unpacker', ':', { file: 'b.ts' }),
 		];
-		const findings = rule.evaluate({ algorithmicBindings: bindings });
+		const { findings } = rule.evaluate({ algorithmicBindings: bindings });
 		expect(findings).toHaveLength(0);
 	});
 
 	test('missing algorithmicBindings capability → treated as empty', () => {
 		const rule = new ConnascenceOfAlgorithmTechnicalRule();
-		const findings = rule.evaluate({
+		const { findings } = rule.evaluate({
 			algorithmicBindings: undefined as unknown as AlgorithmicBinding[],
 		});
 		expect(findings).toHaveLength(0);

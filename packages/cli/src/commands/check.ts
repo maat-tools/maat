@@ -63,7 +63,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 
 		const spinner = options.silent ? null : createSpinner();
 		const totalLLMCosts = { usedTokens: 0, cost: 0, hasUsedLLM: false };
-		const { findings: findingsFromTheCurrentRun } = await this.kernel
+		const { findings: findingsFromTheCurrentRun, warnings: warningsFromTheCurrentRun } = await this.kernel
 			.run({
 				useCache: !options.noCache,
 				onProgress: (event: KernelProgressEvent) => {
@@ -124,6 +124,9 @@ export class Check extends MaatCommandBase implements MaatCommand {
 		const visibleFindings = this.removeSkippedFindings(findingsFromTheCurrentRun, reconciliation);
 
 		this.presenter.findings(visibleFindings, (id) => this.kernel.getRuleById(id));
+		warningsFromTheCurrentRun?.forEach((warning) => {
+			this.presenter.warn(`${warning}\n`);
+		});
 		this.printLLMSummaryIfNecessary(totalLLMCosts);
 		this.evaluateExitConditions(visibleFindings, reconciliation, actionableFindingsFromTheCurrentRun);
 	}

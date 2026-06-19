@@ -23,7 +23,7 @@ function makeRule(id: string): Rule {
 		instanceId: id,
 		id,
 		needFacts: [],
-		evaluate: () => [],
+		evaluate: () => ({ findings: [] }),
 		describeArtifact: (artifact) => ({ [artifact.kind]: String(artifact.data) }),
 	};
 }

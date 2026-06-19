@@ -27,10 +27,9 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 		this.onlyHeterogeneous = options.onlyHeterogeneous ?? true;
 	}
 
-	public evaluate(facts: {
-		positionalSources: PositionalSource[];
-		positionalAccesses: PositionalAccess[];
-	}): RuleOutput[] {
+	public evaluate(facts: { positionalSources: PositionalSource[]; positionalAccesses: PositionalAccess[] }): {
+		findings: RuleOutput[];
+	} {
 		const positionalSources = facts.positionalSources ?? [];
 		const positionalAccesses = facts.positionalAccesses ?? [];
 		const accessMap = new Map<string, PositionalAccess[]>();
@@ -75,7 +74,7 @@ export class ConnascenceOfPositionStructRule implements Rule<'positionalSources'
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

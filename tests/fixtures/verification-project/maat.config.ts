@@ -24,14 +24,16 @@ const rule = defineRule(() => ({
 	id: 'verify-rule',
 	needFacts: ['verifiedFact'],
 	evaluate() {
-		return [
-			{
-				ruleId: 'verify-rule',
-				ruleIdentifier: { id: 'verify-finding' },
-				message: 'finding that needs verification',
-				artifacts: [],
-			},
-		];
+		return {
+			findings: [
+				{
+					ruleId: 'verify-rule',
+					ruleIdentifier: { id: 'verify-finding' },
+					message: 'finding that needs verification',
+					artifacts: [],
+				},
+			],
+		};
 	},
 	describeArtifact() {
 		return {};

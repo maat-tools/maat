@@ -25,7 +25,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 		this.ignoreValues = new Set(options.ignoreValues ?? []);
 	}
 
-	public evaluate(facts: { constants: Constant[] }): RuleOutput[] {
+	public evaluate(facts: { constants: Constant[] }): { findings: RuleOutput[] } {
 		const constants = facts[CONSTANTS_CAPABILITY] ?? [];
 
 		const byValue = new Map<string, Constant[]>();
@@ -66,7 +66,7 @@ export class ConnascenceOfMeaningRule implements Rule<'constants'> {
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

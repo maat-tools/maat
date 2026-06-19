@@ -28,7 +28,7 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 		this.onlyExported = options.onlyExported ?? true;
 	}
 
-	public evaluate(facts: { functionSignatures: FunctionSignature[] }): RuleOutput[] {
+	public evaluate(facts: { functionSignatures: FunctionSignature[] }): { findings: RuleOutput[] } {
 		const signatures = facts[FUNCTION_SIGNATURES_CAPABILITY] ?? [];
 
 		const findings: RuleOutput[] = [];
@@ -71,7 +71,7 @@ export class ConnascenceOfPositionArgsRule implements Rule<'functionSignatures'>
 			});
 		}
 
-		return findings;
+		return { findings };
 	}
 
 	public describeArtifact(artifact: Artifact): Record<string, string> {

@@ -16,7 +16,7 @@ export {
 	resolveProjectRoot,
 	resolveSymbol,
 } from './file-system/file-system';
-export { isMatch } from './file-system/glob';
+export { isGlob, isMatch } from './file-system/glob';
 export { generateId } from './id-generator';
 export { LLMInteractor } from './llm';
 export {

@@ -82,9 +82,16 @@ describe('Kernel.run', () => {
 			instanceId: 'scalar@v1',
 			id: 'scalar@v1',
 			needFacts: ['scalarFact'] as const,
-			evaluate: ({ scalarFact }) => [
-				{ ruleId: 'scalar@v1', ruleIdentifier: { value: scalarFact }, message: `value: ${scalarFact}`, artifacts: [] },
-			],
+			evaluate: ({ scalarFact }) => ({
+				findings: [
+					{
+						ruleId: 'scalar@v1',
+						ruleIdentifier: { value: scalarFact },
+						message: `value: ${scalarFact}`,
+						artifacts: [],
+					},
+				],
+			}),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 
@@ -110,7 +117,7 @@ describe('Kernel.run', () => {
 			needFacts: ['testFacts'] as const,
 			evaluate: (facts) => {
 				seenKeys.push(Object.keys(facts).sort());
-				return [];
+				return { findings: [] };
 			},
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
@@ -169,13 +176,14 @@ describe('Kernel.run', () => {
 			instanceId: 'dynamic@v1',
 			id: 'dynamic@v1',
 			needFacts: ['testFacts'] as const,
-			evaluate: ({ testFacts }) =>
-				testFacts.map((value, i) => ({
+			evaluate: ({ testFacts }) => ({
+				findings: testFacts.map((value, i) => ({
 					ruleId: 'dynamic@v1',
 					ruleIdentifier: { value, i },
 					message: `finding: ${value}`,
 					artifacts: [],
 				})),
+			}),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 
@@ -211,13 +219,14 @@ describe('Kernel.run', () => {
 			instanceId: 'artifact@v1',
 			id: 'artifact@v1',
 			needFacts: ['testFacts'] as const,
-			evaluate: ({ testFacts }) =>
-				testFacts.map((value, i) => ({
+			evaluate: ({ testFacts }) => ({
+				findings: testFacts.map((value, i) => ({
 					ruleId: 'artifact@v1',
 					ruleIdentifier: { value, i },
 					message: `finding: ${value}`,
 					artifacts: [artifact],
 				})),
+			}),
 			describeArtifact: (a) => ({ value: String(a.data) }),
 		};
 
@@ -286,7 +295,7 @@ describe('Kernel.run — smart collector fact selection', () => {
 			instanceId: id,
 			id,
 			needFacts,
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 	}
@@ -355,7 +364,7 @@ describe('Kernel.run — smart collector fact selection', () => {
 			instanceId: 'needs-test@v1',
 			id: 'needs-test@v1',
 			needFacts: ['testFacts'] as const,
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 
@@ -393,7 +402,7 @@ describe('Kernel.run — smart collector fact selection', () => {
 			instanceId: 'needs-test@v1',
 			id: 'needs-test@v1',
 			needFacts: ['testFacts'] as const,
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 
@@ -414,7 +423,7 @@ describe('Kernel.run — smart collector fact selection', () => {
 			instanceId: 'needs-test@v1',
 			id: 'needs-test@v1',
 			needFacts: ['testFacts'] as const,
-			evaluate: () => [],
+			evaluate: () => ({ findings: [] }),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 		const events: unknown[] = [];
@@ -441,13 +450,14 @@ describe('Kernel.run — smart collector fact selection', () => {
 			instanceId: 'needs-a@v1',
 			id: 'needs-a@v1',
 			needFacts: ['requiredFactA'] as const,
-			evaluate: ({ requiredFactA }) =>
-				requiredFactA.map((value) => ({
+			evaluate: ({ requiredFactA }) => ({
+				findings: requiredFactA.map((value) => ({
 					ruleId: 'needs-a@v1',
 					ruleIdentifier: { value },
 					message: `found: ${value}`,
 					artifacts: [],
 				})),
+			}),
 			describeArtifact: (artifact) => ({ value: String(artifact.data) }),
 		};
 

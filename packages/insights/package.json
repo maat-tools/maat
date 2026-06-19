@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/insights",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Built-in insights for maat — cross-cutting analysis over findings from multiple rule families",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/file-ledger",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "NDJSON file-based ledger backend for persisting finding events to disk",
   "type": "module",
   "main": "./dist/index.js",

@@ -163,6 +163,18 @@
   height: auto;
 }
 
+.maat-demo {
+  margin-top: 48px;
+}
+
+.maat-demo img {
+  width: 100%;
+  height: auto;
+  margin-top: 20px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+}
+
 .maat-note {
   border-top: 1px solid var(--vp-c-divider);
   padding: 28px 0;

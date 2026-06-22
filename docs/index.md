@@ -24,6 +24,14 @@ import { withBase } from 'vitepress'
   </div>
 </section>
 
+<section class="maat-demo">
+  <p class="maat-kicker">See it in action</p>
+  <p>
+    maat finding a real layer violation in Cal.com's codebase: config → findings → the file that breaks the rule.
+  </p>
+  <img :src="withBase('/calcom-maat-demo.gif')" alt="maat finding a layer violation in Cal.com" />
+</section>
+
 <section class="maat-note">
   <p>
     maat is not a linter, a code grader, or an AI reviewer. Linters tells you a line breaks a style rule. SonarQube gives your code a score. maat answers a different question: is the codebase still keeping the promises your team made about it — and if not, since when?

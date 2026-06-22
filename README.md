@@ -24,6 +24,12 @@ maat is that review, automated, with the receipts built in. It exists to answer 
 
 ## What it looks like
 
+Running `maat check` against a real codebase:
+
+<p align="center">
+  <img src="docs/public/calcom-maat-demo.gif" alt="maat finding a layer violation in Cal.com" width="100%" />
+</p>
+
 You write an agreement in `maat.config.ts`:
 
 ```ts

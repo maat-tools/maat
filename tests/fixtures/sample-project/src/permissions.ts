@@ -1,4 +1,4 @@
-import type { Role } from './user';
+import { Role } from './user';
 
 const PERMISSIONS: Record<Role, string[]> = {
 	admin: ['read', 'write', 'delete'],

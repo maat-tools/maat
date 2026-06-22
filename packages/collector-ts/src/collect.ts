@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
-import { isMatch, LocalCache } from '@maat-tools/utils';
+import { dirname, join } from 'node:path';
+import { isMatch, LocalCache, readFileContent } from '@maat-tools/utils';
 import {
 	ALGORITHMIC_BINDINGS_CAPABILITY,
 	type AlgorithmicBinding,
@@ -16,6 +16,7 @@ import {
 	type PositionalSource,
 } from '@maat-tools/vocabulary';
 import { Project, type SourceFile } from 'ts-morph';
+import ts from 'typescript';
 import type { TSCollectedFacts, TSInput } from '.';
 import { collectAlgorithmicBindings } from './algorithmic-bindings';
 import { collectConstants } from './constants';
@@ -23,11 +24,7 @@ import { collectDependsOn, toProjectRelativePath } from './dependencies';
 import { collectFunctionSignatures } from './functions';
 import { collectPositionalAccesses, collectPositionalSources } from './positional';
 
-const cache = new LocalCache({ cachePath: 'collector-ts/ast-facts' });
-
-function hashFileContent(content: string): string {
-	return createHash('sha256').update(content).digest('hex');
-}
+const BATCH_SIZE = 10;
 
 export async function collectASTFacts({
 	tsConfigPath,
@@ -47,167 +44,195 @@ export async function collectASTFacts({
 	positionalSources: PositionalSource[];
 	positionalAccesses: PositionalAccess[];
 }> {
-	const seenFiles = new Set<string>();
-	const constants: Constant[] = [];
-	const dependsOn: DependsOn[] = [];
-	const functionSignatures: FunctionSignature[] = [];
-	const positionalSources: PositionalSource[] = [];
-	const positionalAccesses: PositionalAccess[] = [];
-	const algorithmicBindings: AlgorithmicBinding[] = [];
-
-	const usedFilesFromCache = new Map<string, Set<string>>();
-
 	const excludePatterns = config.exclude ?? [];
 	const algorithmicPatterns = config.algorithmicPatterns ?? [];
 
-	const project = new Project({ tsConfigFilePath: tsConfigPath, skipAddingFilesFromTsConfig: true });
-	project.addSourceFilesFromTsConfig(tsConfigPath);
+	const cache = new LocalCache({ cachePath: `collector-ts/ast-facts/${hashFileContent(tsConfigPath)}` });
 
-	for (const sourceFile of project.getSourceFiles()) {
-		if (sourceFile.isInNodeModules() || sourceFile.isFromExternalLibrary()) {
-			continue;
+	const availableFacts = new Map<
+		string,
+		{
+			collector: <T>(sourceFile: SourceFile, filepath: string) => T[];
+			accumulator: unknown[];
+			cacheContext?: unknown;
 		}
+	>([
+		[
+			DEPENDS_ON_CAPABILITY,
+			{
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectDependsOn(sourceFile, filepath) as unknown as T[],
+				accumulator: [],
+			},
+		],
+		[
+			CONSTANTS_CAPABILITY,
+			{
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectConstants(sourceFile, filepath) as unknown as T[],
+				accumulator: [],
+			},
+		],
+		[
+			FUNCTION_SIGNATURES_CAPABILITY,
+			{
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectFunctionSignatures(sourceFile, filepath) as unknown as T[],
+				accumulator: [],
+			},
+		],
+		[
+			POSITIONAL_SOURCES_CAPABILITY,
+			{
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectPositionalSources(sourceFile, filepath) as unknown as T[],
+				accumulator: [],
+			},
+		],
+		[
+			POSITIONAL_ACCESSES_CAPABILITY,
+			{
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectPositionalAccesses(sourceFile, filepath, projectRoot) as unknown as T[],
+				accumulator: [],
+			},
+		],
+		[
+			ALGORITHMIC_BINDINGS_CAPABILITY,
+			{
+				cacheContext: algorithmicPatterns,
+				collector: <T>(sourceFile: SourceFile, filepath: string) =>
+					collectAlgorithmicBindings(sourceFile, filepath, algorithmicPatterns) as unknown as T[],
+				accumulator: [],
+			},
+		],
+	]);
 
-		const absoluteFile = sourceFile.getFilePath();
-		if (seenFiles.has(absoluteFile)) {
-			continue;
-		}
-		seenFiles.add(absoluteFile);
+	const factsToCollect = Array.from(availableFacts.keys()).filter(
+		(fact) => !requiredFactKeys || requiredFactKeys.has(fact as keyof TSCollectedFacts),
+	);
 
-		const file = toProjectRelativePath(projectRoot, absoluteFile);
+	const cachedFilesByFactName = await getAllCachedFilesForFacts(cache, factsToCollect);
+	const fileLoadMapping = new Map<string, { factName: string; filenameForCaching: string }[]>();
+	const allFilesFromCacheForFact = new Map<string, Set<string>>();
+
+	for await (const { filepath, fileContent } of getFileContentFromTSConfigInBatch(tsConfigPath, BATCH_SIZE)) {
+		const file = toProjectRelativePath(projectRoot, filepath);
 		if (isMatch(file, excludePatterns)) {
 			continue;
 		}
 
-		if (!requiredFactKeys || requiredFactKeys.has(DEPENDS_ON_CAPABILITY)) {
-			const fileDependsOn = await tryToReadFromCache<DependsOn[]>({
-				fact: 'depends-on',
-				sourceFile,
-				tsConfigPath,
-				usedFilesFromCache,
-				collectorFn: () => collectDependsOn(sourceFile, file),
-			});
+		for (const factName of factsToCollect) {
+			const fact = availableFacts.get(factName);
+			if (!fact) {
+				continue;
+			}
+			const cacheContext = fact.cacheContext ? JSON.stringify(fact.cacheContext) : undefined;
+			const filename = `${hashFileContent(calculateCacheKey(fileContent, tsConfigPath, factName, cacheContext))}.json`;
 
-			dependsOn.push(...fileDependsOn);
-		}
-		if (!requiredFactKeys || requiredFactKeys.has(CONSTANTS_CAPABILITY)) {
-			const fileConstants = await tryToReadFromCache<Constant[]>({
-				fact: 'constants',
-				sourceFile,
-				tsConfigPath,
-				usedFilesFromCache,
-				collectorFn: () => collectConstants(sourceFile, file),
-			});
+			if (!allFilesFromCacheForFact.has(factName)) {
+				allFilesFromCacheForFact.set(factName, new Set());
+			}
+			allFilesFromCacheForFact.get(factName)?.add(filename);
 
-			constants.push(...fileConstants);
-		}
-		if (!requiredFactKeys || requiredFactKeys.has(FUNCTION_SIGNATURES_CAPABILITY)) {
-			const fileFunctionSignatures = await tryToReadFromCache<FunctionSignature[]>({
-				fact: 'function-signatures',
-				sourceFile,
-				tsConfigPath,
-				usedFilesFromCache,
-				collectorFn: () => collectFunctionSignatures(sourceFile, file),
-			});
+			const cacheHit = cachedFilesByFactName.get(factName)?.has(filename) ?? false;
+			if (cacheHit) {
+				const cacheEntry = await cache.readCacheEntry<unknown[]>(join(factName, filename));
+				if (cacheEntry) {
+					fact.accumulator.push(...cacheEntry);
+				}
+				continue;
+			}
 
-			functionSignatures.push(...fileFunctionSignatures);
-		}
-		if (!requiredFactKeys || requiredFactKeys.has(POSITIONAL_SOURCES_CAPABILITY)) {
-			const filePositionalSources = await tryToReadFromCache<PositionalSource[]>({
-				tsConfigPath,
-				fact: 'positional-sources',
-				sourceFile,
-				usedFilesFromCache,
-				collectorFn: () => collectPositionalSources(sourceFile, file),
-			});
-			positionalSources.push(...filePositionalSources);
-		}
-		if (!requiredFactKeys || requiredFactKeys.has(POSITIONAL_ACCESSES_CAPABILITY)) {
-			const filePositionalAccesses = await tryToReadFromCache<PositionalAccess[]>({
-				sourceFile,
-				tsConfigPath,
-				fact: 'positional-accesses',
-				usedFilesFromCache,
-				collectorFn: () => collectPositionalAccesses(sourceFile, file, projectRoot),
-			});
-
-			positionalAccesses.push(...filePositionalAccesses);
-		}
-		if (!requiredFactKeys || requiredFactKeys.has(ALGORITHMIC_BINDINGS_CAPABILITY)) {
-			const fileAlgorithmicBindings = await tryToReadFromCache<AlgorithmicBinding[]>({
-				sourceFile,
-				tsConfigPath,
-				fact: 'algorithmic-bindings',
-				usedFilesFromCache,
-				cacheContext: JSON.stringify(algorithmicPatterns),
-				collectorFn: () => collectAlgorithmicBindings(sourceFile, file, algorithmicPatterns),
-			});
-
-			algorithmicBindings.push(...fileAlgorithmicBindings);
+			const entries = fileLoadMapping.get(filepath) ?? [];
+			entries.push({ factName, filenameForCaching: filename });
+			fileLoadMapping.set(filepath, entries);
 		}
 	}
 
-	await pruneStaleCacheEntries(usedFilesFromCache);
-
-	return {
-		algorithmicBindings,
-		constants,
-		dependsOn,
-		functionSignatures,
-		positionalAccesses,
-		positionalSources,
-	};
-}
-
-async function tryToReadFromCache<T>({
-	sourceFile,
-	tsConfigPath,
-	fact,
-	usedFilesFromCache,
-	cacheContext,
-	collectorFn,
-}: {
-	sourceFile: SourceFile;
-	tsConfigPath: string;
-	fact: string;
-	usedFilesFromCache: Map<string, Set<string>>;
-	cacheContext?: string;
-	collectorFn: () => T;
-}): Promise<T> {
-	const cacheKey = cacheContext
-		? `${sourceFile.getFullText()}-${tsConfigPath}-${fact}-${cacheContext}`
-		: `${sourceFile.getFullText()}-${tsConfigPath}-${fact}`;
-	const cacheFile = `${hashFileContent(cacheKey)}.json`;
-
-	if (!usedFilesFromCache.has(fact)) {
-		usedFilesFromCache.set(fact, new Set());
-	}
-	usedFilesFromCache.get(fact)?.add(cacheFile);
-
-	const cachedResult = await cache.readCacheEntry<T>(join(fact, cacheFile));
-
-	if (cachedResult) {
-		return cachedResult;
-	}
-
-	const result = collectorFn();
-	await cache.writeCacheEntry(fact, cacheFile, result);
-
-	return result;
-}
-
-async function pruneStaleCacheEntries(usedFilesFromCache: Map<string, Set<string>>): Promise<void> {
-	const facts = Array.from(usedFilesFromCache.keys());
-
-	for (const fact of facts) {
-		const allCacheFilesForFact = await cache.getFileList(fact);
-		const usedFilesForFact = usedFilesFromCache.get(fact);
-		if (!usedFilesForFact) {
+	const project = new Project({ tsConfigFilePath: tsConfigPath, skipAddingFilesFromTsConfig: true });
+	for (const [filepath, entries] of fileLoadMapping.entries()) {
+		const sourceFile = project.addSourceFileAtPath(filepath);
+		if (sourceFile.isInNodeModules() || sourceFile.isFromExternalLibrary()) {
 			continue;
 		}
 
+		const file = toProjectRelativePath(projectRoot, filepath);
+
+		for (const { factName, filenameForCaching } of entries) {
+			const fact = availableFacts.get(factName);
+			if (!fact) {
+				continue;
+			}
+
+			const result = fact.collector(sourceFile, file);
+			fact.accumulator.push(...result);
+
+			await cache.writeCacheEntry(factName, filenameForCaching, result);
+		}
+	}
+
+	await pruneStaleCacheEntries(cache, allFilesFromCacheForFact, factsToCollect);
+
+	return {
+		algorithmicBindings:
+			(availableFacts.get(ALGORITHMIC_BINDINGS_CAPABILITY)?.accumulator as AlgorithmicBinding[]) ?? [],
+		constants: (availableFacts.get(CONSTANTS_CAPABILITY)?.accumulator as Constant[]) ?? [],
+		dependsOn: (availableFacts.get(DEPENDS_ON_CAPABILITY)?.accumulator as DependsOn[]) ?? [],
+		functionSignatures: (availableFacts.get(FUNCTION_SIGNATURES_CAPABILITY)?.accumulator as FunctionSignature[]) ?? [],
+		positionalAccesses: (availableFacts.get(POSITIONAL_ACCESSES_CAPABILITY)?.accumulator as PositionalAccess[]) ?? [],
+		positionalSources: (availableFacts.get(POSITIONAL_SOURCES_CAPABILITY)?.accumulator as PositionalSource[]) ?? [],
+	};
+}
+
+async function getAllCachedFilesForFacts(cache: LocalCache, facts: string[]): Promise<Map<string, Set<string>>> {
+	const cachedFilesByFactName = new Map<string, Set<string>>();
+	for (const fact of facts) {
+		cachedFilesByFactName.set(fact, new Set(await cache.getFileList(fact)));
+	}
+
+	return cachedFilesByFactName;
+}
+
+function hashFileContent(content: string): string {
+	return createHash('sha256').update(content).digest('hex');
+}
+
+async function* getFileContentFromTSConfigInBatch(tsConfigPath: string, batchSize = 10) {
+	const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
+	const parsedConfig = ts.parseJsonConfigFileContent(configFile.config, ts.sys, dirname(tsConfigPath));
+	const filesFromTsConfig = parsedConfig.fileNames;
+
+	for (let i = 0; i < filesFromTsConfig.length; i += batchSize) {
+		const batch = filesFromTsConfig.slice(i, i + batchSize);
+		const results = await Promise.all(
+			batch.map(async (filepath) => ({
+				filepath,
+				fileContent: await readFileContent(filepath),
+			})),
+		);
+		yield* results;
+	}
+}
+
+function calculateCacheKey(fileContent: string, tsConfigPath: string, fact: string, cacheContext?: string): string {
+	const cacheKey = cacheContext
+		? `${fileContent}-${tsConfigPath}-${fact}-${cacheContext}`
+		: `${fileContent}-${tsConfigPath}-${fact}`;
+
+	return hashFileContent(cacheKey);
+}
+
+async function pruneStaleCacheEntries(
+	cache: LocalCache,
+	allFilesFromCacheForFact: Map<string, Set<string>>,
+	collectedFacts: string[],
+): Promise<void> {
+	for (const fact of collectedFacts) {
+		const allCacheFilesForFact = await cache.getFileList(fact);
+
 		for (const cacheFile of allCacheFilesForFact) {
-			if (!usedFilesForFact.has(cacheFile)) {
+			if (!allFilesFromCacheForFact.get(fact)?.has(cacheFile)) {
 				await cache.deleteEntry(join(fact, cacheFile));
 			}
 		}

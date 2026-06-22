@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/testing",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Shared test infrastructure: harnesses, doubles, and scenario builders for maat packages",
   "type": "module",
   "private": true,

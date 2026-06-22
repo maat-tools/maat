@@ -61,6 +61,41 @@ async function getObservedEvent(ledgerPath: string, fingerprint: string): Promis
 	return observed as Record<string, unknown>;
 }
 
+function extractSummaryCount(stdout: string): number | undefined {
+	const match = stripAnsi(stdout).match(/^(\d+) finding\(s\) detected/m);
+	return match ? Number(match[1]) : undefined;
+}
+
+describe('maat check — output consistency', () => {
+	test('summary count equals the number of distinct fingerprints shown in output', () => {
+		// Non-strict so the summary line is reached (strict exits before printing it).
+		const result = runCli(['check'], { config: NON_STRICT_CONFIG });
+		const count = extractSummaryCount(result.stdout);
+		expect(count).toBeDefined();
+		expect(count).toBe(extractFingerprints(result.stdout).length);
+	});
+
+	test(
+		'ledger event count matches the displayed summary count',
+		async () => {
+			const ledger = new LedgerHarness();
+			await ledger.setup();
+			try {
+				const env = { MAAT_TEST_LEDGER: ledger.path };
+				const result = runCli(['check', '--ledger'], { config: NON_STRICT_CONFIG, env });
+				const count = extractSummaryCount(result.stdout);
+				expect(count).toBeDefined();
+				const events = await readLedgerEvents(ledger.path);
+				const observed = events.filter((e) => e.type === FindingStatus.OBSERVED);
+				expect(observed.length).toBe(count!);
+			} finally {
+				await ledger.teardown();
+			}
+		},
+		TIMEOUT,
+	);
+});
+
 describe('maat check — core behavior', () => {
 	test('exits 1 when violations are found (strict mode default)', () => {
 		const result = runCli(['check'], { config: SAMPLE_CONFIG });

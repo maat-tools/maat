@@ -27,6 +27,16 @@ The CLI is just the runner. Collectors, rules, insights, and ledger backends are
 npm install -D @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
 ```
 
+### pnpm
+
+In a pnpm workspace, install at the workspace root with `-w`:
+
+```bash
+pnpm add -D -w @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
+
+If your workspace uses a [catalog](https://pnpm.io/catalogs), pnpm records the dependency as `catalog:` and resolves the version from the catalog entry. If your workspace enables [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage), a maat version published more recently than that window will not install — wait out the window or add `@maat-tools/*` to `minimumReleaseAgeExclude`.
+
 ## Who benefits most
 
 maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, maat can still help.
@@ -75,6 +85,29 @@ The CLI searches upward from the current directory for `maat.config.ts`. You can
 maat --config ./path/to/maat.config.ts check
 # or via env: MAAT_CONFIG=./maat.config.ts maat check
 ```
+
+## Monorepos
+
+The TypeScript collector analyzes exactly the files the `tsConfigFilePath` you give it includes — nothing more. This matters in a monorepo:
+
+- Point it at **one package's** `tsconfig.json` and maat only sees that package. Good for checking a single package in isolation.
+- To check boundaries **across** packages, point it at a tsconfig whose `include` covers every package you care about. A root `tsconfig.json` that only sets `exclude` (with no `include`) collects nothing — it is not enough on its own.
+
+A reliable pattern is a dedicated config that includes all package sources:
+
+```jsonc
+// tsconfig.maat.json
+{
+  "extends": "./tsconfig.json",
+  "include": ["packages/*/src/**/*.ts"]
+}
+```
+
+```ts
+collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.maat.json' }]],
+```
+
+If a rule pattern matches nothing, maat tells you (`pattern "X" matches no import anywhere in the dependency graph`). In a monorepo, the first thing to check is whether your `tsConfigFilePath` actually includes the code you expected. Note also that `import type` declarations are not treated as runtime dependencies, so a type-only import will not match a coupling rule.
 
 ## New projects
 

@@ -139,19 +139,22 @@ export function collectDependsOn(sourceFile: SourceFile, file: string): DependsO
 		})
 		.filter((d): d is DependsOn => d !== undefined);
 
-	const importCalls = sourceFile.getImportDeclarations().map((decl) => {
-		const value = decl.getModuleSpecifierValue();
-		const isExternal = !internalImport(value);
+	const importCalls = sourceFile
+		.getImportDeclarations()
+		.filter((decl) => !decl.isTypeOnly())
+		.map((decl) => {
+			const value = decl.getModuleSpecifierValue();
+			const isExternal = !internalImport(value);
 
-		return buildDependsOn({
-			file,
-			absoluteFile,
-			node: decl.getModuleSpecifier(),
-			value,
-			isExternal,
-			packageInfo,
+			return buildDependsOn({
+				file,
+				absoluteFile,
+				node: decl.getModuleSpecifier(),
+				value,
+				isExternal,
+				packageInfo,
+			});
 		});
-	});
 
 	return [...requireCalls, ...dynamicImportCalls, ...importCalls];
 }

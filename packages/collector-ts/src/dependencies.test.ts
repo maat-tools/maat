@@ -64,6 +64,19 @@ describe('collectDependsOn() — import declarations', () => {
 		expect(deps).toHaveLength(0);
 	});
 
+	test('ignores type-only imports', () => {
+		const { sourceFile, file } = projectFromSource("import type { Foo } from './foo';");
+		const deps = collectDependsOn(sourceFile, file);
+		expect(deps).toHaveLength(0);
+	});
+
+	test('keeps value imports', () => {
+		const { sourceFile, file } = projectFromSource("import { Foo } from './foo';");
+		const [dep] = collectDependsOn(sourceFile, file);
+		expect(dep).toBeDefined();
+		expect(dep?.to.path.endsWith('src/foo')).toBe(true);
+	});
+
 	test('includes source location for each dependency', () => {
 		const { sourceFile, file } = projectFromSource("import { foo } from './foo';");
 		const [dep] = collectDependsOn(sourceFile, file);

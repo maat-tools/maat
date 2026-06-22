@@ -94,6 +94,12 @@ export class Check extends MaatCommandBase implements MaatCommand {
 			warningsFromTheCurrentRun?.forEach((warning) => {
 				this.presenter.warn(`${warning}\n`);
 			});
+
+			if (findingsFromTheCurrentRun.length === 0) {
+				this.presenter.log('No findings detected. Great job!');
+				return;
+			}
+
 			if (actionableFindingsFromTheCurrentRun.length !== findingsFromTheCurrentRun.length) {
 				this.presenter.warn(
 					"Some findings are marked [Verify] but no ledger is configured, so they can't be verified or tracked. They're shown for visibility only. Configure a ledger in maat.config.ts to verify and track them.",
@@ -104,11 +110,6 @@ export class Check extends MaatCommandBase implements MaatCommand {
 					'One or more findings that violate the defined architecture detected. Please address these issues to comply with it.\n',
 				);
 				process.exit(1);
-			}
-
-			if (findingsFromTheCurrentRun.length === 0) {
-				this.presenter.log('No findings detected. Great job!');
-				return;
 			}
 
 			this.presenter.log(

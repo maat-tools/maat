@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { Collector, Enricher, FactRegistry, Rule } from '@maat-tools/contracts';
-import { makeCollector, makeRule } from '@maat-tools/testing';
+import type { Artifact, Collector, Enricher, FactRegistry, Rule, RuleOutput } from '@maat-tools/contracts';
+import { makeCollector, makeKernel, makeRule } from '@maat-tools/testing';
 import { Kernel } from './index';
 
 declare module '@maat-tools/contracts' {
@@ -203,14 +203,16 @@ describe('Kernel.run', () => {
 		expect(findings[0]?.instanceId).toBe('my-custom-instance');
 	});
 
-	test('two rules with the same id but different instanceIds produce findings with correct instanceIds', async () => {
+	test('two rule instances with different instanceIds but same ruleIdentifier fold into one finding', async () => {
+		// Same ruleId + same ruleIdentifier → same fingerprint → consolidated by kernel.
+		// In practice, two instances with the exact same check are redundant; the kernel
+		// deduplicates them into a single canonical finding.
 		const kernel = new Kernel()
 			.registerCollector(makeCollector(['x']))
 			.registerRule(makeRule('rule@v1', 'instance-a'))
 			.registerRule(makeRule('rule@v1', 'instance-b'));
 		const { findings } = await kernel.run();
-		const instanceIds = findings.map((f) => f.instanceId).sort();
-		expect(instanceIds).toEqual(['instance-a', 'instance-b']);
+		expect(findings).toHaveLength(1);
 	});
 
 	test('artifacts emitted by a rule are preserved in findings', async () => {
@@ -267,6 +269,75 @@ describe('Kernel.run', () => {
 		};
 		const kernel = new Kernel().registerCollector(makeCollector(['x'])).registerRule(rule);
 		await expect(kernel.run()).rejects.toThrow('evaluate failed');
+	});
+});
+
+describe('Kernel.run — finding identity consolidation', () => {
+	function artifact(file: string): Artifact {
+		return { kind: 'location', data: { file } };
+	}
+
+	function ruleOutput(ruleIdentifier: Record<string, unknown>, artifacts: Artifact[]): RuleOutput {
+		return {
+			ruleId: 'test@v1',
+			ruleIdentifier,
+			message: `violation ${JSON.stringify(ruleIdentifier)}`,
+			artifacts,
+		};
+	}
+
+	function files(finding: { artifacts: Artifact[] } | undefined): string[] {
+		return (finding?.artifacts ?? []).map((a) => (a.data as { file: string }).file);
+	}
+
+	const SAME_ID = { pkg: '@scope/a', dep: 'mongodb' };
+
+	test('folds findings that share a fingerprint into a single finding', async () => {
+		const { findings } = await makeKernel([
+			ruleOutput(SAME_ID, [artifact('a.ts')]),
+			ruleOutput(SAME_ID, [artifact('b.ts')]),
+			ruleOutput(SAME_ID, [artifact('c.ts')]),
+		]).run();
+
+		expect(findings).toHaveLength(1);
+	});
+
+	test('unions the artifacts of every site sharing a fingerprint (no evidence dropped)', async () => {
+		const { findings } = await makeKernel([
+			ruleOutput(SAME_ID, [artifact('a.ts')]),
+			ruleOutput(SAME_ID, [artifact('b.ts')]),
+			ruleOutput(SAME_ID, [artifact('c.ts')]),
+		]).run();
+
+		expect(files(findings[0])).toEqual(expect.arrayContaining(['a.ts', 'b.ts', 'c.ts']));
+	});
+
+	test('produces a deterministic artifact order regardless of input order', async () => {
+		const forward = await makeKernel([
+			ruleOutput(SAME_ID, [artifact('a.ts')]),
+			ruleOutput(SAME_ID, [artifact('b.ts')]),
+			ruleOutput(SAME_ID, [artifact('c.ts')]),
+		]).run();
+
+		const reversed = await makeKernel([
+			ruleOutput(SAME_ID, [artifact('c.ts')]),
+			ruleOutput(SAME_ID, [artifact('b.ts')]),
+			ruleOutput(SAME_ID, [artifact('a.ts')]),
+		]).run();
+
+		expect(forward.findings).toHaveLength(1);
+		expect(reversed.findings).toHaveLength(1);
+		expect(files(forward.findings[0])).toEqual(files(reversed.findings[0]));
+	});
+
+	test('keeps findings with distinct fingerprints separate (no over-folding)', async () => {
+		const { findings } = await makeKernel([
+			ruleOutput({ pkg: '@scope/a', dep: 'mongodb' }, [artifact('a.ts')]),
+			ruleOutput({ pkg: '@scope/a', dep: 'redis' }, [artifact('b.ts')]),
+			ruleOutput({ pkg: '@scope/b', dep: 'mongodb' }, [artifact('c.ts')]),
+		]).run();
+
+		expect(findings).toHaveLength(3);
 	});
 });
 

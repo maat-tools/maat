@@ -49,27 +49,20 @@ describe('StdoutPresenter.findingGroup', () => {
 		return stripAnsi(writes.join(''));
 	}
 
-	test('groups findings with same fingerprint under one fingerprint line', () => {
+	test('shows fingerprint once per finding with all its artifacts listed below', () => {
 		const presenter = new StdoutPresenter();
 		const rule = makeRule('rule-a');
+		// Kernel consolidates → one finding, multiple artifacts
 		const findings = [
 			makeFinding({
 				ruleId: 'rule-a',
 				fingerprint: 'fp1',
 				message: 'depends on "mongodb"',
-				artifacts: [{ kind: 'file', data: 'src/a.ts:1:0' }],
-			}),
-			makeFinding({
-				ruleId: 'rule-a',
-				fingerprint: 'fp1',
-				message: 'depends on "mongodb"',
-				artifacts: [{ kind: 'file', data: 'src/b.ts:2:0' }],
-			}),
-			makeFinding({
-				ruleId: 'rule-a',
-				fingerprint: 'fp1',
-				message: 'depends on "mongodb"',
-				artifacts: [{ kind: 'file', data: 'src/c.ts:3:0' }],
+				artifacts: [
+					{ kind: 'file', data: 'src/a.ts:1:0' },
+					{ kind: 'file', data: 'src/b.ts:2:0' },
+					{ kind: 'file', data: 'src/c.ts:3:0' },
+				],
 			}),
 		];
 
@@ -83,12 +76,19 @@ describe('StdoutPresenter.findingGroup', () => {
 		expect(text).toContain('src/c.ts:3:0');
 	});
 
-	test('shows unique fingerprint count per rule, not total findings', () => {
+	test('shows the count of findings received (kernel guarantees one per fingerprint)', () => {
 		const presenter = new StdoutPresenter();
 		const rule = makeRule('rule-a');
+		// Kernel already consolidated: fp1 has merged artifacts, fp2 is separate
 		const findings = [
-			makeFinding({ ruleId: 'rule-a', fingerprint: 'fp1', artifacts: [{ kind: 'file', data: 'a.ts' }] }),
-			makeFinding({ ruleId: 'rule-a', fingerprint: 'fp1', artifacts: [{ kind: 'file', data: 'b.ts' }] }),
+			makeFinding({
+				ruleId: 'rule-a',
+				fingerprint: 'fp1',
+				artifacts: [
+					{ kind: 'file', data: 'a.ts' },
+					{ kind: 'file', data: 'b.ts' },
+				],
+			}),
 			makeFinding({ ruleId: 'rule-a', fingerprint: 'fp2', artifacts: [{ kind: 'file', data: 'c.ts' }] }),
 		];
 
@@ -153,22 +153,19 @@ describe('StdoutPresenter.findingGroup', () => {
 		expect(text).toContain('rule-b msg');
 	});
 
-	test('shows [Verify] badge when any finding in fingerprint group requires verification', () => {
+	test('shows [Verify] badge when the finding requires verification', () => {
 		const presenter = new StdoutPresenter();
 		const rule = makeRule('rule-a');
+		// Kernel consolidates → one finding carrying requiresVerification from the source
 		const findings = [
 			makeFinding({
 				ruleId: 'rule-a',
 				fingerprint: 'fp1',
 				message: 'needs verify',
-				artifacts: [{ kind: 'file', data: 'a.ts' }],
-				requiresVerification: false,
-			}),
-			makeFinding({
-				ruleId: 'rule-a',
-				fingerprint: 'fp1',
-				message: 'needs verify',
-				artifacts: [{ kind: 'file', data: 'b.ts' }],
+				artifacts: [
+					{ kind: 'file', data: 'a.ts' },
+					{ kind: 'file', data: 'b.ts' },
+				],
 				requiresVerification: true,
 			}),
 		];
@@ -299,17 +296,21 @@ describe('StdoutPresenter.findingGroup', () => {
 		expect(text).toContain('dependency: mongodb');
 	});
 
-	test('handles many findings sharing the same fingerprint (deduplication scenario)', () => {
+	test('displays a finding with many artifacts (one per evidence site, merged by kernel)', () => {
 		const presenter = new StdoutPresenter();
 		const rule = makeRule('coupling-rules/layer-imports');
-		const findings = Array.from({ length: 50 }, (_, i) =>
+		// Kernel consolidates 50 evidence sites into one finding with 50 artifacts
+		const findings = [
 			makeFinding({
 				ruleId: 'coupling-rules/layer-imports',
 				fingerprint: 'e9ce784',
 				message: '"@rocket.chat/model-typings" depends on "mongodb"',
-				artifacts: [{ kind: 'file', data: `packages/model-typings/src/models/IModel${i}.ts:2:65` }],
+				artifacts: Array.from({ length: 50 }, (_, i) => ({
+					kind: 'file' as const,
+					data: `packages/model-typings/src/models/IModel${i}.ts:2:65`,
+				})),
 			}),
-		);
+		];
 
 		presenter.findingGroup(findings, () => rule);
 

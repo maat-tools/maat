@@ -233,9 +233,28 @@ export class Kernel {
 		);
 
 		return {
-			findings: findingsByRule.flatMap((r) => r.findings),
+			findings: this.deduplicateFindingsByFingerprint(findingsByRule.flatMap((r) => r.findings)),
 			warnings: findingsByRule.flatMap((r) => r.warnings ?? []),
 		};
+	}
+
+	private deduplicateFindingsByFingerprint(findings: Finding[]): Finding[] {
+		const findingsByFingerprint = new Map<string, Finding>();
+
+		for (const finding of findings) {
+			const existing = findingsByFingerprint.get(finding.fingerprint);
+			if (existing) {
+				existing.artifacts.push(...finding.artifacts);
+			} else {
+				findingsByFingerprint.set(finding.fingerprint, { ...finding, artifacts: [...finding.artifacts] });
+			}
+		}
+
+		for (const finding of findingsByFingerprint.values()) {
+			finding.artifacts.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+		}
+
+		return Array.from(findingsByFingerprint.values());
 	}
 
 	private mergeFacts(target: Partial<FactRegistry>, source: Partial<FactRegistry>): Partial<FactRegistry> {

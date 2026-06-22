@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/coupling-rules",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Rules for enforcing import boundaries between architectural layers and packages",
   "type": "module",
   "main": "./dist/index.js",

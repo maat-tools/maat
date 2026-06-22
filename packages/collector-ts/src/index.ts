@@ -22,19 +22,6 @@ import { glob } from 'tinyglobby';
 import ts from 'typescript';
 import { collectCallGraph } from './call-graph';
 
-function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {
-	const seen = new Set<string>();
-	const result: T[] = [];
-	for (const item of items) {
-		const key = keyFn(item);
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(item);
-		}
-	}
-	return result;
-}
-
 export type TSCollectedFacts = Pick<
 	FactRegistry,
 	| 'dependsOn'
@@ -158,33 +145,48 @@ export class TSCollector
 		);
 
 		return {
-			constants: deduplicateBy(
+			constants: this.deduplicateFacts<Constant>(
 				mergedASTFacts.constants,
 				(c) => `${c.file}:${c.location.line}:${c.location.column}:${c.value}`,
 			),
-			dependsOn: deduplicateBy(
+			dependsOn: this.deduplicateFacts<DependsOn>(
 				mergedASTFacts.dependsOn,
 				(d) => `${d.from.path}:${d.from.location.line}:${d.from.location.column}:${d.to.path}`,
 			),
-			functionSignatures: deduplicateBy(
+			functionSignatures: this.deduplicateFacts<FunctionSignature>(
 				mergedASTFacts.functionSignatures,
 				(f) => `${f.file}:${f.name}:${f.location.line}:${f.location.column}`,
 			),
-			positionalAccesses: deduplicateBy(
+			positionalAccesses: this.deduplicateFacts<PositionalAccess>(
 				mergedASTFacts.positionalAccesses,
 				(p) => `${p.file}:${p.name}:${p.accessedIndex}:${p.location.line}:${p.location.column}`,
 			),
-			positionalSources: deduplicateBy(
+			positionalSources: this.deduplicateFacts<PositionalSource>(
 				mergedASTFacts.positionalSources,
 				(p) => `${p.file}:${p.name}:${p.location.line}:${p.location.column}`,
 			),
-			algorithmicBindings: deduplicateBy(
+			algorithmicBindings: this.deduplicateFacts<AlgorithmicBinding>(
 				mergedASTFacts.algorithmicBindings,
 				(a) =>
 					`${a.file}:${a.patternId}:${a.role}:${a.functionName}:${a.bindingKey}:${a.location.line}:${a.location.column}`,
 			),
 			callGraph,
 		};
+	}
+
+	private deduplicateFacts<T>(facts: T[], uniqueKeyFn: (fact: T) => string): T[] {
+		const seen = new Set<string>();
+		const deduplicated: T[] = [];
+
+		for (const fact of facts) {
+			const uniqueKey = uniqueKeyFn(fact);
+			if (!seen.has(uniqueKey)) {
+				seen.add(uniqueKey);
+				deduplicated.push(fact);
+			}
+		}
+
+		return deduplicated;
 	}
 
 	private async collectCallGraphSafely({

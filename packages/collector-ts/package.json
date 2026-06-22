@@ -49,7 +49,8 @@
     "@maat-tools/vocabulary": "workspace:*",
     "execa": "9.6.1",
     "tinyglobby": "0.2.17",
-    "ts-morph": "28.0.0"
+    "ts-morph": "28.0.0",
+    "typescript": "6.0.3"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

@@ -25,6 +25,7 @@ import { Resolve } from './commands/resolve';
 import { Verify } from './commands/verify';
 import { Visualize } from './commands/visualize';
 import { loadMaatConfig } from './config';
+import { formatElapsedTime } from './format';
 
 const { version } = requireFile('../package.json', import.meta.url) as { version: string };
 
@@ -107,21 +108,7 @@ class MaatCLI {
 
 	private trackPerformance(commandName: string, start: number) {
 		const elapsed = performance.now() - start;
-		this.presenter.log(`\n${commandName} took ${this.formatElapsedTime(elapsed)}\n`);
-	}
-
-	private formatElapsedTime(elapsed: number): string {
-		const oneSecondInMS = 1000;
-		const oneMinuteInMS = 60 * oneSecondInMS;
-		if (elapsed < oneSecondInMS) {
-			return `${elapsed.toFixed(0)}ms`;
-		}
-
-		if (elapsed < oneMinuteInMS) {
-			return `${(elapsed / oneSecondInMS).toFixed(2)}s`;
-		}
-
-		return `${(elapsed / oneMinuteInMS).toFixed(2)}m`;
+		this.presenter.log(`\n${commandName} took ${formatElapsedTime(elapsed)}\n`);
 	}
 
 	private registerNoopCommands() {

@@ -1,6 +1,6 @@
 {
   "name": "@maat-tools/connascence-rules",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Built-in rules for detecting connascence — meaning (shared literals) and position (heterogeneous returns)",
   "type": "module",
   "main": "./dist/index.js",

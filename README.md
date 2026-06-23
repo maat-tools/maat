@@ -117,6 +117,32 @@ maat --config ./path/to/maat.config.ts check
 MAAT_CONFIG=./maat.config.ts maat check
 ```
 
+### pnpm and monorepos
+
+In a pnpm workspace, install the dev dependencies at the workspace root with `-w`:
+
+```bash
+pnpm add -D -w @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-tools/coupling-rules
+```
+
+Two things to know in a monorepo:
+
+- **`tsConfigFilePath` decides what gets analyzed.** The TypeScript collector reads the files a single `tsconfig.json` includes. Point it at one package's `tsconfig.json` and maat sees only that package. To check boundaries *across* packages, point it at a tsconfig whose `include` covers every package you care about — a root `tsconfig.json` that only sets `exclude` (no `include`) collects nothing. A common setup is a dedicated `tsconfig.maat.json` that includes all package sources:
+
+  ```jsonc
+  // tsconfig.maat.json
+  {
+    "extends": "./tsconfig.json",
+    "include": ["packages/*/src/**/*.ts"]
+  }
+  ```
+
+  ```ts
+  collectors: [['@maat-tools/collector-ts', { tsConfigFilePath: './tsconfig.maat.json' }]],
+  ```
+
+- **`minimumReleaseAge` can block a fresh release.** Supply-chain-conscious workspaces (via pnpm's `minimumReleaseAge`) refuse packages published more recently than a set window. If a just-published maat version won't install, that is why — wait out the window, or add `@maat-tools/*` to `minimumReleaseAgeExclude`.
+
 ## Starting a new codebase
 
 Write the rules before the shortcuts settle in. Keep `check.strict: true` and add `maat check` to CI — any visible finding exits non-zero, so an accidental dependency fails the build before it becomes precedent.

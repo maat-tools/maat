@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
-    "@biomejs/biome": "2.5.0"
+    "@biomejs/biome": "2.5.1"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

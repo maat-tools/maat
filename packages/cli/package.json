@@ -33,7 +33,7 @@
     "@maat-tools/core": "workspace:*",
     "@maat-tools/kernel": "workspace:*",
     "commander": "15.0.0",
-    "yocto-spinner": "1.2.0"
+    "yocto-spinner": "1.2.2"
   },
   "author": "Marcos Defendi (https://github.com/maat-tools)",
   "homepage": "https://maat-tools.github.io/maat/",

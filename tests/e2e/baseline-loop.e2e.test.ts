@@ -223,7 +223,7 @@ describe('maat — check → baseline → check loop', () => {
 				const entries = await readLedgerEntries(ledger.path);
 				const baselined = entries.filter((e) => e.type === 'finding.baselined');
 				expect(baselined.length).toBeGreaterThan(0);
-				const ledgerDate = (baselined[0]?.expiresAt as string).slice(0, 10);
+				const ledgerDate = ((baselined[0]?.expiresAt as string) ?? '').slice(0, 10);
 
 				expect(base.stdout).toContain(ledgerDate);
 			},

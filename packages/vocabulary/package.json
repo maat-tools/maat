@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
-    "@biomejs/biome": "2.5.13"
+    "@biomejs/biome": "2.5.14"
   },
   "dependencies": {
     "@maat-tools/contracts": "workspace:*"

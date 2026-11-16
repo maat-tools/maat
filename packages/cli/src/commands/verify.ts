@@ -13,11 +13,11 @@ export class Verify extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('verify')
-			.description('Verify a probabilistic finding as approved by a human')
+			.description('Confirm, dismiss, or reopen a finding that requires human review')
 			.requiredOption('--fingerprint <fingerprint>', 'Fingerprint of the finding to verify')
-			.option('--revoke', 'Revoke a previous verification', false)
+			.option('--revoke', 'Dismiss an unverified finding as a false positive', false)
 			.option('--reopen', 'Reopen a previously revoked finding', false)
-			.option('--reason <reason>', 'Optional reason for the verification or revocation')
+			.option('--reason <reason>', 'Optional reason for confirming, dismissing, or reopening the finding')
 			.action((options: VerifyOptions) => this.action(options));
 	}
 

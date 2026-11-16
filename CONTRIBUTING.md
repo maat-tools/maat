@@ -34,7 +34,7 @@ Before adding a new package, it must clearly own a concern not already owned by 
 
 One file travels with the repository and must be committed:
 
-- **`maat-ledger.ndjson`** — the append-only event log. Every finding lifecycle event, axiom declaration, and architectural decision is recorded here. Never edit or delete lines.
+- **`maat-ledger.ndjson`** — this repository's append-only event log. Ledger-writing commands record finding lifecycle events and manual claims here. Never edit or delete lines. Other projects choose the file path in their configuration.
 
 If you run any `maat` command that mutates the ledger, this file will be updated. Stage it in your commit.
 
@@ -48,7 +48,7 @@ These are non-negotiable. PRs that violate them will not be merged regardless of
 
 ### 2. The kernel never touches an LLM
 
-LLMs may produce facts inside a `Collector` (with a committable cache keyed by content hash × model version × prompt version). The kernel and rules never call an LLM. This boundary is inviolable.
+LLM calls belong in enrichers, which consume collected facts and produce probabilistic facts. They may call external providers and cache responses. The kernel orchestrates that phase; rule evaluation never calls an LLM. Findings that depend on enriched facts require human review. See [ADR-011](docs/adr/011-enrichers-probabilistic-facts.md) for how this extends the original collector boundary.
 
 ### 3. Ledger events are immutable and additive
 
@@ -64,7 +64,7 @@ The `ruleIdentifier` passed to `generateFingerprint()` must contain only durable
 
 ## Contributing a rule or collector
 
-Rules and collectors are the primary extension points. The design targets external packages (`@your-org/maat-rules-*`) that plug in via `maat.config.ts` — the same mechanism maat uses internally.
+Rules and collectors are extension points; enrichers add probabilistic interpretation of collected facts. See the [plugin guide](docs/guide/plugins.md) for the interfaces. The design targets external packages (`@your-org/maat-rules-*`) that plug in via `maat.config.ts` — the same mechanism maat uses internally.
 
 1. Implement `Rule<TNeeds>` and export a `BrandedRuleFactory` via `defineRule()`.
 2. If your rule needs new facts, add a capability to `@maat-tools/vocabulary` (or your own vocabulary package) and implement the corresponding `Collector`.

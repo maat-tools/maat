@@ -3,17 +3,19 @@
 **Status:** Accepted  
 **Date:** 2026-05-20
 
+> **Current schema (2026-11-13):** The record types in the consequences below describe the design at adoption. ADR-012 replaces derived records with self-contained events; consult it for current persistence shapes. Current verification and regression behavior is explained below and in the [verify reference](../commands/verify.md).
+
 ## Context
 
 maat's core architectural promise is deterministic rules (ADR-006). `Rule.evaluate(facts)` is a pure function: same facts always produce same findings. This makes the ledger auditable and findings reproducible.
 
-But some analyses require **semantic interpretation** that an AST (abstract syntax tree) cannot provide. Examples:
+Some analyses need semantic interpretation beyond the structural facts collected from an AST (abstract syntax tree). The following examples motivated the design; they are not a list of available detectors:
 
 - Detecting that two functions implement the same business rule in different syntax (Connascence of Algorithm, semantic).
 - Detecting architecture drift between intended design and actual code.
 - Identifying semantic code smells that static analysis misses.
 
-These require an LLM or other probabilistic model to interpret meaning, not just parse syntax.
+An enricher can use an LLM or another probabilistic model to propose an interpretation. The implemented COM enricher examines ambiguous return values; it does not implement all the examples above.
 
 ## The contradiction
 
@@ -33,7 +35,7 @@ This creates an apparent contradiction: maat promises deterministic rules, but t
 
 Introduce **Enricher** as a new architectural layer between collectors and rules.
 
-An enricher is a component that consumes facts and produces new facts. Unlike a collector, it does not read the filesystem or network. Unlike a rule, it does not produce findings. Its sole purpose is to derive higher-level facts from lower-level ones.
+An enricher consumes collected facts and produces new, probabilistic facts rather than findings. It can call external LLM providers and read or write response caches. Rules evaluate those facts without I/O.
 
 **Crucially: all enrichers are probabilistic by definition.** They interpret, synthesize, or infer. There is no such thing as a "deterministic enricher" — if a transformation is deterministic, it belongs in a collector, a rule, or an insight.
 
@@ -56,13 +58,13 @@ The rule remains pure and deterministic. The finding is explicitly flagged as ne
 | **Source** | Facts from collectors only | Facts from enrichers (directly or mixed) |
 | **Badge** | None | `[Verify]` in CLI output |
 | **`requiresVerification`** | `false` / absent | `true` |
-| **Breaks strict build?** | Yes | **Never** |
+| **Breaks strict build?** | When visible in strict mode | Not on its own; a resolved fingerprint that returns fails as a regression even pending verification |
 | **Goes to ledger?** | Yes | **Yes** (as `finding.unverified` via `maat check --ledger`) |
 | **Can be baselined?** | Yes | Only after human verification |
 
 ### Human-in-the-loop verification
 
-Findings with `requiresVerification: true` are presented to the user with a `[Verify]` badge. They never break CI builds. When `maat check --ledger` is used, they are written to the ledger as `finding.unverified`.
+Findings with `requiresVerification: true` are presented to the user with a `[Verify]` badge. They do not fail strict mode on their own. A resolved fingerprint that reappears is a regression and fails the command even while awaiting verification, regardless of strict mode. When `maat check --ledger` is used, they are written to the ledger as `finding.unverified`.
 
 A human can run:
 
@@ -70,7 +72,7 @@ A human can run:
 maat verify --fingerprint <fp>
 ```
 
-This promotes the finding in the ledger from `finding.unverified` to `finding.observed`. On subsequent runs, when the kernel produces the same finding, the CLI reconciles against the ledger: if the fingerprint is in `observed` state, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — can be persisted, baselined, and can break builds.
+**Current implementation limitation (2026-11-13):** `maat verify` records human acceptance as `finding.observed`. In the current implementation, later scans still carry `requiresVerification` when the kernel produces enriched findings; `check` does not clear the flag based on that ledger event. Verification alone therefore does not remove the `[Verify]` badge or make these findings fail strict mode. Returning resolved fingerprints still fail as regressions. The intended promotion to build-blocking findings is not implemented by the current check. Observed records can be baselined; human acceptance does not make the model deterministic.
 
 If a human decides the finding is a false positive, they can dismiss it:
 

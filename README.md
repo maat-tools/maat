@@ -5,32 +5,28 @@
 </p>
 
 <p align="center">
-  <strong>Linters check lines. maat checks the agreements your team made about the codebase.</strong>
+  <strong>Check that your code follows your team's rules.</strong>
 </p>
 
-Every team has rules that no linter knows about. *The domain layer never talks to the database directly. These two modules must not know about each other. This policy is implemented in one place only.* Those rules live in code review comments, onboarding chats, and a few people's heads — and they erode quietly, one reasonable-looking PR at a time.
+Maat checks the rules you define for your project, keeps a history of your decisions, and warns when rules are broken or resolved problems return. It works in new and existing codebases, whether people, AI agents, or both write the code.
 
-maat lets you write those agreements down as code, checks them on every run, and keeps a committed history of every violation and every decision your team made about it.
+## Why Maat exists
 
-## Why maat exists
+Teams make decisions about how their software should work: which packages may depend on each other, where database access belongs, or which layers should stay independent. Those decisions can be difficult to keep track of as the code changes.
 
-Most teams living with a hard-to-change codebase share the same picture: the same kinds of bugs keep coming back, the time goes to firefighting, and nobody asks why — that's just how work feels. When someone finally reviews the architecture by hand, they find the reasons: rules everyone had silently agreed on, broken little by little over years, where every individual change looked fine.
+Maat lets you turn supported constraints into configured checks and run them locally or in CI. A ledger records findings, resolutions, temporary exceptions, and declared decisions so the context can travel with the code.
 
-And then the review usually fails anyway — not because it's wrong, but because it arrives without evidence. There's no way to show *when* each rule started slipping, how fast, or what it's costing. It's one engineer's word against the status quo.
-
-maat is that review, automated, with the receipts built in. It exists to answer the question a good tech lead carries in their head, on every commit, with a paper trail:
-
-> We agreed the codebase would work this way. Is that still true? Since when isn't it?
+These checks cover the rules you configure. They do not establish that the whole codebase is healthy or free of defects, and recording a decision in text does not create an automated check.
 
 ## What it looks like
 
-Running `maat check` against a real codebase:
+This recording shows Maat checking a configured layer rule in Cal.com and opening the source behind a finding:
 
 <p align="center">
-  <img src="docs/public/calcom-maat-demo.gif" alt="maat finding a layer violation in Cal.com" width="100%" />
+  <img src="docs/public/calcom-maat-demo.gif" alt="Terminal recording of Maat reporting dependencies forbidden by a configured layer rule in Cal.com, then opening the source file." width="100%" />
 </p>
 
-You write an agreement in `maat.config.ts`:
+Configure the rules your project needs in `maat.config.ts`:
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -48,7 +44,7 @@ export default defineConfig({
 })
 ```
 
-Then `maat check` tells you where reality disagrees:
+Then run `maat check`. For example, forbidden imports would produce findings like these (illustrative output):
 
 ```
 FINDINGS (2)
@@ -61,28 +57,24 @@ FINDINGS (2)
             ↳ file: src/domain/orders/pricing.ts import: axios
 ```
 
-Each finding has a stable ID, so the same problem stays the same problem across commits and renames. Your team decides what to do with it — fix it, or accept it for a limited time — and that decision is recorded in a history file (the **ledger**) committed next to the code. Six months later, nobody has to remember why an exception exists: the history says who accepted it, when, and for how long.
+Each finding has a fingerprint that identifies it across runs. With a ledger configured, Maat compares current findings with recorded decisions. If a finding marked as resolved returns with the same fingerprint, Maat reports a regression and fails the check. Identity depends on the rule's identifier; a rename or rule change can produce a different fingerprint.
 
-## What maat is not
-
-maat is not a linter, a code grader, or an AI reviewer.
-
-Linters tells you a line breaks a style rule. SonarQube gives your code a score. maat answers a different question: **is the codebase still keeping the promises your team made about it — and if not, since when?** The problems it catches are invisible to line-by-line tools, because every individual line is fine. The damage is in the relationships: a module that quietly learned about another, a policy that now exists in three slightly different copies, a "temporary" shortcut that became a load-bearing wall.
+Your team reviews the evidence and decides whether to fix a finding or accept it for a limited time. You can commit the ledger file to Git to preserve that history alongside the code. Maat does not commit it for you or attach an actor identity to each event; commits and reviews can document who made a decision.
 
 ## How it works
 
-1. **Collectors read your repository** and write down plain facts: which files import which, what lives in which layer, what tends to change together in git history.
-2. **Rules compare those facts against your agreements.** Rules are boring on purpose: same facts in, same findings out. No randomness, no network calls, no hidden state.
-3. **Findings get stable IDs** so they can be tracked over time instead of rediscovered on every run.
-4. **Decisions go in the ledger** — a plain append-only file committed with your repo. Accepted exceptions expire and force a revisit; nothing is swept under the rug permanently.
+1. **Collectors gather facts** from code or Git history, such as imports and files that change together.
+2. **Optional enrichers derive additional facts**, including through LLM calls. Facts from enrichers carry uncertainty.
+3. **Rules check facts against your constraints.** Official rules produce the same findings for the same facts and rule version.
+4. **The ledger tracks findings and decisions over time.** Configuring a ledger lets checks read its history; `maat check --ledger` also writes events.
 
-Some facts can't be parsed, only read — like noticing that two functions implement the same business policy in different ways. For those, maat's design allows AI-assisted collectors to *extract* facts from code. But AI never gets a vote: it can report what it read, and the same boring rules decide whether that's a violation. Results stay repeatable.
+Findings based on enriched facts require human verification. New unverified findings do not fail strict checks on their own. There is an exception: if a probabilistic finding recorded as resolved returns, the regression fails the check even while verification is pending and even with strict mode disabled.
 
-maat records decisions, not people. The ledger exists so context survives when the person who had it leaves — it is about understanding the codebase's history, not assigning blame.
+## Where to use it
 
-## Who gets the most out of it
+In a new project, configure boundaries as you build and check them in CI. In an existing codebase, review the first findings and record temporary exceptions for those you accept. The same checks apply to changes written by people and AI agents.
 
-Backend codebases with real business logic, layers, and module boundaries — the bigger and older, the more maat has to say. If your project is small enough that one person holds all the rules in their head, you probably don't need it yet. Write the config anyway; that person won't be there forever.
+Start with a constraint your team can explain and a rule that can check it. See the [adoption guide](docs/guide/adoption.md) for both workflows.
 
 ## Getting started
 
@@ -145,11 +137,11 @@ Two things to know in a monorepo:
 
 ## Starting a new codebase
 
-Write the rules before the shortcuts settle in. Keep `check.strict: true` and add `maat check` to CI — any visible finding exits non-zero, so an accidental dependency fails the build before it becomes precedent.
+Keep `check.strict: true` and add `maat check` to CI. Visible findings that do not require verification fail the command. Findings based on probabilistic facts need human review, subject to the regression exception described above.
 
 Start with rules that are easy to explain in code review: which packages may depend on which, which layers stay pure, which direction dependencies flow. Add more specific rules when the team has a real pattern it wants to protect.
 
-Some agreements can't be checked by a machine yet. Write them down anyway, so they're versioned and visible instead of tribal:
+Use an axiom to record a decision or claim in the ledger, including one that has no automated check yet. This command requires a configured ledger:
 
 ```bash
 maat axiom declare \
@@ -161,7 +153,13 @@ maat axiom declare \
 
 ## Adopting maat in an existing codebase
 
-The first run on a mature codebase will find things. That's expected, and none of it counts against anyone — maat separates *new* violations from *existing* debt so you can adopt rules without first fixing years of history.
+The first run may find existing violations of the rules you configured. Review those findings and use a baseline for the ones you accept temporarily. This lets you adopt checks without fixing every existing finding first.
+
+Install the ledger backend alongside your collectors and rules:
+
+```bash
+npm install -D @maat-tools/file-ledger
+```
 
 ```ts
 import { defineConfig } from '@maat-tools/core'
@@ -177,7 +175,7 @@ export default defineConfig({
 ```
 
 ```bash
-# Save current findings to the configured ledger
+# Save current findings; this can still exit non-zero before acceptance
 maat check --ledger
 
 # Accept today's findings as the starting point (expires in 30 days by default)
@@ -190,9 +188,9 @@ maat baseline --expires-in 30
 maat resolve --fingerprint <fingerprint>
 ```
 
-Accepted findings are time-limited on purpose: when the window expires, `maat check` fails for them and the team has to look again. There is no permanent "ignore" — an exception you never revisit is just erosion with paperwork.
+Baselines last 1–90 days. An expired baseline fails `maat check`, regardless of strict mode, even if the finding has disappeared. `maat check --ledger` records automatic resolution for missing findings, so the next run no longer sees that expired baseline. Review findings before baselining: `maat baseline` accepts observed records and renews expired baselines; unverified records need `maat verify` first.
 
-The ledger keeps an append-only history of findings, declared agreements, and decisions. Commit it with the codebase so the decisions travel with the architecture they describe.
+The ledger keeps an append-only history of findings, declared decisions, and exceptions. Commit it with the codebase when you want that history versioned. Ordinary CI checks can read the configured ledger without writing to it.
 
 ## Official plugins
 
@@ -220,6 +218,7 @@ maat exposes public interfaces for third-party collectors, rules, insights, and 
 | `maat axiom revoke` | Revoke an agreement that no longer applies. |
 | `maat baseline` | Accept current findings for a limited time (1–90 days), forcing periodic review. |
 | `maat resolve` | Mark one exact finding as intentionally fixed. |
+| `maat verify` | Verify, dismiss, or reopen a probabilistic finding after human review. |
 | `maat visualize` | Print current ledger state: findings, agreements, and optional insights. |
 
 ## Documentation
@@ -227,13 +226,15 @@ maat exposes public interfaces for third-party collectors, rules, insights, and 
 - [Getting started](docs/guide/getting-started.md)
 - [Fitness functions](docs/guide/fitness-functions.md) — how maat relates to *Building Evolutionary Architectures*
 - [Commands](docs/commands/)
-- [Determinism](docs/guide/determinism.md) — why the rules are boring on purpose
+- [Determinism](docs/guide/determinism.md) — repeatable rule evaluation and the limits of probabilistic facts
 - [Plugin system](docs/guide/plugins.md)
 - [Architecture decisions](docs/adr/)
 
 ## Status
 
-maat is pre-1.0. The CLI can run checks, sync findings with the ledger, and move decisions through baseline and resolve flows. Package APIs can still change while the collector and rule interfaces settle.
+Maat is pre-1.0. Available now: configured checks, recorded decisions, temporary exceptions, human verification, and detection of returning findings. Package APIs may change before 1.0.
+
+A broader view of software health, critical modules, and possible costs is a future direction, not a capability of the current checks.
 
 ## License
 

@@ -6,7 +6,7 @@
 
 The COM enricher analyzes function signatures collected by [`@maat-tools/collector-ts`](/plugins/collector-ts/) and asks the LLM which functions exhibit semantic Connascence of Meaning — the same return value encoding multiple distinct outcomes (e.g. `null` meaning both "not found" and "error").
 
-It pre-filters deterministically before any LLM call: only functions whose output is heterogeneous **and** whose return sites repeat the same value are sent for assessment. Candidates are sent in batched LLM calls, and each response is [cached per item](/plugins/enricher-llm/#caching-always-on), so unchanged functions never trigger new calls.
+It pre-filters deterministically before any LLM call: only functions whose output is heterogeneous **and** whose return sites repeat the same value are sent for assessment. Candidates are sent in batched LLM calls, and each response is [cached per item](/plugins/enricher-llm/#caching). A matching readable entry avoids a call unless caching is bypassed.
 
 For each function the LLM judges as CoM, the enricher emits a `comCandidates` fact:
 

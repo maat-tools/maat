@@ -42,7 +42,7 @@ export class Check extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('check')
-			.description('Scan the codebase for architectural findings')
+			.description('Run configured rules and check findings against recorded decisions')
 			.option('--ledger', 'Save findings to the ledger')
 			.option('--silent', 'Suppress all console output (exit code still reflects findings)')
 			.option('--no-cache', 'Disable caching of enricher results')

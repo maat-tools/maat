@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current behavior (2026-11-13):** ADR-011 adds enrichers as the layer for probabilistic interpretation. The collector-only LLM path described below is historical. Rule evaluation and insight analysis remain pure; using the same source code does not guarantee identical findings when enriched facts change.
+
 ## Context
 
 maat's kernel is deterministic: given the same codebase state, it produces the same findings. The ledger depends on this property because a recorded decision is only useful if the finding is reproducible.

@@ -15,7 +15,7 @@ maat --config ./path/to/maat.config.ts axiom declare \
 
 ## What an axiom is
 
-An axiom is not an automated finding. It is a manual claim the team wants to keep next to the codebase until there is a rule that can check it.
+An axiom records a manual claim or decision next to the codebase. Declaring one does not create an executable rule; a configured rule is needed to check the claim automatically.
 
 Axioms can also cover specific finding fingerprints. A covered fingerprint is treated as an explicit exception while the axiom is active.
 

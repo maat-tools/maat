@@ -13,7 +13,7 @@ export class Baseline extends MaatCommandBase implements MaatCommand {
 	public register(): void {
 		this.cli
 			.command('baseline')
-			.description('Baseline all currently observed findings, suppressing them from future check output')
+			.description('Temporarily accept all observed findings until the baseline expires')
 			.option(
 				'--expires-in <days>',
 				`Number of days before the baseline expires and must be revisited (1–${BASELINE_MAX_DAYS}, default: ${BASELINE_DEFAULT_DAYS})`,

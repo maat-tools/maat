@@ -14,16 +14,18 @@ maat --config ./path/to/maat.config.ts verify --fingerprint <fingerprint>
 
 `maat verify` is the human-in-the-loop step for probabilistic findings. It moves a finding between lifecycle states in the ledger:
 
-- **verify** (default): promotes a `finding.unverified` record to `finding.observed`, converting a probabilistic finding into a trusted, deterministic one.
+- **verify** (default): promotes a `finding.unverified` record to `finding.observed`, recording that a human accepted it as valid. This does not make the model deterministic.
 - **`--revoke`**: dismisses an `unverified` finding as a false positive, recording `finding.revoked`.
 - **`--reopen`**: brings a previously `revoked` finding back to `unverified` for re-review.
 
 When the kernel produces a finding that depends on enriched facts, it marks the finding with `requiresVerification: true`. When `maat check --ledger` runs, these findings are written to the ledger as `finding.unverified`. They:
 
 - Display a `[Verify]` badge in CLI output
-- Never break strict builds
+- Do not fail strict mode on their own. A resolved fingerprint that reappears is a regression and fails the command even while awaiting verification; see [`maat check`](./check#exit-behavior).
 
-After `maat verify`, the finding is treated as deterministic on subsequent runs.
+### Current limitation
+
+`maat verify` records human acceptance as `finding.observed`. In the current implementation, later scans still carry `requiresVerification` when the kernel produces enriched findings; `check` does not clear the flag based on that ledger event. Verification alone therefore does not remove the `[Verify]` badge or make these findings fail strict mode. Returning resolved fingerprints still fail as regressions.
 
 ## Verification lifecycle
 
@@ -36,7 +38,7 @@ maat check --ledger writes finding.unverified to ledger
     ↓
 Human reviews the finding:
 
-    maat verify --fingerprint <fp>            → finding.observed  (trusted; treated as deterministic)
+    maat verify --fingerprint <fp>            → finding.observed  (accepted by a human)
     maat verify --fingerprint <fp> --revoke   → finding.revoked   (dismissed; hidden on later runs)
 
 A revoked finding is not a dead end:

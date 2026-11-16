@@ -1,10 +1,10 @@
 # `@maat-tools/file-ledger`
 
-Append-only file backend for the maat ledger. Events are stored as NDJSON (one JSON event per line) in a single file committed alongside the repository.
+Append-only file backend for the maat ledger. Events are stored as NDJSON (one JSON event per line) in a file that you can commit alongside the code. Maat does not commit it automatically.
 
 ## What It Does
 
-The ledger is maat's memory: every finding observation, baseline, resolution, verification, and axiom declaration is recorded as an event. This backend persists those events to a plain text file:
+The ledger is maat's memory: ledger-writing commands record observations, baselines, resolutions, verification decisions, and axiom declarations as events. A check without `--ledger` reads recorded decisions without appending events. This backend persists those events to a plain text file:
 
 - **Append-only.** Events are only ever appended — existing lines are never rewritten. History stays intact.
 - **State by replay.** The current state (findings, axioms) is derived by replaying every event from the top of the file. There is no separate state store and no migration on read.

@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current context (2026-11-13):** The builder registration example below is historical. Current configuration calls `.build()` to supply a rule instance; the CLI registers that instance. See the [layer reference](../plugins/coupling-rules/layer.md) for current configuration examples.
+
 ## Context
 
 Most rules are configured via `defineRule()` with an options object. This works well for simple configuration but becomes awkward for rules that need a multi-step, interdependent setup.

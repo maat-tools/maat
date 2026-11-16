@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current context (2026-11-13):** The registry list below records the original design. ADR-011 adds `EnricherRegistry` and the enricher helpers. See the [plugin guide](../guide/plugins.md) for current interfaces.
+
 ## Context
 
 maat needs to be extended by external packages — third-party collectors, rules, ledger backends, and insights — without requiring changes to the core. At the same time, the config and kernel must be fully type-safe: a config entry `['@maat-tools/collector-ts', options]` should only accept options that `@maat-tools/collector-ts` actually accepts.

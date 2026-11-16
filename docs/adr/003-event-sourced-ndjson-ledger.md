@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current context (2026-11-13):** The event table below records the initial event set. ADR-011 adds verification events, and ADR-012 documents the current self-contained events and latest-event snapshot. See the [command reference](../commands/index.md) for current lifecycle behavior.
+
 ## Context
 
 maat stores finding history, not only current finding state. Decisions such as baselining or resolving a finding need a responsible decision maker, but the ledger should not couple findings to an identity provider, Git host, or external approval system. A mutable store (database, JSON file rewritten on every run) loses review context and creates unnecessary merge conflicts in version control.

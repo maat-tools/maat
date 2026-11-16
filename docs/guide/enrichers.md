@@ -1,18 +1,18 @@
 # Enrichers
 
-Enrichers are a new architectural layer in maat that sits between **collectors** and **rules**. Their sole purpose is to derive higher-level facts from lower-level facts.
+Enrichers are optional plugins that run between **collectors** and **rules**. They derive additional facts from collected facts, including through LLM calls. Rules then check those facts against your configured constraints.
 
-An enricher consumes facts and produces new facts. Unlike a collector, it does not read the filesystem or network. Unlike a rule, it does not produce findings. It exists to enable **semantic interpretation** that static analysis cannot provide.
+An enricher consumes facts and produces new facts. It works from collected facts rather than collecting repository facts itself; an LLM-backed enricher may make network calls and read or write a local cache. Unlike a rule, it does not produce findings. It exists to enable **semantic interpretation** that static analysis cannot provide.
 
 ## Why enrichers exist
 
-Some architectural patterns are invisible to AST-based analysis:
+Some questions require interpretation beyond syntax. Examples of questions a custom enricher and rule might explore include:
 
 - Two functions implement the same business rule in different syntax (Connascence of Algorithm, semantic).
 - Architecture drift between intended design and actual code.
 - Semantic code smells that require interpreting meaning, not just parsing syntax.
 
-These require a probabilistic model — typically an LLM — to interpret meaning. Enrichers provide a controlled path for this interpretation without violating the determinism of the rule layer.
+These examples describe possible uses of the extension interface, not a list of detectors available today. The official package includes a Connascence of Meaning enricher. Enrichers provide a path for probabilistic interpretation without changing the determinism contract of the rule layer; resulting findings require human review.
 
 ## The execution pipeline
 
@@ -122,13 +122,13 @@ The rule itself remains pure and deterministic. The finding is explicitly flagge
 | **Source** | Facts from collectors only | Facts from enrichers (directly or mixed) |
 | **Badge** | None | `[Verify]` in CLI output |
 | **`requiresVerification`** | `false` / absent | `true` |
-| **Breaks strict build?** | Yes | **Never** |
+| **Fails the check?** | Visible findings fail in strict mode; regressions and expired baselines fail regardless | New unverified findings do not fail on their own; returning resolved findings fail as regressions even pending verification |
 | **Goes to ledger?** | Yes | **Yes** (as `finding.unverified` via `maat check --ledger`) |
-| **Can be baselined?** | Yes | Yes — `maat baseline` baselines every non-baselined ledger record, including `finding.unverified` ones |
+| **Can be baselined?** | Yes | Only after human verification changes the ledger state to `finding.observed` |
 
 ## Human-in-the-loop verification
 
-Findings with `requiresVerification: true` are presented with a `[Verify]` badge. They never break CI builds. When `maat check --ledger` is used, they are written to the ledger as `finding.unverified`.
+Findings with `requiresVerification: true` are presented with a `[Verify]` badge. New unverified findings do not fail strict checks on their own. If a finding recorded as resolved returns, that regression fails the command even while verification is pending, regardless of strict mode. When `maat check --ledger` is used, pending findings are written as `finding.unverified`.
 
 A human can verify a finding after reviewing it:
 
@@ -136,7 +136,7 @@ A human can verify a finding after reviewing it:
 maat verify --fingerprint <fp>
 ```
 
-This promotes the finding in the ledger from `finding.unverified` to `finding.observed`. On subsequent runs, when the kernel produces the same finding, the CLI reconciles against the ledger: if the fingerprint is in `observed` state, the finding loses `requiresVerification` and its `[Verify]` badge. It is now treated as a normal, deterministic finding — it can be persisted, baselined, and can break builds.
+`maat verify` records human acceptance as `finding.observed`. In the current implementation, later scans still carry `requiresVerification` when the kernel produces enriched findings; `check` does not clear the flag based on that ledger event. Verification alone therefore does not remove the `[Verify]` badge or make these findings fail strict mode. Returning resolved fingerprints still fail as regressions. Human acceptance does not make the underlying model deterministic. Baseline accepts observed findings and expired baselines; verify an unverified finding before baselining it.
 
 If a finding is a false positive, it can be dismissed:
 
@@ -146,9 +146,9 @@ maat verify --fingerprint <fp> --revoke
 
 ## Caching
 
-For the official `@maat-tools/enricher-llm` package, every LLM response is cached by default. Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. **If nothing changed — same code, same prompt, same model — the cached result is used and the LLM is never called again for that item.** Only changed items trigger new calls; entries are per-item, so one changed function re-asks about one function, not the whole batch. Entries for items that no longer exist are pruned automatically.
+The official `@maat-tools/enricher-llm` package caches responses under `.maat/cache/enrichers/<enricher-id>/`. Each entry is keyed by the serialized item, prompt instructions, provider, and model. An available entry with the same key is reused. Missing entries trigger LLM calls; entries not used in the run are pruned.
 
-Commit `.maat/enricher-cache/` with your repository. This makes enriched runs reproducible across machines and CI — same facts, no network access, no repeated cost — and it means LLM cost scales with how much code changed, not with how often `maat check` runs. The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
+You can commit `.maat/cache/enrichers/` to share results between local runs and CI. Reusing a complete cache avoids repeated LLM calls for those inputs. A missing cache entry, changed input, prompt, provider, or model can require a new call. The cache is stored beneath the resolved project root; the current implementation has no environment-variable override for its location.
 
 To bypass the cache for a single run — for example, when you suspect cached enriched facts are stale or want to reproduce an issue without committing the cache — pass `--no-cache` to `maat check`:
 
@@ -162,7 +162,7 @@ This forces all configured enrichers to re-run. It has no effect when no enriche
 
 ### Enrichers vs. deterministic alternatives
 
-**Tradeoff:** Enrichers introduce non-determinism into the fact pipeline. Every finding that depends on an enriched fact requires human verification before it can be treated as actionable.
+**Tradeoff:** Enrichers introduce non-determinism into the fact pipeline. Findings that depend on enriched facts require human review. A returning resolved finding can still fail the check as a regression before verification.
 
 | Approach | Pros | Cons |
 |---|---|---|
@@ -176,7 +176,7 @@ This forces all configured enrichers to re-run. It has no effect when no enriche
 **Tradeoff:** LLM-backed enrichers add latency and cost when code changes.
 
 - Enrichers run in parallel. Total latency is bounded by the slowest enricher, not the sum of all. They all receive the same snapshot of collected facts.
-- The [always-on cache](#caching-every-llm-response-is-cached-always) means unchanged items never trigger LLM calls — a run over unchanged code makes zero calls.
+- The [cache](#caching) avoids LLM calls when entries for the same inputs are available and cache use is enabled.
 
 ### Verification fatigue
 
@@ -188,14 +188,14 @@ This forces all configured enrichers to re-run. It has no effect when no enriche
 
 ### Determinism is preserved at the rule layer
 
-**This is the most important tradeoff to understand.** The existence of enrichers does **not** mean maat rules are no longer deterministic. Rules remain pure functions:
+Enrichers can produce different facts on fresh runs. Rules still evaluate a given set of facts deterministically:
 
 - `Rule.evaluate(facts)` is still synchronous and deterministic.
 - Rules do not call LLMs or make network requests.
 - The kernel does not invoke LLMs.
 - The non-determinism is explicitly bounded to the **fact layer**.
 
-The maat philosophy is not contradicted: **rules are still deterministic**. The probabilistic nature is contained in the *facts*, and the system marks the *findings* that depend on them.
+The system marks findings that depend on probabilistic facts so their source remains visible during review.
 
 ## Does this mean maat is no longer deterministic?
 
@@ -209,9 +209,7 @@ The maat philosophy is not contradicted: **rules are still deterministic**. The 
 | Findings from deterministic facts | Yes | Fully reproducible |
 | Findings from enriched facts | Flagged for verification | Explicitly marked as uncertain |
 
-A finding that comes from deterministic facts is fully deterministic. A finding that comes from enriched facts is explicitly flagged and restricted until a human verifies it. Once verified, it is treated as deterministic.
-
-This is **architectural separation with explicit contamination tracking**, not a breakdown of determinism.
+Rule evaluation is deterministic for the same facts. Findings based on enriched facts require human review. Verification records acceptance in the ledger, but the current check retains the verification flag on new enriched findings. A returning resolved fingerprint can fail as a regression even pending verification.
 
 ## Enricher package structure
 
@@ -223,7 +221,7 @@ import type { EnricherLLMInput } from '@maat-tools/enricher-llm'
 
 | Type | Purpose |
 |---|---|
-| `EnricherLLMInput` | LLM configuration for the supported provider/model combinations (`provider`, `model`, optional `extra` and `timeoutMs`). Currently Google Vertex AI with Gemini models — see [LLM models](/guide/llm-models) |
+| `EnricherLLMInput` | LLM configuration for the supported provider/model combinations (`provider`, `model`, optional `extra` and `timeoutMs`). See [LLM models](/guide/llm-models) for the providers and models supported by the current package |
 
 ## Related
 

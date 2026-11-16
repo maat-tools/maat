@@ -1,6 +1,6 @@
 # `maat check`
 
-Runs the configured collectors and rules, prints the current findings, and evaluates exit conditions. When a ledger is configured it also reconciles those findings against the decisions recorded in the ledger; `--ledger` additionally records new ledger events.
+Runs the configured collectors, optional enrichers, and rules, prints the current findings, and evaluates exit conditions. When a ledger is configured it also reconciles those findings against the decisions recorded in the ledger; `--ledger` additionally records new ledger events.
 
 ```bash
 maat check
@@ -33,7 +33,7 @@ Rules always run against the current repository facts. What happens next depends
 - revoked findings that reappear are hidden from output;
 - findings recorded as `resolved` that reappear are treated as **regressions** (shown and failing);
 - expired baselines fail the command;
-- probabilistic `[Verify]` findings are tracked separately and never break the build on their own.
+- probabilistic `[Verify]` findings are tracked separately and do not fail strict mode on their own. If a resolved fingerprint reappears, it still fails as a regression pending verification.
 
 Without `--ledger`, this reconciliation is **read-only**: the ledger is consulted but no events are written. Pass `--ledger` to also record events (see below).
 
@@ -41,8 +41,8 @@ Without `--ledger`, this reconciliation is **read-only**: the ledger is consulte
 
 `--ledger` records new events to the configured ledger after reconciliation. It appends:
 
-- `finding.observed` — for active findings present in this run, including a **regression**: a finding previously recorded as `resolved` that reappears. A regression also fails the command (see [Exit behavior](#exit-behavior)); re-recording it as `observed` instead of leaving it `resolved` is what lets you act on it again — address it, or accept it with `maat baseline` — rather than it staying stuck.
-- `finding.unverified` — for new probabilistic findings (`requiresVerification`) that have not been verified yet.
+- `finding.observed` — for new findings that do not require verification, including a **regression**: a finding previously recorded as `resolved` that reappears. A regression also fails the command (see [Exit behavior](#exit-behavior)); re-recording it as `observed` instead of leaving it `resolved` is what lets you act on it again — address it, or accept it with `maat baseline` — rather than it staying stuck.
+- `finding.unverified` — for new findings requiring verification, including resolved fingerprints that return with `requiresVerification`. Returning probabilistic findings fail as regressions in that run.
 - `finding.resolved` — for any previously recorded finding that no longer appears in the current run. This includes observed and unverified findings, **and baselined findings whose underlying finding has disappeared** (whether the baseline was still active or already expired) — they are auto-resolved instead of lingering until the baseline expires.
 
 ```bash
@@ -51,7 +51,7 @@ maat check --ledger
 
 ### First run
 
-On a fresh ledger, the first `maat check --ledger` records every current finding as `observed`. In strict mode this run still **fails** — recording is not the same as accepting — and `check` reminds you to run [`maat baseline`](baseline.md). Baselining the recorded findings makes the current state your starting point; subsequent checks then pass while still enforcing anything new.
+On a fresh ledger, the first `maat check --ledger` records deterministic findings as `observed` and findings requiring human review as `unverified`. In strict mode, visible findings that do not require verification still fail the command; recording them does not accept them. When those findings remain, `check` reminds you to run [`maat baseline`](baseline.md). Baselining the recorded findings makes the current state your starting point; subsequent checks then pass while still enforcing anything new.
 
 ## Options
 
@@ -67,7 +67,7 @@ On a fresh ledger, the first `maat check --ledger` records every current finding
 
 - a resolved finding reappears (regression);
 - a resolved probabilistic finding reappears (regression to verify);
-- a baseline has expired;
+- a baseline has expired, even if its finding has disappeared. With `--ledger`, automatic resolution clears that missing finding for the next run; the current run still fails;
 - `check.strict` is enabled and visible findings that do not require verification remain;
 - `--ledger` is passed but no ledger is configured;
 - the configuration registers no collectors or no rules (reported as `No collectors configured.` / `No rules configured.`).

@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current behavior (2026-11-13):** ADR-011 adds an enricher phase for probabilistic facts, including external LLM calls and local caches. The collector-only I/O boundary below describes the original design. The current purity contract applies to rule evaluation and insight analysis; the kernel orchestrates collectors and enrichers.
+
 ## Context
 
 The kernel is the component that orchestrates fact collection and rule evaluation. If the kernel or the rules it runs have side effects — file I/O, network calls, random values, LLM calls — then:

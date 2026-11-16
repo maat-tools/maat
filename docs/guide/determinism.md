@@ -1,6 +1,6 @@
 # Determinism
 
-maat is designed for reproducible architecture checks. A finding is useful only when the same repository state can produce it again.
+Maat evaluates configured rules against collected facts. Repeatable rule evaluation lets you compare findings with recorded decisions over time. This guarantee applies to the rule layer; LLM-derived facts can vary and require human review.
 
 ## Official rule guarantee
 
@@ -12,7 +12,7 @@ For the same rule version and the same collected facts, official maat rules prod
 - no randomness
 - no network calls
 - no filesystem reads during rule evaluation
-- no LLM judgment in the check path
+- no LLM calls during rule evaluation
 
 Official rules evaluate facts already collected by collectors. They do not inspect the repository directly, call external services, or make time-dependent decisions.
 
@@ -28,9 +28,9 @@ This does not break the rule guarantee. Rules remain deterministic:
 When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings:
 
 - display a `[Verify]` badge in CLI output;
-- never break strict builds;
+- do not fail strict checks on their own when new and unverified; a finding previously recorded as resolved that returns fails as a regression, even while verification is pending and even with strict mode disabled;
 - enter the ledger in a quarantined state: `maat check --ledger` appends them as `finding.unverified` events, not `finding.observed`;
-- become `finding.observed` — and only then treated as deterministic — after human verification with `maat verify`.
+- become `finding.observed` in the ledger after human verification with `maat verify`. The current check still retains `requiresVerification` on newly produced enriched findings; verification alone does not make them fail strict mode. Human acceptance does not make the model deterministic.
 
 The non-determinism is explicitly contained at the **fact layer**, not the rule layer. See the [Enrichers guide](/guide/enrichers) and [ADR-011](/adr/011-enrichers-probabilistic-facts) for the full design.
 
@@ -45,14 +45,14 @@ Third-party package authors are expected to follow the plugin determinism contra
 - `Rule.evaluate(facts)` must be synchronous and pure.
 - `Insight.analyze(findings)` must be synchronous and pure.
 - `Collector.collect()` may perform I/O, but must produce deterministic facts for the same filesystem and environment state.
-- LLM-assisted enrichers must use a committed or otherwise reproducible cache keyed by content hash, model version, and prompt version. The official `@maat-tools/enricher-llm` package caches automatically at `.maat/enricher-cache/`.
+- LLM-assisted enrichers must use a committed or otherwise reproducible cache keyed by content hash, model version, and prompt version. The official `@maat-tools/enricher-llm` package caches automatically at `.maat/cache/enrichers/`.
 - LLM calls inside `Rule.evaluate()` or `Insight.analyze()` violate the contract.
 
 ## Ledger history
 
 Official ledger backends preserve append-only history. The current file ledger writes NDJSON events by appending lines and derives current state by replaying those events.
 
-The generated ledger file can be committed to version control so accepted findings, resolved findings, and axioms travel with the repository. This is part of the reproducibility model: a future run can compare current findings with the recorded history.
+The generated ledger file can be committed to version control so accepted findings, resolved findings, and axioms travel with the repository. Maat does not commit this file automatically. A future run with that ledger can compare current findings with the recorded history. A written claim still needs a configured rule to be checked automatically.
 
 maat does not bind a finding or ledger event to a user identity. Decisions such as baselining or resolving findings still need a responsible decision maker, but that ownership should come from the normal repository workflow: commits, reviews, and change history. This keeps maat independent from Git hosting providers, identity systems, and external approval flows.
 

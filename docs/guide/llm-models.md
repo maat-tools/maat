@@ -79,9 +79,9 @@ maat asks for the most reproducible output each provider allows. Gemini requests
 
 ## Cache and cost
 
-Every LLM response is cached at `.maat/enricher-cache/` by default, keyed by content hash, provider, model, and prompt instructions. Only items whose code actually changed trigger new calls. Commit `.maat/enricher-cache/` to share the cache across CI environments.
+Every LLM response is cached at `.maat/cache/enrichers/` by default, keyed by content hash, provider, model, and prompt instructions. A cache miss triggers a new call, including when the serialized item, prompt instructions, provider, or model changes. Commit `.maat/cache/enrichers/` to share the cache across CI environments.
 
-Set the `MAAT_ENRICHER_CACHE_DIR` environment variable to override the cache location.
+The cache lives beneath the resolved project root. The current implementation has no environment-variable override for its location.
 
 To bypass the cache for a single run, use [`maat check --no-cache`](/commands/check).
 

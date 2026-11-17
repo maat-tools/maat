@@ -53,7 +53,7 @@ class MaatCLI {
 	public constructor() {
 		this.program
 			.name('maat')
-			.description('maat cli')
+			.description('Check configured codebase rules and track findings and decisions over time')
 			.version(version)
 			.option('-c, --config <path>', 'Path to a maat config file');
 	}

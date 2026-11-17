@@ -24,11 +24,11 @@ The short version:
 
 ## Enricher
 
-An enricher consumes facts and produces new facts. Unlike a collector, it does not read the filesystem or network. Unlike a rule, it does not produce findings. Its sole purpose is to derive higher-level facts from lower-level ones.
+An enricher consumes facts and produces new facts. It works from collected facts rather than collecting repository facts itself, and may call an external LLM and read or write a cache. Unlike a rule, it does not produce findings. Its sole purpose is to derive higher-level facts from lower-level ones.
 
 **All enrichers are probabilistic by definition.** They interpret, synthesize, or infer. If a transformation is deterministic, it belongs in a collector, a rule, or an insight.
 
-When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. These findings display a `[Verify]` badge and never break strict builds. With `maat check --ledger` they are recorded as quarantined `finding.unverified` events; they are promoted to `finding.observed` only after a human verifies them with `maat verify`.
+When a rule consumes facts produced by an enricher, the resulting finding is marked with `requiresVerification: true`. New unverified findings display a `[Verify]` badge and do not fail strict checks on their own. A finding recorded as resolved that returns fails as a regression even while verification is pending, regardless of strict mode. With `maat check --ledger`, unverified findings are recorded as `finding.unverified`; human verification with `maat verify` promotes them to `finding.observed`. See [determinism](/guide/determinism) for the boundary between repeatable evaluation and probabilistic facts.
 
 ```ts
 import { type Enricher, defineEnricher } from '@maat-tools/contracts'

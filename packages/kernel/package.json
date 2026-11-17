@@ -1,7 +1,7 @@
 {
   "name": "@maat-tools/kernel",
   "version": "0.5.0",
-  "description": "Pure analysis engine that runs collectors and rules to produce findings",
+  "description": "Orchestrates collectors, optional enrichers, and pure rule evaluation to produce findings",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

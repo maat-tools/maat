@@ -1,6 +1,6 @@
-# Greenfield and brownfield adoption
+# Adoption in new and existing codebases
 
-maat works in both new and existing codebases, but the ledger does not have the same job in both places.
+Maat checks your configured rules in both new and existing codebases, whether people or AI agents write the code. The checks cover the constraints you encode; they do not establish the overall health of the software. The ledger adds recorded decisions, temporary exceptions, and detection of returning resolved findings.
 
 In a greenfield codebase, the main value is early enforcement. You usually run `maat check` as a gate and fix violations in the same pull request that introduced them. The ledger should have no active findings most of the time, except for rare reviewed exceptions or manual axioms.
 
@@ -30,7 +30,7 @@ Run the same command locally and in CI:
 maat check
 ```
 
-Use this when a rule should be enforced from the start. A new architecture violation fails the command immediately, so the author fixes the architecture issue before the pull request merges. Because violations do not survive the pull request, there is no debt history to manage.
+With strict mode enabled, a visible finding that does not require verification fails the command. This lets CI check configured constraints from the start. New probabilistic findings require human review and do not fail the check on their own.
 
 ## Greenfield with recorded decisions
 
@@ -78,7 +78,7 @@ Open a dedicated ledger pull request for this kind of decision. A maintainer sho
 
 Existing codebases often have valid rules and existing violations at the same time. The goal is to stop new damage without pretending all old damage can be fixed in one pass.
 
-Add a ledger, run an initial collection, and baseline the current findings:
+Add a ledger, run an initial collection, review the findings, and baseline those you accept. The initial check may exit non-zero while still writing findings. `maat baseline` accepts observed records and renews expired baselines. Unverified findings must be reviewed with `maat verify` first:
 
 ```bash
 maat check --ledger
@@ -139,7 +139,7 @@ When a pull request fixes old debt, merge the code fix first. Then a maintainer 
 maat resolve --fingerprint <fingerprint>
 ```
 
-From then on, if the same fingerprint appears again, `maat check` treats it as a regression.
+From then on, if the same fingerprint appears again, `maat check` treats it as a regression and fails, regardless of strict mode. This also applies to probabilistic findings while verification is still pending.
 
 When the team has architectural knowledge that is not automated yet, record it as an axiom:
 
@@ -151,7 +151,7 @@ maat axiom declare \
   --note "Automate this with a collector once database clients are tagged."
 ```
 
-This does not replace a rule. It keeps the decision reviewable until the team can automate it.
+This records the claim without creating an automated check. A configured rule is still needed to enforce it. Maat does not commit the ledger for you.
 
 ## Choosing the first rule
 

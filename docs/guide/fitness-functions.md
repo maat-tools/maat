@@ -2,7 +2,7 @@
 
 maat rules implement the **fitness function** concept from [*Building Evolutionary Architectures*](https://www.oreilly.com/library/view/building-evolutionary-architectures/9781492097532/) (Neal Ford, Rebecca Parsons, Patrick Kua, Pramod Sadalage): automated checks that verify how well a system adheres to its intended architectural characteristics.
 
-This page explains how maat maps to that model and how to use fitness functions to guide your codebase's evolution.
+In Maat, these checks cover the constraints you configure, whether a person or an AI agent writes the next change. This page relates those checks to fitness functions; it does not describe a score for overall software health.
 
 ## What is a fitness function
 
@@ -31,7 +31,7 @@ The evaluation is deterministic at the rule layer: the same collected facts and 
 
 ## Dimensions of fitness functions
 
-maat rules can express checks across multiple dimensions of your codebase. Each dimension captures a different kind of architectural concern:
+These dimensions help describe architectural concerns. Available checks depend on the installed collectors and rules; the examples below are not a catalog of implemented detectors:
 
 ### Structure
 
@@ -47,7 +47,7 @@ Examples: high-churn detection, erosion signals, temporal coupling between modul
 
 ### Meaning
 
-Checks that verify semantic coupling — whether modules are connected by shared meaning rather than explicit imports.
+Semantic checks explore whether modules share meaning beyond explicit imports. The official Connascence of Meaning enricher supports one such check; interpreting duplicated policies or implicit contracts requires suitable collectors, enrichers, and rules, rather than an automatic guarantee of the current checks.
 
 Examples: connascence of meaning, duplicated policies across boundaries, implicit contracts that must stay synchronized.
 
@@ -100,7 +100,7 @@ When a finding is fixed, mark it as resolved so regressions are caught:
 maat resolve --fingerprint <fingerprint>
 ```
 
-Resolved findings are fingerprint-specific. If the same rule fires on a different code location, it is a new finding.
+Resolution is fingerprint-specific. A returning resolved fingerprint fails the check, including a probabilistic regression pending verification, regardless of strict mode. A different fingerprint is a new finding; whether moving code changes its identity depends on the rule identifier.
 
 ## Writing custom fitness functions
 
@@ -114,7 +114,7 @@ Read the [plugin guide](./plugins.md) for details on writing custom collectors a
 |---|---|---|
 | Architecture unit tests | Pass/fail checks embedded in test suites | maat adds lifecycle: baselining, resolving, and ledger history |
 | Manual code review | Human judgment at PR time | maat makes repeated review comments into deterministic checks |
-| Diagrams and ADRs | Documentation of intended architecture | maat verifies whether the code still matches the intent |
+| Diagrams and ADRs | Documentation of intended architecture | Maat checks constraints encoded in configured rules; writing an ADR or axiom alone does not create a check |
 | Linters | Local syntax and style checks | maat checks cross-cutting architectural facts from multiple sources |
 
 ## Further reading

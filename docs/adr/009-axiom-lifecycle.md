@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-12
 
+> **Current behavior (2026-11-13):** ADR-012 replaces the derived `active` record and fold described below with self-contained events. Current state is the latest event per axiom ID. Events do not store the declaring user's identity; Git history can provide authorship when the ledger is committed manually. Recording a claim does not create an executable rule.
+
 ## Context
 
 Some project rules cannot be verified by automated detection — for example, "all public APIs must have documentation" or "no circular dependencies between services X and Y". These need to be recorded as manual claims, but they are fundamentally different from findings:

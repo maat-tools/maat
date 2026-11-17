@@ -1,10 +1,14 @@
 # CI integration
 
+Run `maat check` in CI to check the configured rules against each change. A configured ledger is read automatically; `--ledger` writes events and belongs in intentional ledger maintenance, as described in the [adoption guide](./adoption.md).
+
+Visible findings that do not require verification fail in strict mode. Regressions and expired baselines fail regardless of strict mode, including a returning resolved probabilistic finding that is still pending verification. New unverified findings do not fail the check on their own.
+
 ## Cache
 
-maat writes all intermediate facts to `.maat/cache/`. Collectors write AST facts there; enrichers write LLM results there. The cache is content-addressed: each entry is keyed by the hash of the content that produced it, so entries for unchanged files are always reused and stale entries are pruned automatically after each run.
+The official TypeScript collector stores AST facts under `.maat/cache/collector-ts/`; the LLM enricher stores results under `.maat/cache/enrichers/`, beneath the resolved project root. Cache keys include the inputs used to produce each entry. Available entries with matching keys are reused; the collector and enricher prune entries they no longer use.
 
-Commit `.maat/cache/` with your repository. This gives CI read access to everything that was already computed locally — same facts, no redundant work, no external calls for unchanged code.
+You can commit `.maat/cache/` to share previously computed results with CI. Matching entries avoid repeated work; missing entries or changed inputs can require new computation or LLM calls.
 
 ### One-way flow and cache misses
 
@@ -17,7 +21,7 @@ When a developer pushes code without running `maat check` locally first, CI enco
 | **Collector** | Recomputes AST facts for the changed files | Cheap — no external calls |
 | **Enricher** | Calls the LLM for the changed items | Requires API key in CI env; billed per call |
 
-For enrichers, CI needs a provider API key available as an environment variable (e.g. `VERTEX_AI_TOKEN`, `ANTHROPIC_API_KEY`). The result is used for that run but cannot be committed back, so the next CI run for the same unchanged files will call the LLM again.
+For LLM-backed enrichers, CI needs credentials for the configured provider. See [LLM models](./llm-models.md) for API-key and Vertex AI authentication options. The result is used for that run but cannot be committed back, so the next CI run for the same unchanged files will call the LLM again.
 
 ### Reducing repeated LLM calls in CI
 
@@ -32,7 +36,7 @@ Use your CI provider's built-in cache to persist `.maat/cache/` between runs on 
     restore-keys: maat-${{ runner.os }}-
 ```
 
-This keeps LLM costs bounded to genuinely changed files within a pull request, regardless of how many times CI runs on that branch. The collector cache is also preserved, so AST facts are not recomputed on every push.
+Restoring matching cache entries avoids repeated calls for those inputs. Cache eviction, a miss, changed inputs, or `--no-cache` can still cause LLM calls. The same cache also preserves collector results.
 
 ### Known limitation
 

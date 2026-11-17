@@ -1,4 +1,4 @@
-# ADRs vs Axioms
+# ADRs and axioms
 
 maat uses both ADRs and axioms to capture architecture knowledge, but they serve different purposes.
 
@@ -22,7 +22,7 @@ An **axiom** is a manual claim recorded in the ledger. It states:
 - **Where** it applies (scope)
 - **Why** (optional note, often referencing an ADR)
 
-Axioms are not documentation — they are living entries in the ledger. They travel with the repository, can be superseded or revoked, and rules may check whether the codebase still honors them.
+Axioms are tracked entries in the ledger. They can be superseded or revoked, and can travel with the repository when you commit the ledger file yourself. Declaring an axiom does not generate a rule; automated enforcement needs a separately configured check.
 
 ## When to use which
 

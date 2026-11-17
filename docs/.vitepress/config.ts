@@ -206,6 +206,7 @@ const guideAndPluginSidebar = [
       },
     ],
   },
+  { text: 'Future direction', link: '/future-direction' },
   {
     text: 'For Contributors',
     collapsed: false,
@@ -227,7 +228,7 @@ const guideAndPluginSidebar = [
 
 export default defineConfig({
   title: 'maat',
-  description: 'Linters check lines. maat checks the agreements your team made about the codebase.',
+  description: 'Check the rules you define for your project, keep a history of your decisions, and detect returning findings.',
   base: '/maat/',
 
   head: [
@@ -243,12 +244,14 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Commands', link: '/commands/' },
       { text: 'Plugins', link: '/plugins/' },
+      { text: 'Future direction', link: '/future-direction' },
       ...(docsVersion
         ? [{ text: docsVersion, link: 'https://github.com/maat-tools/maat/releases' }]
         : []),
     ],
 
     sidebar: {
+      '/future-direction': guideAndPluginSidebar,
       '/guide/': guideAndPluginSidebar,
       '/commands/': guideAndPluginSidebar,
       '/plugins/': guideAndPluginSidebar,

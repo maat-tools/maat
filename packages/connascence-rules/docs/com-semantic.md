@@ -5,7 +5,7 @@ This rule requires the [`@maat-tools/enricher-llm/com`](/plugins/enricher-llm/) 
 :::
 
 ::: warning Probabilistic
-Findings from this rule are probabilistic — they come from LLM analysis and carry uncertainty. They are shown with a `[Verify]` badge and require human verification before they become actionable. See [Enrichers](/guide/enrichers) for details.
+Findings from this rule are probabilistic — they come from LLM analysis and carry uncertainty. They are shown with a `[Verify]` badge and require human review. They do not fail strict mode on their own, but a resolved fingerprint that returns fails as a regression even pending verification. See [Enrichers](/guide/enrichers) for details.
 :::
 
 `com-semantic` detects the semantic form of [Connascence of Meaning](https://connascence.io/meaning.html): a function that returns the **same value** to represent multiple distinct outcomes. Callers must rely on out-of-band knowledge to interpret which meaning applies.

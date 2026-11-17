@@ -15,7 +15,7 @@ When a resolved fingerprint appears again, maat treats that as a regression and 
 
 ## Why resolution is explicit
 
-When a finding disappears, maat does not assume the architecture was fixed. The finding could have disappeared because:
+An explicit resolution records the team's judgment that this fingerprint was fixed. Automatic resolution only records that a previously tracked finding disappeared; it does not establish why. The finding could have disappeared because:
 
 - the code was corrected;
 - the rule changed;
@@ -36,7 +36,7 @@ Not every ledger state can be resolved. The command checks the current state of 
 | `revoked` | Rejected (exit 1). A revoked finding cannot be resolved. |
 | `unverified` | Rejected (exit 1). Use `maat verify` first to promote the finding to `observed`. |
 
-Observed findings that disappear are also resolved automatically by `maat check --ledger` when they were not baselined.
+Observed, unverified, and baselined findings that disappear are also resolved automatically by `maat check --ledger`. No resolution event is written by a check without `--ledger`.
 
 ## Options
 

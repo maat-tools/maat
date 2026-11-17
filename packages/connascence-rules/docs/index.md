@@ -9,7 +9,7 @@ Connascence is measured along two axes:
 - **Strength** — the form of connascence, ordered from weakest to strongest: Name → Type → Meaning → Position → Algorithm.
 - **Degree** — how many components are involved. The more components share a dependency, the more expensive a change becomes.
 
-**The refactoring direction is always toward weaker forms.** Replacing a positional tuple `[userId, role]` with a named object `{ userId, role }` moves from Connascence of Position to Connascence of Name — a real improvement. The inverse (introducing positional coupling where named coupling existed) is always a regression.
+Replacing a positional tuple `[userId, role]` with a named object `{ userId, role }` illustrates a move from Connascence of Position to Connascence of Name. Whether that change is useful depends on the code and its contracts. The rules report the configured signals; the team decides whether to change the code.
 
 Some connascence cannot be removed, only contained. When two components must share an invariant (a serialization format, a hash algorithm, a protocol), the coupling is real — the question is whether it is explicit and localized, or implicit and spread across the codebase.
 

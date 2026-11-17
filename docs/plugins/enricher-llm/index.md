@@ -12,7 +12,7 @@ The kernel handles this automatically:
 
 - Any finding that depends on an enriched fact is marked with `requiresVerification: true`.
 - The CLI displays a `[Verify]` badge.
-- The finding never breaks strict builds. With `maat check --ledger`, it is appended to the ledger as a `finding.unverified` event; it only becomes an observed finding after a human confirms it with `maat verify --fingerprint <fp>` (or is discarded with `--revoke`).
+- The finding does not fail strict mode on its own. A resolved fingerprint that returns fails as a regression even while awaiting verification. With `maat check --ledger`, it is appended to the ledger as a `finding.unverified` event; it only becomes an observed finding after a human confirms it with `maat verify --fingerprint <fp>` (or is discarded with `--revoke`).
 
 ## Shared types
 
@@ -22,55 +22,23 @@ All enrichers in this package accept a common base configuration:
 import type { EnricherLLMInput, LLMConfig, LLMModel, LLMProvider } from '@maat-tools/enricher-llm'
 ```
 
-### `LLMProvider`
+`EnricherLLMInput` is the `KnownLLMConfig` union from `@maat-tools/utils`. It constrains provider/model pairs and their `extra` options to those registered in the implementation. `LLMConfig` is the generic configuration type; `LLMModel` is the model interface.
+
+The package exports `LLMProvider` as a type. The `GeminiAIModel` runtime constant is exported by `@maat-tools/utils`; `LLMProvider` is exported there as a type as well.
+
+For example, this is one supported configuration:
 
 ```ts
-const LLMProvider = {
-  Vertex: 'vertex',
-} as const
+import type { EnricherLLMInput } from '@maat-tools/enricher-llm'
 
-type LLMProvider = typeof LLMProvider[keyof typeof LLMProvider] // 'vertex'
+const config = {
+  provider: 'vertex',
+  model: 'gemini-3-5-flash',
+  extra: { project: 'my-gcp-project', location: 'us-central1' },
+} satisfies EnricherLLMInput
 ```
 
-### `GeminiAIModel`
-
-```ts
-const GeminiAIModel = {
-  Gemini_3_5_Flash: 'gemini-3-5-flash',
-} as const
-
-type GeminiAIModel = typeof GeminiAIModel[keyof typeof GeminiAIModel]
-```
-
-### `LLMConfig`
-
-```ts
-type LLMConfig = {
-  provider: 'vertex'
-  model: 'gemini-3-5-flash'
-  extra?: { project?: string; location?: string }
-  timeoutMs?: number
-}
-```
-
-### `EnricherLLMInput`
-
-```ts
-type EnricherLLMInput = KnownLLMConfig // from '@maat-tools/utils'
-```
-
-`KnownLLMConfig` is the union of all known provider/model configurations. Today that is:
-
-```ts
-{
-  provider: 'vertex'
-  model: 'gemini-3-5-flash'
-  extra?: { project?: string; location?: string }
-  timeoutMs?: number
-}
-```
-
-The type marks `extra` as optional, but the Vertex Gemini model throws at construction time if `extra.project` and `extra.location` are not provided — always pass both.
+Vertex requires `extra.project` and `extra.location` at construction even though the fields are optional in the shared type. Other providers use their own credentials and options. See [LLM models and providers](/guide/llm-models) for the supported configurations and authentication setup.
 
 ## Available enrichers
 
@@ -82,26 +50,21 @@ Each enricher has its own page with configuration and fact shapes.
 
 ## Caching
 
-**Every LLM response is cached by default.** Before any LLM call, each item is looked up in `.maat/enricher-cache/` by a key derived from the item's content, the prompt instructions, and the provider/model pair. If nothing changed — same code, same prompt, same model — the cached result is used and **the LLM is never called again** for that item. Only items whose key changed trigger new calls; entries are per-item, not per-batch, so one changed function re-asks about one function, not the whole batch. Stale entries for items that no longer exist are pruned automatically.
+Responses are cached by default under `.maat/cache/enrichers/<enricher-id>/`, relative to the project root. Each key includes the serialized item, prompt instructions, and provider/model pair. A readable entry with the same key is reused; missing, unreadable, changed, or bypassed entries can trigger external calls. Entries are per item, and unused entries are pruned after the run.
 
-This has two consequences worth relying on:
+Sharing the cache can let another environment reuse the same enriched facts. Review it before committing: it contains source-derived information. A run avoids LLM calls only when every requested item has a usable cache entry and caching is enabled. Credentials and provider configuration are still needed to construct the model.
 
-- **Cost and latency are paid once per change**, not once per run. A CI run over unchanged code makes zero LLM calls.
-- **Re-runs are reproducible.** Commit `.maat/enricher-cache/` with your repository and every environment — CI included — gets the exact same enriched facts without network access or repeated cost.
-
-The cache location can be overridden with the `MAAT_ENRICHER_CACHE_DIR` environment variable.
-
-To bypass the cache for a single run, use [`maat check --no-cache`](/commands/check).
+The cache path is set by the implementation; there is no environment variable to override it. To bypass cached responses for a run, use [`maat check --no-cache`](/commands/check).
 
 ## Tradeoffs
 
 ### Cost and latency
 
-LLM calls add latency and cost when code changes. The [always-on cache](#caching-always-on) means unchanged items never trigger calls, so the cost scales with how much changed, not with how often you run.
+LLM calls add latency and cost when code changes. The [cache](#caching) reduces repeat calls when matching entries are available. Cache misses and `--no-cache` can incur cost even for unchanged code.
 
 ### Determinism
 
-**This package does not break maat's determinism guarantee.** Rules remain pure and deterministic. The probabilistic nature is contained in the facts, and the system marks the findings that depend on them. See the [Enrichers guide](/guide/enrichers) for the full explanation.
+Rules remain pure and deterministic for the same facts. LLM-produced facts can vary, so the system marks findings that depend on them for human review. See the [Enrichers guide](/guide/enrichers) for the full explanation.
 
 ### Verification overhead
 

@@ -3,6 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-06-11
 
+> **Current behavior (2026-11-13):** The self-contained event design below remains in use. The statement about disappeared baselined findings staying baselined describes the behavior at adoption. Today `maat check --ledger` automatically resolves missing observed, unverified, and baselined findings. See the [check reference](../commands/check.md#recording-findings) for current reconciliation behavior.
+
 ## Context
 
 The original ledger design (ADR-003, ADR-005) stored delta events: `finding.baselined` carried only a fingerprint and expiry, `finding.resolved` only a fingerprint. The fold reconstructed an aggregate record (`FindingRecord`/`AxiomRecord`) with derived fields (`state`, `baselined`, `active`) that existed nowhere on disk.

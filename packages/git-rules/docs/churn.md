@@ -4,7 +4,7 @@
 `gitCommits` · `gitFileChanges` — from [`@maat-tools/collector-git`](../collector-git/)
 :::
 
-`churn` detects files that change too frequently within a rolling time window. A file that accumulates changes faster than the rest of the codebase is a signal that it is doing too much, that too many concerns depend on it, or both.
+`churn` reports files whose change count meets the configured threshold within a rolling time window. Frequent changes can help identify files to inspect, but the count alone does not establish excessive coupling, defects, or business cost.
 
 ## What It Checks
 
@@ -14,7 +14,7 @@ Deleted files are counted the same as modifications — a file deleted and recre
 
 ::: details What this rule detects
 
-A file that accumulates commits faster than the rest of the codebase, as seen in git history over a rolling time window.
+A file whose commit count meets or exceeds the configured threshold in the time window. The rule does not compare that count with the rest of the codebase.
 
 ```
 # Commits touching src/payments/processor.ts in the last 90 days

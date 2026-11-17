@@ -1,8 +1,8 @@
 # Getting started
 
-maat checks architecture rules against facts collected from your repository.
+Maat checks the rules you configure for your project and warns when they are broken. With a ledger, it also keeps a history of decisions and detects when a finding recorded as resolved returns.
 
-The first run should answer a small question: "can this codebase collect facts and report findings?" After that, you can decide which findings should be baselined, resolved, or ignored for now.
+The checks apply to new and existing codebases, whether people or AI agents write the changes. Start with a rule your team wants to preserve, run it, and review the evidence behind each finding. The result covers those configured checks, not the overall health of the software.
 
 ## Installation
 
@@ -37,9 +37,9 @@ pnpm add -D -w @maat-tools/cli @maat-tools/core @maat-tools/collector-ts @maat-t
 
 If your workspace uses a [catalog](https://pnpm.io/catalogs), pnpm records the dependency as `catalog:` and resolves the version from the catalog entry. If your workspace enables [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage), a maat version published more recently than that window will not install — wait out the window or add `@maat-tools/*` to `minimumReleaseAgeExclude`.
 
-## Who benefits most
+## Choosing a first check
 
-maat is most useful for backend repositories with meaningful domain logic, layered architectures, and multiple bounded contexts. Frontend projects tend to have less business logic encoded in structure — a linter or type-checker often covers the same ground. If your frontend has complex state machines, domain models, or cross-module contracts, maat can still help.
+Choose a constraint that matters to your project and can be checked by a rule: which packages may depend on each other, where database access belongs, or which layers should stay independent. The TypeScript examples below use layer rules. Other checks depend on the collectors and rules you install.
 
 ## Add a config
 
@@ -67,7 +67,7 @@ This config does three things:
 
 - `collectors` tells maat how to collect facts from the repository.
 - `rules` tells maat which architecture rules to check.
-- `check.strict` makes visible findings fail the command.
+- `check.strict` makes visible findings that do not require verification fail the command.
 
 Every `layer()` chain ends with `.build()`, which produces the rule the CLI registers. A `Pure` layer may not import anything outside itself, so `.is(Pure)` chains only to `.build()` — it cannot be combined with `.allows()`. When a layer is permitted specific imports, use a plain `.allows()` rule instead.
 
@@ -111,7 +111,7 @@ If a rule pattern matches nothing, maat tells you (`pattern "X" matches no impor
 
 ## New projects
 
-For a new project, keep `check.strict: true` and add `maat check` to CI. Any visible finding exits non-zero.
+For a new project, keep `check.strict: true` and add `maat check` to CI. Visible findings that do not require verification exit non-zero. The same rules apply to changes made by people and AI agents.
 
 Start with rules that are easy to explain in code review: package boundaries, layer boundaries, and dependency direction. Add more specific rules when the team has a real pattern it wants to preserve.
 
@@ -140,7 +140,7 @@ export default defineConfig({
 })
 ```
 
-Then record the current findings and baseline them:
+Run the check, review the findings, and baseline them if you accept them temporarily. The first command can exit non-zero while still recording findings:
 
 ```bash
 maat check --ledger
@@ -159,7 +159,7 @@ The ledger records decisions about those fingerprints:
 - `baselined`: the finding is temporarily accepted as existing debt. This is a suppression flag, not a full lifecycle state; unexpired baselines are hidden from normal `maat check` output unless you pass `--show-baselined`. That flag only includes baselined findings that still appear in the current check; findings stored in the ledger but absent from the current run are visible through `maat visualize`.
 - `resolved`: this exact fingerprint was intentionally fixed. If the same fingerprint appears again later, `maat check` treats it as a regression.
 
-In short: baseline means "not now"; resolve means "this exact finding was fixed."
+A baseline accepts a finding temporarily; resolving records that this exact finding was fixed.
 
 Use these commands when you are ready to move a finding:
 
@@ -168,9 +168,25 @@ Use these commands when you are ready to move a finding:
 maat resolve --fingerprint <fingerprint>
 ```
 
-Resolved findings should have a decision maker. maat records the decision in the ledger, but it does not attach findings to users or teams. With the default NDJSON ledger, commit the ledger file and let the repository history show who made the decision, when it was reviewed, and why it changed.
+Resolved findings should have a decision maker. maat records the decision in the ledger, but it does not attach findings to users or teams. With the default NDJSON ledger, commit the ledger file yourself and let the repository history show who made the decision, when it was reviewed, and why it changed.
 
 Resolution is fingerprint-specific. If another finding from the same rule appears with a different fingerprint, maat treats it as a new finding, not as a regression of the resolved one.
+
+## Human verification
+
+Optional enrichers can use LLMs to derive facts. Findings that depend on those facts carry a `[Verify]` badge and require human review. New unverified findings do not fail strict checks on their own.
+
+If a probabilistic finding recorded as resolved returns with the same fingerprint, it is a regression: the check fails while verification is still pending, even with strict mode disabled.
+
+With a configured ledger, record findings using `maat check --ledger`, inspect the evidence, and verify or dismiss an unverified finding:
+
+```bash
+maat verify --fingerprint <fingerprint>
+# Dismiss an unverified finding reviewed as a false positive instead
+maat verify --fingerprint <fingerprint> --revoke
+```
+
+See [verification](/commands/verify) and [determinism](./determinism.md) for the full behavior.
 
 ## Manual architecture claims
 

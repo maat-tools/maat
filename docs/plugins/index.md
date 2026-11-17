@@ -1,6 +1,6 @@
 # Plugins
 
-maat plugins package collectors, rules, insights, and ledger backends behind stable public interfaces.
+Maat plugins provide collectors, enrichers, rules, insights, and ledger backends. Configure the checks you need; findings based on enriched facts require human review.
 
 ## Official Plugins
 

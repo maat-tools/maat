@@ -105,7 +105,7 @@ export default defineConfig({
 - **Heuristic container tracking.** `containingFunction` is inferred syntactically from the AST parent chain. It captures function, method and arrow-function names, but falls back to module-level when a binding is at the top level of a file.
 
 ::: info Planned
-A companion rule **`coa-semantic`** is planned to detect algorithmic complements using LLM-based semantic analysis, eliminating the false positives caused by coincidental literal reuse across unrelated data flows.
+A companion rule **`coa-semantic`** is a future direction for investigating algorithmic complements using LLM-based analysis. It is not implemented; reduced false positives or reliable semantic detection have not been established.
 :::
 
 ## Finding Identity

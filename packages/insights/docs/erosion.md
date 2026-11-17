@@ -4,7 +4,7 @@
 Findings from `maat-tools/git-rules/churn@v1` — from [`@maat-tools/git-rules`](../git-rules/) — and any `maat-tools/coupling-rules/pure-imports@v1` or `maat-tools/coupling-rules/layer-imports@v1` rule instance — from [`@maat-tools/coupling-rules`](../coupling-rules/).
 :::
 
-`erosion` identifies hot architectural debt: boundaries that are simultaneously high-churn and violating layer constraints. Neither signal alone tells the full story: churning code might be healthy, and a violation might be dormant. The combination — volatile code that is also architecturally out of bounds — is where active decay concentrates.
+`erosion` combines churn findings with violations of configured import boundaries. It shows which boundaries have both signals, ordered by total churn. This helps a reviewer inspect the evidence; it does not establish software health, incident risk, or business cost.
 
 ## What It Checks
 
